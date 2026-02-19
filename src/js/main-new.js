@@ -955,26 +955,56 @@ async function selectPlan(planId) {
 }
 
 // Função para mostrar status da assinatura
+// ===== FUNÇÃO MELHORADA PARA VERIFICAR STATUS DA ASSINATURA =====
 async function checkSubscriptionStatus() {
     if (!currentUser) return;
 
     try {
+        console.log('🔍 Verificando status da assinatura para usuário:', currentUser.id);
+        
         const response = await fetch(`${API}/payments/subscription/status/${currentUser.id}`);
         const data = await response.json();
 
-        if (data.success && data.data.hasSubscription) {
-            const plan = data.data.plan;
-            const userInfo = document.getElementById('userInfo');
+        console.log('📊 Resposta do status:', data);
+
+        if (data.success && data.data) {
+            // Atualizar currentUser com os dados da assinatura
+            if (data.data.hasSubscription && data.data.plan) {
+                currentUser.plan = data.data.plan;
+                console.log('✅ Plan atualizado:', currentUser.plan);
+            }
             
-            // Adicionar badge do plano
-            const planBadge = document.createElement('span');
-            planBadge.className = 'plan-badge';
-            planBadge.innerHTML = `<i class="fas fa-crown"></i> ${plan.type}`;
+            // Se tiver subscription mas não plan
+            if (data.data.subscription && data.data.subscription.status === 'active') {
+                const sub = data.data.subscription;
+                currentUser.subscription = sub;
+                
+                if (!currentUser.plan) {
+                    currentUser.plan = {
+                        id: sub.planType,
+                        name: getPlanName(sub.planType),
+                        aulasPorSemana: sub.aulasPorSemana || getPlanAulas(sub.planType),
+                        status: 'active'
+                    };
+                }
+            }
             
-            userInfo.appendChild(planBadge);
-            
-            // Atualizar limite semanal no aviso
-            updateWeeklyWarningWithPlan(plan.aulasPorSemana);
+            // Atualizar UI com badge do plano se tiver
+            if (currentUser.plan) {
+                const userInfo = document.getElementById('userInfo');
+                if (userInfo) {
+                    // Verificar se já não tem badge
+                    if (!userInfo.querySelector('.plan-badge')) {
+                        const planBadge = document.createElement('span');
+                        planBadge.className = 'plan-badge';
+                        planBadge.innerHTML = `<i class="fas fa-crown"></i> ${currentUser.plan.name || currentUser.plan.id}`;
+                        userInfo.appendChild(planBadge);
+                    }
+                }
+                
+                // Atualizar aviso semanal
+                updateWeeklyWarningWithPlan(currentUser.plan.aulasPorSemana);
+            }
         }
     } catch (error) {
         console.error('Erro ao verificar assinatura:', error);
@@ -1002,27 +1032,68 @@ function updateWeeklyWarningWithPlan(limite) {
     }
 }
 
-// Modificar a função getWeeklyBookingsCount para usar o limite do plano
-const getWeeklyBookingsCount = () => {
-    if (!currentUser) return 0;
+ //planos 
+function userHasActivePlan() {
+    if (!currentUser) return false;
     
-    const now = new Date();
-    const weekStart = new Date(now);
-    weekStart.setDate(now.getDate() - now.getDay() + 1);
-    weekStart.setHours(0, 0, 0, 0);
+    // Admin não precisa de plano
+    if (currentUser.isAdmin) return true;
     
-    const weekEnd = new Date(weekStart);
-    weekEnd.setDate(weekStart.getDate() + 5);
-    weekEnd.setHours(23, 59, 59, 999);
+    console.log('🔍 Verificando plano do usuário:', currentUser);
     
-    return bookings.filter(b => {
-        if (b.userId !== currentUser.id) return false;
-        const bookDate = new Date(b.date + 'T00:00:00');
-        return bookDate >= weekStart && bookDate <= weekEnd;
-    }).length;
-};
+    // Verificar se tem plan direto
+    if (currentUser.plan) {
+        // Se o status for active ou não tiver status (considera ativo)
+        if (!currentUser.plan.status || currentUser.plan.status === 'active') {
+            console.log('✅ Plano ativo encontrado (direto):', currentUser.plan);
+            return true;
+        }
+    }
+    
+    // Verificar se tem subscription com status active
+    if (currentUser.subscription && currentUser.subscription.status === 'active') {
+        console.log('✅ Assinatura ativa encontrada:', currentUser.subscription);
+        
+        // Se tiver subscription mas não tiver plan, criar plan a partir da subscription
+        if (!currentUser.plan) {
+            const planType = currentUser.subscription.planType || 'basic';
+            currentUser.plan = {
+                id: planType,
+                name: getPlanName(planType),
+                aulasPorSemana: currentUser.subscription.aulasPorSemana || getPlanAulas(planType),
+                status: 'active'
+            };
+            console.log('📝 Plan criado a partir da subscription:', currentUser.plan);
+        }
+        return true;
+    }
+    
+    console.log('❌ Nenhum plano ativo encontrado');
+    return false;
+}
 
-// ===== CARREGAR DADOS =====
+// Funções auxiliares para planos
+function getPlanName(planId) {
+    const names = {
+        basic: 'Básico',
+        intermediate: 'Intermediário',
+        advanced: 'Avançado',
+        premium: 'Premium'
+    };
+    return names[planId] || 'Básico';
+}
+
+function getPlanAulas(planId) {
+    const aulas = {
+        basic: 2,
+        intermediate: 3,
+        advanced: 4,
+        premium: 5
+    };
+    return aulas[planId] || 2;
+}
+
+// ===== FUNÇÃO MELHORADA PARA CARREGAR DADOS =====
 async function loadData() {
     if (loading) return;
     loading = true;
@@ -1045,17 +1116,24 @@ async function loadData() {
         availability = availabilityRes.data;
         bookings = bookingsRes.data;
         
+        // 3. Verificar status da assinatura (importante!)
+        await checkSubscriptionStatus();
+        
         updateUserInfo();
         
-        // 👇 VERIFICAÇÃO MELHORADA PARA MOSTRAR PLANOS
-        const userNeedsPlan = currentUser && 
-                             !currentUser.isAdmin && 
-                             (!currentUser.plan || !currentUser.plan.id);
+        // 👇 VERIFICAÇÃO CORRIGIDA PARA MOSTRAR PLANOS
+        const precisaPlano = currentUser && 
+                            !currentUser.isAdmin && 
+                            !userHasActivePlan(); // USA A NOVA FUNÇÃO
         
-        if (userNeedsPlan && !showingPlans) {
-            // Mostrar seção de planos
+        console.log('🔍 Precisa de plano?', precisaPlano);
+        console.log('👤 Usuário atual:', currentUser);
+        
+        if (precisaPlano && !showingPlans) {
+            console.log('📢 Mostrando tela de planos');
             showPlans();
         } else {
+            console.log('📅 Mostrando agenda normal');
             // Mostrar agenda normal
             renderSchedule();
             renderDayControls();
@@ -1077,7 +1155,6 @@ async function loadData() {
         loading = false;
     }
 }
-
 // ===== INICIALIZAÇÃO =====
 document.addEventListener('DOMContentLoaded', function() {
     console.log('🚀 Sistema iniciado - Versão Melhorada');
@@ -1132,10 +1209,15 @@ document.addEventListener('DOMContentLoaded', function() {
             
             if (response.ok) {
                 currentUser = data.user || data.data || data;
+                
+                // 👉 FORÇAR VERIFICAÇÃO DA ASSINATURA
+                await checkSubscriptionStatus();
+                
                 localStorage.setItem('user', JSON.stringify(currentUser));
                 
                 showAppScreen();
                 showNotification(`Bem-vindo, ${currentUser.name}!`, 'success');
+
             } else {
                 showNotification(data.error || 'Falha no login', 'error');
                 submitBtn.disabled = false;
