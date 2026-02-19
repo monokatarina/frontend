@@ -596,14 +596,33 @@ function validateBookingTime(date, hour) {
     const now = new Date();
     const bookingDate = new Date(`${date}T${String(hour).padStart(2, '0')}:00:00`);
     
+    // Verificar se é horário passado
+    if (bookingDate < now) {
+        return {
+            valid: false,
+            error: 'past',
+            message: '❌ Não é possível agendar em horários que já passaram.'
+        };
+    }
+    
+    // Verificar se está muito próximo (menos de 9 horas)
     if (bookingDate - now < CANCEL_LIMIT_HOURS * 60 * 60 * 1000) {
         return {
             valid: true,
-            warning: `⏰ Aula em menos de ${CANCEL_LIMIT_HOURS}h. Você terá apenas ${PROXIMITY_GRACE_MINUTES} minutos para cancelar.`
+            warning: true,
+            message: `⏰ Esta aula começará em menos de ${CANCEL_LIMIT_HOURS}h. Você terá apenas ${PROXIMITY_GRACE_MINUTES} minutos para cancelar após a reserva.`
         };
     }
     
     return { valid: true };
+}
+// FUNÇÃO PARA VERIFICAR SE O HORÁRIO JÁ PASSOU
+function isPastDateTime(date, hour) {
+    const now = new Date();
+    const bookingDateTime = new Date(`${date}T${String(hour).padStart(2, '0')}:00:00`);
+    
+    // Comparar se a data/hora do agendamento é anterior ao momento atual
+    return bookingDateTime < now;
 }
 
 // ============================================
@@ -1009,6 +1028,12 @@ function onSlotClick(e) {
     const isAvailable = btn.dataset.available === 'true';
     const bookCount = Number(btn.dataset.bookCount);
 
+    // VERIFICAÇÃO DE HORÁRIO PASSADO
+    if (isPastDateTime(date, h)) {
+        showNotification('Não é possível agendar em horários que já passaram', 'error');
+        return;
+    }
+
     // Modo Admin - toggle disponibilidade
     if (adminMode && currentUser?.isAdmin) {
         const newState = !isAvailable;
@@ -1140,6 +1165,13 @@ window.redirectToPlans = function() {
 // ============================================
 
 function openBookingModal(date, h) {
+    // Verificar novamente se é horário passado (segurança)
+    if (isPastDateTime(date, h)) {
+        showNotification('Não é possível agendar em horários que já passaram', 'error');
+        closeModal();
+        return;
+    }
+    
     modalContext = { date, hour: h };
     
     const bookedList = isBooked(date, h);
@@ -1150,6 +1182,12 @@ function openBookingModal(date, h) {
     
     const timeValidation = validateBookingTime(date, h);
     
+    // Se for horário passado, não abre o modal
+    if (!timeValidation.valid) {
+        showNotification(timeValidation.message, 'error');
+        return;
+    }
+    
     modalTitle.innerHTML = `
         <i class="fas fa-calendar-check"></i>
         Reservar ${formatDate(date)} — ${h}:00
@@ -1158,7 +1196,7 @@ function openBookingModal(date, h) {
     const warningHtml = timeValidation.warning ? 
         `<div class="booking-warning">
             <i class="fas fa-exclamation-triangle"></i>
-            ${timeValidation.warning}
+            ${timeValidation.message}
         </div>` : '';
     
     modalUserName.innerHTML = `
@@ -1544,6 +1582,26 @@ document.addEventListener('DOMContentLoaded', function() {
 // ============================================
 
 const additionalStyles = `
+    .past-slot {
+        opacity: 0.4;
+        cursor: not-allowed;
+        background: linear-gradient(135deg, #e5e7eb, #d1d5db);
+        position: relative;
+    }
+
+    .past-slot::before {
+        content: "⏰ Passado";
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 10px;
+        color: #6b7280;
+        font-weight: 600;
+        background: rgba(255,255,255,0.9);
+        padding: 2px 6px;
+        border-radius: 4px;
+    }
     /* Estilos para informações do plano */
     .user-info {
         display: flex;
