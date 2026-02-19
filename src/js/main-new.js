@@ -1,5 +1,6 @@
 // ============================================
 // FRONTEND - SISTEMA DE AGENDAMENTO
+// VERSÃO COM CONTROLE DE PLANOS
 // ============================================
 
 // ===== CONFIGURAÇÕES =====
@@ -8,8 +9,8 @@ const weekdays = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta'];
 const HOURS = [6, 7, 8, 9, 10, 11, 12, 16, 17, 18, 19];
 
 // ===== CONSTANTES DE REGRAS =====
-const CANCEL_LIMIT_HOURS = 9; // Limite padrão de 9 horas para cancelamento
-const PROXIMITY_GRACE_MINUTES = 10; // Período de graça de 10 minutos para aulas próximas
+const CANCEL_LIMIT_HOURS = 9;
+const PROXIMITY_GRACE_MINUTES = 10;
 
 // ===== PLANOS DE ASSINATURA =====
 const PLANS = {
@@ -18,28 +19,36 @@ const PLANS = {
         name: 'Básico',
         aulasPorSemana: 2,
         price: 1,
-        features: ['2 aulas por semana', 'Acesso a todos horários', 'teste']
+        color: '#10b981',
+        icon: 'fa-seedling',
+        features: ['2 aulas por semana', 'Acesso a todos horários', 'Suporte básico']
     },
     intermediate: {
         id: 'intermediate',
         name: 'Intermediário',
         aulasPorSemana: 3,
         price: 1,
-        features: ['3 aulas por semana', 'Acesso a todos horários', 'lletra boa ?']
+        color: '#3b82f6',
+        icon: 'fa-fire',
+        features: ['3 aulas por semana', 'Acesso a todos horários', 'Suporte prioritário']
     },
     advanced: {
         id: 'advanced',
         name: 'Avançado',
         aulasPorSemana: 4,
         price: 1,
-        features: ['4 aulas por semana', 'Acesso a todos horários', 'tesrt']
+        color: '#f59e0b',
+        icon: 'fa-rocket',
+        features: ['4 aulas por semana', 'Acesso a todos horários', 'Suporte VIP']
     },
     premium: {
         id: 'premium',
         name: 'Premium',
         aulasPorSemana: 5,
         price: 1,
-        features: ['5 aulas por semana', 'Acesso a todos horários', 'teste ']
+        color: '#8b5cf6',
+        icon: 'fa-crown',
+        features: ['5 aulas por semana', 'Acesso a todos horários', 'Suporte 24/7']
     }
 };
 
@@ -51,7 +60,7 @@ let currentUser = null;
 let loading = false;
 let processingReservation = false;
 let showingPlans = false;
-let nextDates = {}; // Cache global para datas
+let nextDates = {};
 let timerInterval = null;
 let modalContext = null;
 
@@ -162,28 +171,210 @@ const isBooked = (dateStr, hour) => {
     );
 };
 
+// ============================================
+// 2. FUNÇÕES DE CONTROLE DE PLANOS
+// ============================================
 
-// Menu dropdown do admin
-
-if (adminMenuBtn) {
-    adminMenuBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        if (currentUser?.isAdmin) {
-            adminDropdown.hidden = !adminDropdown.hidden;
-        } else {
-            showNotification('Apenas administradores', 'error');
+// Verifica se usuário tem plano ativo
+function userHasActivePlan() {
+    if (!currentUser) return false;
+    if (currentUser.isAdmin) return true;
+    
+    console.log('🔍 Verificando plano do usuário:', currentUser);
+    
+    // Verificar plano direto
+    if (currentUser.plan) {
+        if (!currentUser.plan.status || currentUser.plan.status === 'active') {
+            console.log('✅ Plano ativo encontrado:', currentUser.plan);
+            return true;
         }
-    });
-}
-// Fechar dropdown ao clicar fora
-document.addEventListener('click', (e) => {
-    if (!e.target.closest('.admin-menu')) {
-        if (adminDropdown) adminDropdown.hidden = true;
     }
-});
+    
+    // Verificar assinatura
+    if (currentUser.subscription && currentUser.subscription.status === 'active') {
+        console.log('✅ Assinatura ativa encontrada:', currentUser.subscription);
+        
+        if (!currentUser.plan) {
+            const planType = currentUser.subscription.planType || 'basic';
+            currentUser.plan = {
+                id: planType,
+                name: getPlanName(planType),
+                aulasPorSemana: currentUser.subscription.aulasPorSemana || getPlanAulas(planType),
+                status: 'active',
+                color: PLANS[planType]?.color || '#6366f1'
+            };
+        }
+        return true;
+    }
+    
+    console.log('❌ Nenhum plano ativo encontrado');
+    return false;
+}
+
+// Verifica status da assinatura no backend
+async function checkSubscriptionStatus() {
+    if (!currentUser) return;
+
+    try {
+        console.log('🔍 Verificando status da assinatura para usuário:', currentUser.id);
+        
+        const response = await fetch(`${API}/payments/subscription/status/${currentUser.id}`);
+        const data = await response.json();
+
+        console.log('📊 Resposta do status:', data);
+
+        if (data.success && data.data) {
+            if (data.data.hasSubscription && data.data.plan) {
+                currentUser.plan = data.data.plan;
+                console.log('✅ Plan atualizado:', currentUser.plan);
+            }
+            
+            if (data.data.subscription && data.data.subscription.status === 'active') {
+                const sub = data.data.subscription;
+                currentUser.subscription = sub;
+                
+                if (!currentUser.plan) {
+                    currentUser.plan = {
+                        id: sub.planType,
+                        name: getPlanName(sub.planType),
+                        aulasPorSemana: sub.aulasPorSemana || getPlanAulas(sub.planType),
+                        status: 'active',
+                        color: PLANS[sub.planType]?.color || '#6366f1'
+                    };
+                }
+            }
+            
+            // Atualizar UI com informações do plano
+            updatePlanInfo();
+        }
+    } catch (error) {
+        console.error('Erro ao verificar assinatura:', error);
+    }
+}
+
+// Atualiza informações do plano na interface
+function updatePlanInfo() {
+    if (!currentUser) return;
+    
+    const userInfo = document.getElementById('userInfo');
+    if (!userInfo) return;
+    
+    let planHtml = '';
+    
+    if (currentUser.isAdmin) {
+        planHtml = `
+            <span class="plan-badge admin">
+                <i class="fas fa-crown"></i>
+                Administrador
+            </span>
+        `;
+    } else if (userHasActivePlan() && currentUser.plan) {
+        const planColor = currentUser.plan.color || '#6366f1';
+        planHtml = `
+            <span class="plan-badge" style="background: ${planColor}">
+                <i class="fas ${PLANS[currentUser.plan.id]?.icon || 'fa-crown'}"></i>
+                ${currentUser.plan.name || currentUser.plan.id}
+                <span class="plan-aulas">${currentUser.plan.aulasPorSemana}/semana</span>
+            </span>
+        `;
+    } else {
+        planHtml = `
+            <span class="plan-badge no-plan" onclick="window.location.href='/plans'">
+                <i class="fas fa-exclamation-circle"></i>
+                Sem plano ativo
+                <button class="btn-plan-small">Escolher plano</button>
+            </span>
+        `;
+    }
+    
+    // Adicionar badge do usuário
+    const userBadge = `
+        <span class="user-badge ${currentUser.isAdmin ? 'admin' : ''}">
+            <i class="fas fa-${currentUser.isAdmin ? 'crown' : 'user'}"></i>
+            ${currentUser.name || currentUser.email}
+        </span>
+    `;
+    
+    userInfo.innerHTML = userBadge + planHtml;
+    
+    // Atualizar aviso semanal com base no plano
+    if (currentUser.plan) {
+        updateWeeklyWarningWithPlan(currentUser.plan.aulasPorSemana);
+    } else {
+        updateWeeklyWarningNoPlan();
+    }
+}
+
+// Funções auxiliares para planos
+function getPlanName(planId) {
+    return PLANS[planId]?.name || 'Básico';
+}
+
+function getPlanAulas(planId) {
+    return PLANS[planId]?.aulasPorSemana || 2;
+}
 
 // ============================================
-// 2. FUNÇÕES DE CONTAGEM E VALIDAÇÃO
+// 3. FUNÇÕES DE AVISO SEMANAL
+// ============================================
+
+function updateWeeklyWarningWithPlan(limite) {
+    if (!weeklyWarning) return;
+    
+    const weeklyCount = getWeeklyBookingsCount();
+    
+    if (weeklyCount >= limite) {
+        weeklyWarning.innerHTML = `
+            <i class="fas fa-exclamation-triangle"></i>
+            <span><strong>Atenção!</strong> Você atingiu o limite de ${limite} agendamentos do seu plano</span>
+            <a href="/plans" class="warning-link">Gerenciar plano</a>
+        `;
+        weeklyWarning.className = 'weekly-warning warning';
+    } else {
+        weeklyWarning.innerHTML = `
+            <i class="fas fa-chart-line"></i>
+            <span>Agendamentos esta semana: <strong>${weeklyCount}/${limite}</strong></span>
+            <span class="plan-info">Plano ${currentUser?.plan?.name || 'Ativo'}</span>
+        `;
+        weeklyWarning.className = 'weekly-warning info';
+    }
+}
+
+function updateWeeklyWarningNoPlan() {
+    if (!weeklyWarning) return;
+    
+    weeklyWarning.innerHTML = `
+        <i class="fas fa-info-circle"></i>
+        <span>Você não possui um plano ativo.</span>
+        <a href="/plans" class="warning-link" style="background: var(--primary);">
+            <i class="fas fa-crown"></i>
+            Escolher plano
+        </a>
+    `;
+    weeklyWarning.className = 'weekly-warning warning';
+}
+
+function updateWeeklyWarning() {
+    if (!weeklyWarning) return;
+    
+    if (currentUser?.isAdmin) {
+        weeklyWarning.innerHTML = `
+            <i class="fas fa-crown"></i>
+            <span>Modo Administrador - Você tem acesso total</span>
+        `;
+        weeklyWarning.className = 'weekly-warning admin';
+        return;
+    }
+    
+    if (currentUser?.plan && userHasActivePlan()) {
+        updateWeeklyWarningWithPlan(currentUser.plan.aulasPorSemana);
+    } else {
+        updateWeeklyWarningNoPlan();
+    }
+}
+
+// ============================================
+// 4. FUNÇÕES DE CONTAGEM E VALIDAÇÃO
 // ============================================
 
 // Conta reservas do usuário na semana atual
@@ -301,177 +492,8 @@ function validateBookingTime(date, hour) {
     return { valid: true };
 }
 
-// Tooltip
-function showTooltip(element, message) {
-    const tooltip = document.createElement('div');
-    tooltip.className = 'tooltip';
-    tooltip.textContent = message;
-    
-    document.body.appendChild(tooltip);
-    
-    const rect = element.getBoundingClientRect();
-    tooltip.style.top = `${rect.top - tooltip.offsetHeight - 10}px`;
-    tooltip.style.left = `${rect.left + (rect.width / 2) - (tooltip.offsetWidth / 2)}px`;
-    
-    setTimeout(() => tooltip.remove(), 3000);
-}
-
 // ============================================
-// 3. FUNÇÕES DE AVISO SEMANAL
-// ============================================
-
-function updateWeeklyWarningWithPlan(limite) {
-    if (!weeklyWarning) return;
-    
-    const weeklyCount = getWeeklyBookingsCount();
-    
-    if (weeklyCount >= limite) {
-        weeklyWarning.innerHTML = `
-            <i class="fas fa-exclamation-triangle"></i>
-            <span><strong>Atenção!</strong> Você atingiu o limite de ${limite} agendamentos do seu plano</span>
-        `;
-        weeklyWarning.className = 'weekly-warning warning';
-    } else {
-        weeklyWarning.innerHTML = `
-            <i class="fas fa-chart-line"></i>
-            <span>Agendamentos esta semana: <strong>${weeklyCount}/${limite}</strong></span>
-        `;
-        weeklyWarning.className = 'weekly-warning info';
-    }
-}
-
-function updateWeeklyWarning() {
-    if (!weeklyWarning) return;
-    
-    if (currentUser?.plan) {
-        updateWeeklyWarningWithPlan(currentUser.plan.aulasPorSemana);
-        return;
-    }
-    
-    const weeklyCount = getWeeklyBookingsCount();
-    weeklyWarning.innerHTML = `
-        <i class="fas fa-chart-line"></i>
-        <span>Agendamentos esta semana: <strong>${weeklyCount}/3</strong></span>
-    `;
-    weeklyWarning.className = 'weekly-warning info';
-}
-
-// ============================================
-// 4. FUNÇÕES AUXILIARES PARA PLANOS
-// ============================================
-
-function getPlanName(planId) {
-    const names = {
-        basic: 'Básico',
-        intermediate: 'Intermediário',
-        advanced: 'Avançado',
-        premium: 'Premium'
-    };
-    return names[planId] || 'Básico';
-}
-
-function getPlanAulas(planId) {
-    const aulas = {
-        basic: 2,
-        intermediate: 3,
-        advanced: 4,
-        premium: 5
-    };
-    return aulas[planId] || 2;
-}
-
-// ============================================
-// 5. FUNÇÃO DE VERIFICAÇÃO DE PLANO ATIVO
-// ============================================
-
-function userHasActivePlan() {
-    if (!currentUser) return false;
-    
-    if (currentUser.isAdmin) return true;
-    
-    console.log('🔍 Verificando plano do usuário:', currentUser);
-    
-    if (currentUser.plan) {
-        if (!currentUser.plan.status || currentUser.plan.status === 'active') {
-            console.log('✅ Plano ativo encontrado (direto):', currentUser.plan);
-            return true;
-        }
-    }
-    
-    if (currentUser.subscription && currentUser.subscription.status === 'active') {
-        console.log('✅ Assinatura ativa encontrada:', currentUser.subscription);
-        
-        if (!currentUser.plan) {
-            const planType = currentUser.subscription.planType || 'basic';
-            currentUser.plan = {
-                id: planType,
-                name: getPlanName(planType),
-                aulasPorSemana: currentUser.subscription.aulasPorSemana || getPlanAulas(planType),
-                status: 'active'
-            };
-            console.log('📝 Plan criado a partir da subscription:', currentUser.plan);
-        }
-        return true;
-    }
-    
-    console.log('❌ Nenhum plano ativo encontrado');
-    return false;
-}
-
-// ============================================
-// 6. FUNÇÃO DE VERIFICAÇÃO DE ASSINATURA
-// ============================================
-
-async function checkSubscriptionStatus() {
-    if (!currentUser) return;
-
-    try {
-        console.log('🔍 Verificando status da assinatura para usuário:', currentUser.id);
-        
-        const response = await fetch(`${API}/payments/subscription/status/${currentUser.id}`);
-        const data = await response.json();
-
-        console.log('📊 Resposta do status:', data);
-
-        if (data.success && data.data) {
-            if (data.data.hasSubscription && data.data.plan) {
-                currentUser.plan = data.data.plan;
-                console.log('✅ Plan atualizado:', currentUser.plan);
-            }
-            
-            if (data.data.subscription && data.data.subscription.status === 'active') {
-                const sub = data.data.subscription;
-                currentUser.subscription = sub;
-                
-                if (!currentUser.plan) {
-                    currentUser.plan = {
-                        id: sub.planType,
-                        name: getPlanName(sub.planType),
-                        aulasPorSemana: sub.aulasPorSemana || getPlanAulas(sub.planType),
-                        status: 'active'
-                    };
-                }
-            }
-            
-            if (currentUser.plan) {
-                const userInfo = document.getElementById('userInfo');
-                if (userInfo && !userInfo.querySelector('.plan-badge')) {
-                    const planBadge = document.createElement('span');
-                    planBadge.className = 'plan-badge';
-                    planBadge.innerHTML = `<i class="fas fa-crown"></i> ${currentUser.plan.name || currentUser.plan.id}`;
-                    userInfo.appendChild(planBadge);
-                }
-                
-                updateWeeklyWarningWithPlan(currentUser.plan.aulasPorSemana);
-            }
-        }
-    } catch (error) {
-        console.error('Erro ao verificar assinatura:', error);
-    }
-}
-
-// ============================================
-// 7. FUNÇÕES DE CRONÔMETRO
+// 5. FUNÇÕES DE CRONÔMETRO
 // ============================================
 
 function formatTimeRemaining(bookingDate) {
@@ -553,7 +575,7 @@ function updateAllTimers() {
 }
 
 // ============================================
-// 8. FUNÇÕES DE RENDERIZAÇÃO
+// 6. FUNÇÕES DE RENDERIZAÇÃO
 // ============================================
 
 function createHeaderCell(className, content) {
@@ -587,6 +609,7 @@ function createSlot(wd, h) {
     const isAvailable = availability[wd]?.[h] || false;
     const isFull = bookCount >= 4;
     const userHasBooking = bookedList.some(b => b.userId === currentUser?.id);
+    const hasActivePlan = userHasActivePlan() || currentUser?.isAdmin;
     
     if (!isAvailable) {
         slot.classList.add('disabled');
@@ -598,9 +621,21 @@ function createSlot(wd, h) {
     } else if (bookCount > 0) {
         slot.classList.add('partial');
         slot.innerHTML = `<span class="count">${bookCount}/4</span><span class="label"> vagas</span>`;
+        // Só desabilita se não tiver plano
+        if (!hasActivePlan) {
+            slot.disabled = true;
+            slot.classList.add('requires-plan');
+            slot.title = 'Você precisa de um plano para agendar';
+        }
     } else {
         slot.classList.add('available');
         slot.innerHTML = `<span class="count">0/4</span><span class="label"> Disponível</span>`;
+        // Só desabilita se não tiver plano
+        if (!hasActivePlan) {
+            slot.disabled = true;
+            slot.classList.add('requires-plan');
+            slot.title = 'Você precisa de um plano para agendar';
+        }
     }
     
     if (userHasBooking) {
@@ -763,7 +798,7 @@ function renderDayControls() {
 }
 
 // ============================================
-// 9. FUNÇÕES DE AÇÃO
+// 7. FUNÇÕES DE AÇÃO
 // ============================================
 
 async function cancelBooking(id) {
@@ -808,6 +843,7 @@ function onSlotClick(e) {
     const isAvailable = btn.dataset.available === 'true';
     const bookCount = Number(btn.dataset.bookCount);
 
+    // Modo Admin - toggle disponibilidade
     if (adminMode && currentUser?.isAdmin) {
         const newState = !isAvailable;
         if (!confirm(`${newState ? '✅ Ativar' : '❌ Desativar'} horário ${h}:00 de ${weekdays[wd - 1]}?`)) return;
@@ -828,35 +864,42 @@ function onSlotClick(e) {
         return;
     }
     
+    // Verificar login
     if (!currentUser) {
         showNotification('Faça login para reservar um horário', 'error');
         showAuthScreen();
         return;
     }
 
-    if (!currentUser.plan && !currentUser.isAdmin) {
+    // VERIFICAÇÃO PRINCIPAL: Usuário tem plano ativo?
+    if (!currentUser.isAdmin && !userHasActivePlan()) {
         showNotification('Você precisa escolher um plano primeiro', 'warning');
-        showPlans();
+        
+        // Criar modal personalizado para redirecionamento
+        showPlanRequiredModal();
         return;
     }
 
+    // Verificar disponibilidade
     if (!isAvailable) {
         showNotification('Este horário está indisponível', 'error');
         return;
     }
 
+    // Verificar se já reservou
     const bookedList = isBooked(date, h);
-    
     if (bookedList.some(b => b.userId === currentUser.id)) {
         showNotification('Você já reservou este horário', 'warning');
         return;
     }
     
+    // Verificar lotação
     if (bookCount >= 4) {
         showNotification('Este horário já está lotado!', 'error');
         return;
     }
     
+    // Verificar limite semanal
     const limite = currentUser.plan?.aulasPorSemana || 0;
     if (getWeeklyBookingsCount() >= limite) {
         showNotification(`Seu plano permite apenas ${limite} aulas por semana`, 'warning');
@@ -866,8 +909,71 @@ function onSlotClick(e) {
     openBookingModal(date, h);
 }
 
+// Modal para redirecionar para planos
+function showPlanRequiredModal() {
+    // Criar modal se não existir
+    let modal = document.getElementById('planRequiredModal');
+    
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'planRequiredModal';
+        modal.className = 'modal';
+        modal.innerHTML = `
+            <div class="modal-content" style="max-width: 400px; text-align: center;">
+                <div class="modal-header">
+                    <h3><i class="fas fa-crown" style="color: #f59e0b;"></i> Plano necessário</h3>
+                    <button class="modal-close" onclick="closePlanModal()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <i class="fas fa-lock" style="font-size: 48px; color: #f59e0b; margin: 20px 0;"></i>
+                    <p style="font-size: 16px; margin-bottom: 20px;">
+                        Para realizar agendamentos, você precisa escolher um plano.
+                    </p>
+                    <div style="background: #f8f9fa; padding: 15px; border-radius: 10px; margin-bottom: 20px;">
+                        <p style="color: #666; margin-bottom: 10px;">Benefícios dos planos:</p>
+                        <ul style="list-style: none; padding: 0; text-align: left;">
+                            <li style="margin: 8px 0;">✓ Acesso a todos horários</li>
+                            <li style="margin: 8px 0;">✓ Até 5 aulas por semana</li>
+                            <li style="margin: 8px 0;">✓ Suporte personalizado</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="modal-actions" style="flex-direction: column;">
+                    <button class="btn-primary" onclick="redirectToPlans()" style="width: 100%;">
+                        <i class="fas fa-crown"></i>
+                        Ver planos disponíveis
+                    </button>
+                    <button class="btn-secondary" onclick="closePlanModal()" style="width: 100%;">
+                        Cancelar
+                    </button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+    }
+    
+    modal.style.display = 'flex';
+    setTimeout(() => modal.classList.add('show'), 10);
+}
+
+// Funções globais para o modal
+window.closePlanModal = function() {
+    const modal = document.getElementById('planRequiredModal');
+    if (modal) {
+        modal.classList.remove('show');
+        setTimeout(() => modal.style.display = 'none', 300);
+    }
+};
+
+window.redirectToPlans = function() {
+    closePlanModal();
+    window.location.href = '/plans';
+};
+
 // ============================================
-// 10. FUNÇÕES DE MODAL
+// 8. FUNÇÕES DE MODAL DE RESERVA
 // ============================================
 
 function openBookingModal(date, h) {
@@ -894,11 +1000,14 @@ function openBookingModal(date, h) {
     modalUserName.innerHTML = `
         <div class="user-info-detail">
             <p><i class="fas fa-user"></i> <strong>${currentUser.name}</strong></p>
+            <p><i class="fas fa-crown" style="color: ${currentUser.plan?.color || '#6366f1'}"></i> 
+                <strong>Plano: ${currentUser.plan?.name || 'Ativo'}</strong>
+            </p>
             <p class="${availableSpots > 0 ? 'text-success' : 'text-danger'}">
                 <i class="fas fa-users"></i> Vagas disponíveis: ${availableSpots}/4
             </p>
             <p>
-                <i class="fas fa-chart-line"></i> Agendamentos na semana: ${weeklyCount}/${currentUser.plan?.aulasPorSemana || 3}
+                <i class="fas fa-chart-line"></i> Agendamentos na semana: ${weeklyCount}/${currentUser.plan?.aulasPorSemana || 0}
             </p>
             ${warningHtml}
         </div>
@@ -922,80 +1031,11 @@ function closeModal() {
 }
 
 // ============================================
-// 11. FUNÇÕES DE PLANOS E PAGAMENTO
+// 9. FUNÇÕES DE PLANOS (REDIRECIONAMENTO)
 // ============================================
 
 function showPlans() {
-    showingPlans = true;
-    
-    const mainContent = document.querySelector('.main-content') || document.querySelector('.container main');
-    const scheduleWrapper = document.querySelector('.schedule-wrapper');
-    
-    if (!mainContent && !scheduleWrapper) {
-        console.error('Elemento principal não encontrado');
-        return;
-    }
-    
-    const targetElement = scheduleWrapper || mainContent;
-    
-    targetElement.innerHTML = `
-        <div class="plans-section">
-            <h2 class="section-title">
-                <i class="fas fa-crown"></i>
-                Escolha seu plano para começar
-            </h2>
-            <p class="plans-subtitle">Selecione o plano que melhor se adequa aos seus objetivos</p>
-            
-            <div class="plans-container">
-                ${Object.values(PLANS).map(plan => `
-                    <div class="plan-card ${plan.id}">
-                        <div class="plan-badge">${plan.name}</div>
-                        <h3>${plan.name}</h3>
-                        <div class="price">
-                            R$ ${plan.price}
-                            <span>/mês</span>
-                        </div>
-                        <div class="features">
-                            ${plan.features.map(f => `
-                                <div class="feature">
-                                    <i class="fas fa-check"></i>
-                                    ${f}
-                                </div>
-                            `).join('')}
-                        </div>
-                        <button class="btn-select-plan btn-primary" data-plan="${plan.id}">
-                            <i class="fas fa-shopping-cart"></i>
-                            Escolher plano
-                        </button>
-                    </div>
-                `).join('')}
-            </div>
-            
-            <div class="plans-footer">
-                <button class="btn-secondary" id="backToSchedule">
-                    <i class="fas fa-arrow-left"></i>
-                    Voltar para agenda
-                </button>
-            </div>
-        </div>
-    `;
-
-    document.querySelectorAll('.btn-select-plan').forEach(btn => {
-        btn.addEventListener('click', () => selectPlan(btn.dataset.plan));
-    });
-
-    document.getElementById('backToSchedule')?.addEventListener('click', () => {
-        showingPlans = false;
-        loadData();
-    });
-    
-    const myBookings = document.querySelector('.my-bookings');
-    const adminPanel = document.getElementById('adminPanel');
-    
-    if (myBookings) myBookings.style.display = 'none';
-    if (adminPanel) adminPanel.style.display = 'none';
-    
-    showNotification('Escolha um plano para continuar', 'info');
+    window.location.href = '/plans';
 }
 
 async function selectPlan(planId) {
@@ -1005,53 +1045,20 @@ async function selectPlan(planId) {
         return;
     }
 
-    showNotification('Preparando pagamento...', 'info');
-
-    try {
-        const cpf = prompt('Digite seu CPF (somente números):');
-        if (!cpf) {
-            showNotification('CPF é obrigatório', 'error');
-            return;
-        }
-        
-        if (cpf.length !== 11 || !/^\d+$/.test(cpf)) {
-            showNotification('CPF deve ter 11 dígitos numéricos', 'error');
-            return;
-        }
-
-        const response = await fetch(`${API}/payments/subscription/create`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                userId: currentUser.id,
-                planType: planId,
-                payerInfo: {
-                    documentType: 'CPF',
-                    documentNumber: cpf
-                }
-            })
-        });
-
-        const data = await response.json();
-
-        if (data.success && data.data.initPoint) {
-            showNotification('Redirecionando para pagamento...', 'success');
-            
-            setTimeout(() => {
-                window.location.href = data.data.initPoint;
-            }, 1500);
-            
-        } else {
-            showNotification('Erro: ' + (data.error || 'Falha ao criar assinatura'), 'error');
-        }
-    } catch (error) {
-        console.error('Erro no pagamento:', error);
-        showNotification('Erro ao processar pagamento', 'error');
-    }
+    // Salvar plano selecionado e redirecionar para checkout
+    const selectedPlanData = {
+        id: planId,
+        name: PLANS[planId].name,
+        aulasPorSemana: PLANS[planId].aulasPorSemana,
+        price: PLANS[planId].price
+    };
+    
+    sessionStorage.setItem('selectedPlan', JSON.stringify(selectedPlanData));
+    window.location.href = '/checkout';
 }
 
 // ============================================
-// 12. CONTROLE DE TELAS
+// 10. CONTROLE DE TELAS
 // ============================================
 
 function showAuthScreen() {
@@ -1068,24 +1075,7 @@ function showAppScreen() {
 }
 
 // ============================================
-// 13. ATUALIZAÇÃO DE UI
-// ============================================
-
-function updateUserInfo() {
-    if (!currentUser || !userInfo) return;
-    
-    const badgeText = currentUser.isAdmin ? 'Admin' : 'Aluno';
-    userInfo.innerHTML = `
-        <span class="user-badge ${currentUser.isAdmin ? 'admin' : ''}">
-            <i class="fas fa-${currentUser.isAdmin ? 'crown' : 'user'}"></i>
-            ${badgeText}: ${currentUser.name || currentUser.email}
-        </span>
-    `;
-    checkSubscriptionStatus();
-}
-
-// ============================================
-// 14. CARREGAR DADOS
+// 11. CARREGAR DADOS
 // ============================================
 
 async function loadData() {
@@ -1110,30 +1100,16 @@ async function loadData() {
         
         await checkSubscriptionStatus();
         
-        updateUserInfo();
+        // Renderizar interface
+        renderSchedule();
+        renderDayControls();
+        renderMyBookings();
+        startTimers();
         
-        const precisaPlano = currentUser && 
-                            !currentUser.isAdmin && 
-                            !userHasActivePlan();
-        
-        console.log('🔍 Precisa de plano?', precisaPlano);
-        console.log('👤 Usuário atual:', currentUser);
-        
-        if (precisaPlano && !showingPlans) {
-            console.log('📢 Mostrando tela de planos');
-            showPlans();
-        } else {
-            console.log('📅 Mostrando agenda normal');
-            renderSchedule();
-            renderDayControls();
-            renderMyBookings();
-            startTimers();
-            
-            const myBookings = document.querySelector('.my-bookings');
-            const adminPanel = document.getElementById('adminPanel');
-            
-            if (myBookings) myBookings.style.display = '';
-            if (adminPanel) adminPanel.style.display = currentUser?.isAdmin && adminMode ? '' : 'none';
+        // Mostrar/esconder painel admin
+        const adminPanel = document.getElementById('adminPanel');
+        if (adminPanel) {
+            adminPanel.style.display = currentUser?.isAdmin && adminMode ? '' : 'none';
         }
         
     } catch (e) {
@@ -1145,11 +1121,11 @@ async function loadData() {
 }
 
 // ============================================
-// 15. INICIALIZAÇÃO
+// 12. INICIALIZAÇÃO
 // ============================================
 
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('🚀 Sistema iniciado - Versão Melhorada');
+    console.log('🚀 Sistema iniciado - Versão com Planos');
     
     const loginForm = document.getElementById('loginForm');
     const cadastroForm = document.getElementById('cadastroForm');
@@ -1159,6 +1135,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const refreshBtn = document.getElementById('refreshBtn');
     const logoutBtn = document.getElementById('logoutBtn');
     
+    // ===== TABS DE AUTENTICAÇÃO =====
     tabLogin.addEventListener('click', () => {
         tabLogin.classList.add('active');
         tabCadastro.classList.remove('active');
@@ -1173,6 +1150,7 @@ document.addEventListener('DOMContentLoaded', function() {
         loginForm.classList.remove('active');
     });
     
+    // ===== LOGIN =====
     loginForm.addEventListener('submit', async function(e) {
         e.preventDefault();
         
@@ -1220,6 +1198,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
+    // ===== CADASTRO =====
     cadastroForm.addEventListener('submit', async function(e) {
         e.preventDefault();
         
@@ -1270,6 +1249,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
+    // ===== LOGOUT =====
     logoutBtn.addEventListener('click', async () => {
         if (timerInterval) {
             clearInterval(timerInterval);
@@ -1282,6 +1262,7 @@ document.addEventListener('DOMContentLoaded', function() {
         showNotification('Logout realizado', 'info');
     });
     
+    // ===== MODO ADMIN =====
     adminToggle.addEventListener('change', (e) => {
         if (!currentUser?.isAdmin) {
             showNotification('Apenas administradores podem acessar o modo admin', 'error');
@@ -1299,18 +1280,13 @@ document.addEventListener('DOMContentLoaded', function() {
         showNotification(adminMode ? 'Modo admin ativado' : 'Modo admin desativado', 'info');
     });
     
+    // ===== BOTÃO ATUALIZAR =====
     refreshBtn.addEventListener('click', () => {
         loadData();
         showNotification('Dados atualizados', 'success');
     });
     
-    const plansBtn = document.getElementById('plansBtn');
-    if (plansBtn) {
-        plansBtn.addEventListener('click', () => {
-            window.location.href = 'plans.html';
-        });
-    }
-    
+    // ===== MODAL DE RESERVA =====
     modal.addEventListener('click', (e) => {
         if (e.target === modal) closeModal();
     });
@@ -1365,6 +1341,25 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
+    // ===== MENU ADMIN DROPDOWN =====
+    if (adminMenuBtn) {
+        adminMenuBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (currentUser?.isAdmin) {
+                adminDropdown.hidden = !adminDropdown.hidden;
+            } else {
+                showNotification('Apenas administradores', 'error');
+            }
+        });
+    }
+    
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.admin-menu')) {
+            if (adminDropdown) adminDropdown.hidden = true;
+        }
+    });
+    
+    // ===== VERIFICAR USUÁRIO SALVO =====
     const savedUser = localStorage.getItem('user');
     if (savedUser) {
         try {
@@ -1381,128 +1376,179 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // ============================================
-// 16. ESTILOS ADICIONAIS
+// 13. ESTILOS ADICIONAIS
 // ============================================
 
 const additionalStyles = `
-    .booking-info {
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-    }
-    
-    .booking-datetime {
+    /* Estilos para informações do plano */
+    .user-info {
         display: flex;
         align-items: center;
-        gap: 8px;
+        gap: 12px;
+        flex-wrap: wrap;
     }
     
-    .booking-status {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        font-size: 12px;
-    }
-    
-    .status-text {
-        cursor: help;
-        border-bottom: 1px dashed #999;
-    }
-    
-    .booking-info.can-cancel .status-text {
-        color: #10b981;
-    }
-    
-    .booking-info.cannot-cancel .status-text {
-        color: #ef4444;
-    }
-    
-    .booking-info.grace-period .status-text {
-        color: #f59e0b;
-        animation: pulse 2s infinite;
-    }
-    
-    .near-badge {
+    .plan-badge {
         display: inline-flex;
         align-items: center;
-        gap: 4px;
-        padding: 2px 8px;
-        background: #f59e0b;
-        color: white;
-        border-radius: 12px;
-        font-size: 10px;
-        font-weight: 600;
-        margin-top: 4px;
-        width: fit-content;
-    }
-    
-    .booking-warning {
-        margin-top: 12px;
-        padding: 10px;
-        background: #fff3cd;
-        border-left: 4px solid #f59e0b;
-        border-radius: 4px;
-        font-size: 13px;
-        color: #856404;
-        display: flex;
-        align-items: center;
         gap: 8px;
-    }
-    
-    .booking-warning i {
-        color: #f59e0b;
-        font-size: 16px;
-    }
-    
-    .tooltip {
-        position: absolute;
-        background: #333;
+        padding: 6px 12px;
+        border-radius: 30px;
+        font-size: 13px;
+        font-weight: 600;
         color: white;
-        padding: 8px 12px;
-        border-radius: 6px;
-        font-size: 12px;
-        max-width: 250px;
-        text-align: center;
-        z-index: 1000;
-        pointer-events: none;
-        animation: fadeIn 0.2s;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        position: relative;
     }
     
-    .tooltip::after {
-        content: '';
-        position: absolute;
-        bottom: -5px;
-        left: 50%;
-        transform: translateX(-50%);
-        border-width: 5px 5px 0;
-        border-style: solid;
-        border-color: #333 transparent transparent;
-    }
-    
-    .my-booking-item {
+    .plan-badge.no-plan {
+        background: #f59e0b;
+        cursor: pointer;
         transition: all 0.3s;
     }
     
-    .my-booking-item:hover {
-        transform: translateX(4px);
+    .plan-badge.no-plan:hover {
+        background: #d97706;
+        transform: translateY(-2px);
     }
     
-    .btn-cancel:disabled {
-        opacity: 0.5;
+    .plan-badge .btn-plan-small {
+        background: white;
+        color: #f59e0b;
+        border: none;
+        padding: 4px 8px;
+        border-radius: 20px;
+        font-size: 11px;
+        font-weight: 700;
+        margin-left: 8px;
+        cursor: pointer;
+    }
+    
+    .plan-badge .plan-aulas {
+        background: rgba(255,255,255,0.2);
+        padding: 2px 8px;
+        border-radius: 20px;
+        font-size: 10px;
+        margin-left: 8px;
+    }
+    
+    .plan-badge.admin {
+        background: #8b5cf6;
+    }
+    
+    /* Estilos para slots que requerem plano */
+    .slot-btn.requires-plan {
+        opacity: 0.6;
         cursor: not-allowed;
-        background: #9ca3af;
+        position: relative;
+        filter: grayscale(0.5);
     }
     
-    .btn-cancel:disabled:hover {
-        transform: none;
-        box-shadow: none;
+    .slot-btn.requires-plan:hover::after {
+        content: "🔒 Necessário plano";
+        position: absolute;
+        top: -30px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #333;
+        color: white;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 10px;
+        white-space: nowrap;
+        z-index: 10;
     }
     
-    @keyframes pulse {
-        0% { opacity: 1; }
-        50% { opacity: 0.7; }
-        100% { opacity: 1; }
+    /* Aviso semanal melhorado */
+    .weekly-warning {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 16px;
+    }
+    
+    .weekly-warning.warning {
+        background: #fff3cd;
+        color: #856404;
+        border-left: 4px solid #f59e0b;
+    }
+    
+    .weekly-warning.info {
+        background: #d1e7ff;
+        color: #0c63e4;
+        border-left: 4px solid #0d6efd;
+    }
+    
+    .weekly-warning.admin {
+        background: #e8d5ff;
+        color: #6f42c1;
+        border-left: 4px solid #6f42c1;
+    }
+    
+    .warning-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 16px;
+        background: #f59e0b;
+        color: white;
+        border-radius: 30px;
+        text-decoration: none;
+        font-size: 13px;
+        font-weight: 600;
+        transition: all 0.3s;
+    }
+    
+    .warning-link:hover {
+        background: #d97706;
+        transform: translateY(-2px);
+    }
+    
+    .plan-info {
+        background: rgba(13,110,253,0.1);
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+    
+    /* Modal de plano necessário */
+    #planRequiredModal .modal-content {
+        max-width: 400px;
+    }
+    
+    #planRequiredModal ul {
+        list-style: none;
+        padding: 0;
+    }
+    
+    #planRequiredModal li {
+        margin: 8px 0;
+        color: #4b5563;
+    }
+    
+    /* Responsividade */
+    @media (max-width: 768px) {
+        .user-info {
+            flex-direction: column;
+            align-items: flex-start;
+            width: 100%;
+        }
+        
+        .plan-badge {
+            width: 100%;
+            justify-content: center;
+        }
+        
+        .weekly-warning {
+            flex-direction: column;
+            text-align: center;
+        }
+        
+        .warning-link {
+            width: 100%;
+            justify-content: center;
+        }
     }
 `;
 
