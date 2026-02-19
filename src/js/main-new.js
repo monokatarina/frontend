@@ -10,7 +10,8 @@ const HOURS = [6, 7, 8, 9, 10, 11, 12, 16, 17, 18, 19];
 // ===== CONSTANTES DE REGRAS =====
 const CANCEL_LIMIT_HOURS = 9; // Limite padrão de 9 horas para cancelamento
 const PROXIMITY_GRACE_MINUTES = 10; // Período de graça de 10 minutos para aulas próximas
-// planos de assinatura (exemplo, pode ser expandido conforme necessário)
+
+// ===== PLANOS DE ASSINATURA =====
 const PLANS = {
     basic: {
         id: 'basic',
@@ -50,6 +51,9 @@ let currentUser = null;
 let loading = false;
 let processingReservation = false;
 let showingPlans = false;
+let nextDates = {}; // Cache global para datas
+let timerInterval = null;
+let modalContext = null;
 
 // ===== ELEMENTOS DOM =====
 const authScreen = document.getElementById('authScreen');
@@ -66,29 +70,11 @@ const modalConfirm = document.getElementById('modalConfirm');
 const modalClose = document.getElementById('modalClose');
 const toastContainer = document.getElementById('toastContainer');
 
-let modalContext = null;
+// ============================================
+// 1. FUNÇÕES UTILITÁRIAS BÁSICAS
+// ============================================
 
-// COLOQUE ISSO LOGO APÓS as declarações de CONSTANTES (linha ~30)
-const getWeeklyBookingsCount = () => {
-    if (!currentUser) return 0;
-    
-    const now = new Date();
-    const weekStart = new Date(now);
-    weekStart.setDate(now.getDate() - now.getDay() + 1);
-    weekStart.setHours(0, 0, 0, 0);
-    
-    const weekEnd = new Date(weekStart);
-    weekEnd.setDate(weekStart.getDate() + 5);
-    weekEnd.setHours(23, 59, 59, 999);
-    
-    return bookings.filter(b => {
-        if (b.userId !== currentUser.id) return false;
-        const bookDate = new Date(b.date + 'T00:00:00');
-        return bookDate >= weekStart && bookDate <= weekEnd;
-    }).length;
-};
-
-// ===== SISTEMA DE NOTIFICAÇÕES =====
+// Sistema de notificações
 function showNotification(message, type = 'info', duration = 3000) {
     let container = document.getElementById('toastContainer');
     if (!container) {
@@ -123,9 +109,7 @@ function showNotification(message, type = 'info', duration = 3000) {
     }, duration);
 }
 
-// ===== NOVA FUNÇÃO - Carrega datas do backend =====
-let nextDates = {}; // Cache global
-
+// Carrega datas do backend
 async function loadDates() {
     try {
         const response = await fetch(`${API}/admin/dates`);
@@ -140,7 +124,7 @@ async function loadDates() {
     }
 }
 
-// ===== UTILITÁRIOS =====
+// Fetch API wrapper
 const fetchAPI = async (endpoint, options = {}) => {
     const defaultOptions = {
         headers: { 'Content-Type': 'application/json' },
@@ -162,22 +146,45 @@ const fetchAPI = async (endpoint, options = {}) => {
     }
 };
 
+// Formata data de YYYY-MM-DD para DD/MM/YYYY
 const formatDate = (dateStr) => {
     const [year, month, day] = dateStr.split('-');
     return `${day}/${month}/${year}`;
 };
 
-
+// Verifica se um horário está reservado
 const isBooked = (dateStr, hour) => {
-    // Garantir que hour seja número para comparação
     return bookings.filter(b => 
         b.date === dateStr && 
         Number(b.hour) === Number(hour)
     );
 };
 
+// ============================================
+// 2. FUNÇÕES DE CONTAGEM E VALIDAÇÃO
+// ============================================
 
-// ===== FUNÇÕES DE VALIDAÇÃO DE CANCELAMENTO =====
+// Conta reservas do usuário na semana atual
+const getWeeklyBookingsCount = () => {
+    if (!currentUser) return 0;
+    
+    const now = new Date();
+    const weekStart = new Date(now);
+    weekStart.setDate(now.getDate() - now.getDay() + 1);
+    weekStart.setHours(0, 0, 0, 0);
+    
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekStart.getDate() + 5);
+    weekEnd.setHours(23, 59, 59, 999);
+    
+    return bookings.filter(b => {
+        if (b.userId !== currentUser.id) return false;
+        const bookDate = new Date(b.date + 'T00:00:00');
+        return bookDate >= weekStart && bookDate <= weekEnd;
+    }).length;
+};
+
+// Valida se pode cancelar uma reserva
 function canCancelBooking(booking) {
     if (!booking) return { canCancel: false, reason: 'Reserva não encontrada' };
     
@@ -238,6 +245,7 @@ function canCancelBooking(booking) {
     return { canCancel: false, reason: 'unknown' };
 }
 
+// Mensagem de cancelamento
 function getCancellationMessage(cancelCheck) {
     if (!cancelCheck) return 'Não é possível cancelar esta reserva';
     
@@ -256,6 +264,7 @@ function getCancellationMessage(cancelCheck) {
     }
 }
 
+// Valida horário da reserva
 function validateBookingTime(date, hour) {
     const now = new Date();
     const bookingDate = new Date(`${date}T${String(hour).padStart(2, '0')}:00:00`);
@@ -270,6 +279,7 @@ function validateBookingTime(date, hour) {
     return { valid: true };
 }
 
+// Tooltip
 function showTooltip(element, message) {
     const tooltip = document.createElement('div');
     tooltip.className = 'tooltip';
@@ -284,43 +294,38 @@ function showTooltip(element, message) {
     setTimeout(() => tooltip.remove(), 3000);
 }
 
-// ===== CONTROLE DE TELAS =====
-function showAuthScreen() {
-    authScreen.style.display = 'flex';
-    appScreen.classList.remove('active');
-    if (modal) modal.hidden = true;
-}
+// ============================================
+// 3. FUNÇÕES DE AVISO SEMANAL
+// ============================================
 
-function showAppScreen() {
-    authScreen.style.display = 'none';
-    appScreen.classList.add('active');
-    if (modal) modal.hidden = true;
-    loadData();
-}
-
-// ===== ATUALIZAÇÃO DE UI =====
-function updateUserInfo() {
-    if (!currentUser || !userInfo) return;
+function updateWeeklyWarningWithPlan(limite) {
+    if (!weeklyWarning) return;
     
-    const badgeText = currentUser.isAdmin ? 'Admin' : 'Aluno';
-    userInfo.innerHTML = `
-        <span class="user-badge ${currentUser.isAdmin ? 'admin' : ''}">
-            <i class="fas fa-${currentUser.isAdmin ? 'crown' : 'user'}"></i>
-            ${badgeText}: ${currentUser.name || currentUser.email}
-        </span>
-    `;
-    checkSubscriptionStatus();
+    const weeklyCount = getWeeklyBookingsCount();
+    
+    if (weeklyCount >= limite) {
+        weeklyWarning.innerHTML = `
+            <i class="fas fa-exclamation-triangle"></i>
+            <span><strong>Atenção!</strong> Você atingiu o limite de ${limite} agendamentos do seu plano</span>
+        `;
+        weeklyWarning.className = 'weekly-warning warning';
+    } else {
+        weeklyWarning.innerHTML = `
+            <i class="fas fa-chart-line"></i>
+            <span>Agendamentos esta semana: <strong>${weeklyCount}/${limite}</strong></span>
+        `;
+        weeklyWarning.className = 'weekly-warning info';
+    }
 }
+
 function updateWeeklyWarning() {
     if (!weeklyWarning) return;
     
-    // Se usuário tem plano, usa limite do plano
     if (currentUser?.plan) {
         updateWeeklyWarningWithPlan(currentUser.plan.aulasPorSemana);
         return;
     }
     
-    // Fallback para usuários sem plano (ex: admin)
     const weeklyCount = getWeeklyBookingsCount();
     weeklyWarning.innerHTML = `
         <i class="fas fa-chart-line"></i>
@@ -328,7 +333,125 @@ function updateWeeklyWarning() {
     `;
     weeklyWarning.className = 'weekly-warning info';
 }
-// ===== FUNÇÃO DO CRONÔMETRO =====
+
+// ============================================
+// 4. FUNÇÕES AUXILIARES PARA PLANOS
+// ============================================
+
+function getPlanName(planId) {
+    const names = {
+        basic: 'Básico',
+        intermediate: 'Intermediário',
+        advanced: 'Avançado',
+        premium: 'Premium'
+    };
+    return names[planId] || 'Básico';
+}
+
+function getPlanAulas(planId) {
+    const aulas = {
+        basic: 2,
+        intermediate: 3,
+        advanced: 4,
+        premium: 5
+    };
+    return aulas[planId] || 2;
+}
+
+// ============================================
+// 5. FUNÇÃO DE VERIFICAÇÃO DE PLANO ATIVO
+// ============================================
+
+function userHasActivePlan() {
+    if (!currentUser) return false;
+    
+    if (currentUser.isAdmin) return true;
+    
+    console.log('🔍 Verificando plano do usuário:', currentUser);
+    
+    if (currentUser.plan) {
+        if (!currentUser.plan.status || currentUser.plan.status === 'active') {
+            console.log('✅ Plano ativo encontrado (direto):', currentUser.plan);
+            return true;
+        }
+    }
+    
+    if (currentUser.subscription && currentUser.subscription.status === 'active') {
+        console.log('✅ Assinatura ativa encontrada:', currentUser.subscription);
+        
+        if (!currentUser.plan) {
+            const planType = currentUser.subscription.planType || 'basic';
+            currentUser.plan = {
+                id: planType,
+                name: getPlanName(planType),
+                aulasPorSemana: currentUser.subscription.aulasPorSemana || getPlanAulas(planType),
+                status: 'active'
+            };
+            console.log('📝 Plan criado a partir da subscription:', currentUser.plan);
+        }
+        return true;
+    }
+    
+    console.log('❌ Nenhum plano ativo encontrado');
+    return false;
+}
+
+// ============================================
+// 6. FUNÇÃO DE VERIFICAÇÃO DE ASSINATURA
+// ============================================
+
+async function checkSubscriptionStatus() {
+    if (!currentUser) return;
+
+    try {
+        console.log('🔍 Verificando status da assinatura para usuário:', currentUser.id);
+        
+        const response = await fetch(`${API}/payments/subscription/status/${currentUser.id}`);
+        const data = await response.json();
+
+        console.log('📊 Resposta do status:', data);
+
+        if (data.success && data.data) {
+            if (data.data.hasSubscription && data.data.plan) {
+                currentUser.plan = data.data.plan;
+                console.log('✅ Plan atualizado:', currentUser.plan);
+            }
+            
+            if (data.data.subscription && data.data.subscription.status === 'active') {
+                const sub = data.data.subscription;
+                currentUser.subscription = sub;
+                
+                if (!currentUser.plan) {
+                    currentUser.plan = {
+                        id: sub.planType,
+                        name: getPlanName(sub.planType),
+                        aulasPorSemana: sub.aulasPorSemana || getPlanAulas(sub.planType),
+                        status: 'active'
+                    };
+                }
+            }
+            
+            if (currentUser.plan) {
+                const userInfo = document.getElementById('userInfo');
+                if (userInfo && !userInfo.querySelector('.plan-badge')) {
+                    const planBadge = document.createElement('span');
+                    planBadge.className = 'plan-badge';
+                    planBadge.innerHTML = `<i class="fas fa-crown"></i> ${currentUser.plan.name || currentUser.plan.id}`;
+                    userInfo.appendChild(planBadge);
+                }
+                
+                updateWeeklyWarningWithPlan(currentUser.plan.aulasPorSemana);
+            }
+        }
+    } catch (error) {
+        console.error('Erro ao verificar assinatura:', error);
+    }
+}
+
+// ============================================
+// 7. FUNÇÕES DE CRONÔMETRO
+// ============================================
+
 function formatTimeRemaining(bookingDate) {
     const now = new Date();
     const diffMs = bookingDate - now;
@@ -362,14 +485,13 @@ function formatTimeRemaining(bookingDate) {
         timeClass = 'seconds';
     }
     
-    // Determinar cor baseada no tempo restante
     let urgencyClass = 'safe';
     if (diffHours < 1) {
-        urgencyClass = 'critical'; // Menos de 1 hora
+        urgencyClass = 'critical';
     } else if (diffHours < 6) {
-        urgencyClass = 'warning'; // Menos de 6 horas
+        urgencyClass = 'warning';
     } else if (diffHours < 24) {
-        urgencyClass = 'moderate'; // Menos de 24 horas
+        urgencyClass = 'moderate';
     }
     
     return {
@@ -380,14 +502,9 @@ function formatTimeRemaining(bookingDate) {
     };
 }
 
-// ===== ATUALIZAR CRONÔMETROS EM TEMPO REAL =====
-let timerInterval = null;
-
 function startTimers() {
-    // Limpa intervalo anterior se existir
     if (timerInterval) clearInterval(timerInterval);
     
-    // Atualiza a cada 1 segundo
     timerInterval = setInterval(() => {
         updateAllTimers();
     }, 1000);
@@ -406,16 +523,79 @@ function updateAllTimers() {
                 element.classList.add('expired');
             } else {
                 element.innerHTML = `<i class="fas fa-hourglass-half"></i> <span class="${timeRemaining.class}">${timeRemaining.text}</span>`;
-                
-                // Remove classes anteriores e adiciona novas
                 element.className = 'booking-timer';
-                element.classList.add(timeRemaining.class.split(' '));
+                element.classList.add(...timeRemaining.class.split(' '));
             }
         }
     });
 }
 
-// ===== RENDERIZAÇÃO =====
+// ============================================
+// 8. FUNÇÕES DE RENDERIZAÇÃO
+// ============================================
+
+function createHeaderCell(className, content) {
+    const div = document.createElement('div');
+    div.className = className;
+    div.innerHTML = content;
+    return div;
+}
+
+function createHourLabel(hour) {
+    const div = document.createElement('div');
+    div.className = 'hour-label';
+    div.innerHTML = `<span>${hour}:00</span>`;
+    return div;
+}
+
+function createSlot(wd, h) {
+    const slot = document.createElement('button');
+    slot.className = 'slot-btn';
+    
+    const dateStr = nextDates[wd];
+    
+    if (!dateStr) {
+        slot.classList.add('disabled');
+        slot.innerHTML = '<i class="fas fa-ban"></i>';
+        return slot;
+    }
+    
+    const bookedList = isBooked(dateStr, h);
+    const bookCount = bookedList.length;
+    const isAvailable = availability[wd]?.[h] || false;
+    const isFull = bookCount >= 4;
+    const userHasBooking = bookedList.some(b => b.userId === currentUser?.id);
+    
+    if (!isAvailable) {
+        slot.classList.add('disabled');
+        slot.innerHTML = '<i class="fas fa-ban"></i>';
+    } else if (isFull) {
+        slot.classList.add('full');
+        slot.innerHTML = `<span class="count">${bookCount}/4</span><span class="label"> Lotado</span>`;
+        slot.disabled = true;
+    } else if (bookCount > 0) {
+        slot.classList.add('partial');
+        slot.innerHTML = `<span class="count">${bookCount}/4</span><span class="label"> vagas</span>`;
+    } else {
+        slot.classList.add('available');
+        slot.innerHTML = `<span class="count">0/4</span><span class="label"> Disponível</span>`;
+    }
+    
+    if (userHasBooking) {
+        slot.classList.add('my-booking');
+    }
+
+    slot.dataset.weekday = wd;
+    slot.dataset.hour = h;
+    slot.dataset.date = dateStr;
+    slot.dataset.available = isAvailable;
+    slot.dataset.bookCount = bookCount;
+
+    slot.addEventListener('click', onSlotClick);
+    
+    return slot;
+}
+
 function renderSchedule() {
     const grid = document.createElement('div');
     grid.className = 'grid';
@@ -445,77 +625,6 @@ function renderSchedule() {
     updateWeeklyWarning();
 }
 
-function createHeaderCell(className, content) {
-    const div = document.createElement('div');
-    div.className = className;
-    div.innerHTML = content;
-    return div;
-}
-
-function createHourLabel(hour) {
-    const div = document.createElement('div');
-    div.className = 'hour-label';
-    div.innerHTML = `<span>${hour}:00</span>`;
-    return div;
-}
-
-function createSlot(wd, h) {
-    const slot = document.createElement('button');
-    slot.className = 'slot-btn';
-    
-    // USA a data do backend
-    const dateStr = nextDates[wd];
-    
-    // Se não tiver data, desabilita
-    if (!dateStr) {
-        slot.classList.add('disabled');
-        slot.innerHTML = '<i class="fas fa-ban"></i>';
-        return slot;
-    }
-    
-    const bookedList = isBooked(dateStr, h);
-    const bookCount = bookedList.length;
-    const isAvailable = availability[wd]?.[h] || false;
-    const isFull = bookCount >= 4;
-    const userHasBooking = bookedList.some(b => b.userId === currentUser?.id);
-
-    // CORREÇÃO: Garantir que a contagem seja exibida corretamente
-    const vagasRestantes = 4 - bookCount;
-    
-    // Define o conteúdo baseado no estado
-    if (!isAvailable) {
-        slot.classList.add('disabled');
-        slot.innerHTML = '<i class="fas fa-ban"></i>';
-    } else if (isFull) {
-        slot.classList.add('full');
-        slot.innerHTML = `<span class="count">${bookCount}/4</span><span class="label"> Lotado</span>`;
-        slot.disabled = true;
-    } else if (bookCount > 0) {
-        slot.classList.add('partial');
-        // CORRIGIDO: Mostra bookCount/4 e a label correta
-        slot.innerHTML = `<span class="count">${bookCount}/4</span><span class="label"> vagas</span>`;
-    } else {
-        slot.classList.add('available');
-        // CORRIGIDO: Quando bookCount = 0
-        slot.innerHTML = `<span class="count">0/4</span><span class="label"> Disponível</span>`;
-    }
-    
-    // Se o usuário tem reserva neste horário, adiciona classe especial
-    if (userHasBooking) {
-        slot.classList.add('my-booking');
-    }
-
-    slot.dataset.weekday = wd;
-    slot.dataset.hour = h;
-    slot.dataset.date = dateStr;
-    slot.dataset.available = isAvailable;
-    slot.dataset.bookCount = bookCount;
-
-    slot.addEventListener('click', onSlotClick);
-    
-    return slot;
-}
-
 function renderMyBookings() {
     const el = document.getElementById('myBookingsList');
     if (!el) return;
@@ -534,22 +643,16 @@ function renderMyBookings() {
         return;
     }
 
-    // Ordena por data (mais próximas primeiro)
     myBookings.sort((a, b) => new Date(a.date) - new Date(b.date)).forEach(booking => {
         const item = document.createElement('div');
         item.className = 'my-booking-item';
         
-        // Cria objeto Date para a reserva
         const bookingDateTime = new Date(`${booking.date}T${String(booking.hour).padStart(2, '0')}:00:00`);
         const datetimeStr = bookingDateTime.toISOString();
         
         const cancelCheck = canCancelBooking(booking);
         const canCancel = cancelCheck.canCancel;
-        
-        // Formata a data para exibição
         const formattedDate = formatDate(booking.date);
-        
-        // Calcula tempo restante inicial
         const timeRemaining = formatTimeRemaining(bookingDateTime);
         
         item.innerHTML = `
@@ -581,7 +684,6 @@ function renderMyBookings() {
         el.appendChild(item);
     });
     
-    // Inicia os timers
     startTimers();
 }
 
@@ -638,7 +740,10 @@ function renderDayControls() {
     }
 }
 
-// ===== AÇÕES =====
+// ============================================
+// 9. FUNÇÕES DE AÇÃO
+// ============================================
+
 async function cancelBooking(id) {
     const booking = bookings.find(b => b.id === id);
     if (!booking) return;
@@ -700,16 +805,16 @@ function onSlotClick(e) {
         });
         return;
     }
+    
     if (!currentUser) {
         showNotification('Faça login para reservar um horário', 'error');
         showAuthScreen();
         return;
     }
 
-    // 👇 VERIFICAR SE USUÁRIO TEM PLANO ATIVO
     if (!currentUser.plan && !currentUser.isAdmin) {
         showNotification('Você precisa escolher um plano primeiro', 'warning');
-        showPlans(); // Mostra a tela de planos
+        showPlans();
         return;
     }
 
@@ -730,7 +835,6 @@ function onSlotClick(e) {
         return;
     }
     
-    // 👇 USAR LIMITE DO PLANO EM VEZ DE 3 FIXO
     const limite = currentUser.plan?.aulasPorSemana || 0;
     if (getWeeklyBookingsCount() >= limite) {
         showNotification(`Seu plano permite apenas ${limite} aulas por semana`, 'warning');
@@ -739,88 +843,11 @@ function onSlotClick(e) {
 
     openBookingModal(date, h);
 }
-// ===== FUNÇÃO - Mostrar planos (CORRIGIDA) =====
-function showPlans() {
-    showingPlans = true;
-    
-    // Encontrar o elemento principal onde a agenda é renderizada
-    const mainContent = document.querySelector('.main-content') || document.querySelector('.container main');
-    const scheduleWrapper = document.querySelector('.schedule-wrapper');
-    
-    if (!mainContent && !scheduleWrapper) {
-        console.error('Elemento principal não encontrado');
-        return;
-    }
-    
-    // Usar o elemento que contém a grade
-    const targetElement = scheduleWrapper || mainContent;
-    
-    // Salvar referência para restaurar depois
-    const originalContent = targetElement.innerHTML;
-    
-    // Renderizar planos
-    targetElement.innerHTML = `
-        <div class="plans-section">
-            <h2 class="section-title">
-                <i class="fas fa-crown"></i>
-                Escolha seu plano para começar
-            </h2>
-            <p class="plans-subtitle">Selecione o plano que melhor se adequa aos seus objetivos</p>
-            
-            <div class="plans-container">
-                ${Object.values(PLANS).map(plan => `
-                    <div class="plan-card ${plan.id}">
-                        <div class="plan-badge">${plan.name}</div>
-                        <h3>${plan.name}</h3>
-                        <div class="price">
-                            R$ ${plan.price}
-                            <span>/mês</span>
-                        </div>
-                        <div class="features">
-                            ${plan.features.map(f => `
-                                <div class="feature">
-                                    <i class="fas fa-check"></i>
-                                    ${f}
-                                </div>
-                            `).join('')}
-                        </div>
-                        <button class="btn-select-plan btn-primary" data-plan="${plan.id}">
-                            <i class="fas fa-shopping-cart"></i>
-                            Escolher plano
-                        </button>
-                    </div>
-                `).join('')}
-            </div>
-            
-            <div class="plans-footer">
-                <button class="btn-secondary" id="backToSchedule">
-                    <i class="fas fa-arrow-left"></i>
-                    Voltar para agenda
-                </button>
-            </div>
-        </div>
-    `;
 
-    // Adicionar eventos aos botões
-    document.querySelectorAll('.btn-select-plan').forEach(btn => {
-        btn.addEventListener('click', () => selectPlan(btn.dataset.plan));
-    });
+// ============================================
+// 10. FUNÇÕES DE MODAL
+// ============================================
 
-    document.getElementById('backToSchedule')?.addEventListener('click', () => {
-        showingPlans = false;
-        loadData(); // Recarrega a agenda
-    });
-    
-    // Esconder outras seções que podem estar atrapalhando
-    const myBookings = document.querySelector('.my-bookings');
-    const adminPanel = document.getElementById('adminPanel');
-    
-    if (myBookings) myBookings.style.display = 'none';
-    if (adminPanel) adminPanel.style.display = 'none';
-    
-    showNotification('Escolha um plano para continuar', 'info');
-}
-// ===== MODAL =====
 function openBookingModal(date, h) {
     modalContext = { date, hour: h };
     
@@ -872,52 +899,81 @@ function closeModal() {
     }, 300);
 }
 
-// ===== FUNÇÕES DE PAGAMENTO =====
-function renderPlans() {
-    const mainContent = document.querySelector('.main-content');
-    if (!mainContent) return;
+// ============================================
+// 11. FUNÇÕES DE PLANOS E PAGAMENTO
+// ============================================
+
+function showPlans() {
+    showingPlans = true;
     
-    // Salva o conteúdo original para voltar depois
-    const originalContent = mainContent.innerHTML;
+    const mainContent = document.querySelector('.main-content') || document.querySelector('.container main');
+    const scheduleWrapper = document.querySelector('.schedule-wrapper');
     
-    mainContent.innerHTML = `
+    if (!mainContent && !scheduleWrapper) {
+        console.error('Elemento principal não encontrado');
+        return;
+    }
+    
+    const targetElement = scheduleWrapper || mainContent;
+    
+    targetElement.innerHTML = `
         <div class="plans-section">
-            <h2 class="section-title">Escolha seu plano</h2>
+            <h2 class="section-title">
+                <i class="fas fa-crown"></i>
+                Escolha seu plano para começar
+            </h2>
+            <p class="plans-subtitle">Selecione o plano que melhor se adequa aos seus objetivos</p>
+            
             <div class="plans-container">
                 ${Object.values(PLANS).map(plan => `
                     <div class="plan-card ${plan.id}">
+                        <div class="plan-badge">${plan.name}</div>
                         <h3>${plan.name}</h3>
-                        <div class="price">R$ ${plan.price}<span>/mês</span></div>
+                        <div class="price">
+                            R$ ${plan.price}
+                            <span>/mês</span>
+                        </div>
                         <div class="features">
                             ${plan.features.map(f => `
                                 <div class="feature">
-                                    <i class="fas fa-check"></i> ${f}
+                                    <i class="fas fa-check"></i>
+                                    ${f}
                                 </div>
                             `).join('')}
                         </div>
-                        <button class="btn-select-plan" data-plan="${plan.id}">
+                        <button class="btn-select-plan btn-primary" data-plan="${plan.id}">
+                            <i class="fas fa-shopping-cart"></i>
                             Escolher plano
                         </button>
                     </div>
                 `).join('')}
             </div>
+            
             <div class="plans-footer">
-                <button class="btn-back" id="backToSchedule">
-                    <i class="fas fa-arrow-left"></i> Voltar para agenda
+                <button class="btn-secondary" id="backToSchedule">
+                    <i class="fas fa-arrow-left"></i>
+                    Voltar para agenda
                 </button>
             </div>
         </div>
     `;
 
-    // Adicionar eventos aos botões
     document.querySelectorAll('.btn-select-plan').forEach(btn => {
         btn.addEventListener('click', () => selectPlan(btn.dataset.plan));
     });
 
-    document.getElementById('backToSchedule').addEventListener('click', () => {
+    document.getElementById('backToSchedule')?.addEventListener('click', () => {
         showingPlans = false;
-        loadData(); // Recarrega a agenda
+        loadData();
     });
+    
+    const myBookings = document.querySelector('.my-bookings');
+    const adminPanel = document.getElementById('adminPanel');
+    
+    if (myBookings) myBookings.style.display = 'none';
+    if (adminPanel) adminPanel.style.display = 'none';
+    
+    showNotification('Escolha um plano para continuar', 'info');
 }
 
 async function selectPlan(planId) {
@@ -930,7 +986,6 @@ async function selectPlan(planId) {
     showNotification('Preparando pagamento...', 'info');
 
     try {
-        // Criar elemento de input para CPF (mais amigável que prompt)
         const cpf = prompt('Digite seu CPF (somente números):');
         if (!cpf) {
             showNotification('CPF é obrigatório', 'error');
@@ -960,7 +1015,6 @@ async function selectPlan(planId) {
         if (data.success && data.data.initPoint) {
             showNotification('Redirecionando para pagamento...', 'success');
             
-            // REDIRECIONAR PARA PÁGINA DO MERCADO PAGO
             setTimeout(() => {
                 window.location.href = data.data.initPoint;
             }, 1500);
@@ -974,146 +1028,44 @@ async function selectPlan(planId) {
     }
 }
 
-// Função para mostrar status da assinatura
-// ===== FUNÇÃO MELHORADA PARA VERIFICAR STATUS DA ASSINATURA =====
-async function checkSubscriptionStatus() {
-    if (!currentUser) return;
+// ============================================
+// 12. CONTROLE DE TELAS
+// ============================================
 
-    try {
-        console.log('🔍 Verificando status da assinatura para usuário:', currentUser.id);
-        
-        const response = await fetch(`${API}/payments/subscription/status/${currentUser.id}`);
-        const data = await response.json();
-
-        console.log('📊 Resposta do status:', data);
-
-        if (data.success && data.data) {
-            // Atualizar currentUser com os dados da assinatura
-            if (data.data.hasSubscription && data.data.plan) {
-                currentUser.plan = data.data.plan;
-                console.log('✅ Plan atualizado:', currentUser.plan);
-            }
-            
-            // Se tiver subscription mas não plan
-            if (data.data.subscription && data.data.subscription.status === 'active') {
-                const sub = data.data.subscription;
-                currentUser.subscription = sub;
-                
-                if (!currentUser.plan) {
-                    currentUser.plan = {
-                        id: sub.planType,
-                        name: getPlanName(sub.planType),
-                        aulasPorSemana: sub.aulasPorSemana || getPlanAulas(sub.planType),
-                        status: 'active'
-                    };
-                }
-            }
-            
-            // Atualizar UI com badge do plano se tiver
-            if (currentUser.plan) {
-                const userInfo = document.getElementById('userInfo');
-                if (userInfo) {
-                    // Verificar se já não tem badge
-                    if (!userInfo.querySelector('.plan-badge')) {
-                        const planBadge = document.createElement('span');
-                        planBadge.className = 'plan-badge';
-                        planBadge.innerHTML = `<i class="fas fa-crown"></i> ${currentUser.plan.name || currentUser.plan.id}`;
-                        userInfo.appendChild(planBadge);
-                    }
-                }
-                
-                // Atualizar aviso semanal
-                updateWeeklyWarningWithPlan(currentUser.plan.aulasPorSemana);
-            }
-        }
-    } catch (error) {
-        console.error('Erro ao verificar assinatura:', error);
-    }
+function showAuthScreen() {
+    authScreen.style.display = 'flex';
+    appScreen.classList.remove('active');
+    if (modal) modal.hidden = true;
 }
 
-// Modificar o aviso semanal para usar o limite do plano
-function updateWeeklyWarningWithPlan(limite) {
-    if (!weeklyWarning) return;
-    
-    const weeklyCount = getWeeklyBookingsCount();
-    
-    if (weeklyCount >= limite) {
-        weeklyWarning.innerHTML = `
-            <i class="fas fa-exclamation-triangle"></i>
-            <span><strong>Atenção!</strong> Você atingiu o limite de ${limite} agendamentos do seu plano</span>
-        `;
-        weeklyWarning.className = 'weekly-warning warning';
-    } else {
-        weeklyWarning.innerHTML = `
-            <i class="fas fa-chart-line"></i>
-            <span>Agendamentos esta semana: <strong>${weeklyCount}/${limite}</strong></span>
-        `;
-        weeklyWarning.className = 'weekly-warning info';
-    }
+function showAppScreen() {
+    authScreen.style.display = 'none';
+    appScreen.classList.add('active');
+    if (modal) modal.hidden = true;
+    loadData();
 }
 
- //planos 
-function userHasActivePlan() {
-    if (!currentUser) return false;
+// ============================================
+// 13. ATUALIZAÇÃO DE UI
+// ============================================
+
+function updateUserInfo() {
+    if (!currentUser || !userInfo) return;
     
-    // Admin não precisa de plano
-    if (currentUser.isAdmin) return true;
-    
-    console.log('🔍 Verificando plano do usuário:', currentUser);
-    
-    // Verificar se tem plan direto
-    if (currentUser.plan) {
-        // Se o status for active ou não tiver status (considera ativo)
-        if (!currentUser.plan.status || currentUser.plan.status === 'active') {
-            console.log('✅ Plano ativo encontrado (direto):', currentUser.plan);
-            return true;
-        }
-    }
-    
-    // Verificar se tem subscription com status active
-    if (currentUser.subscription && currentUser.subscription.status === 'active') {
-        console.log('✅ Assinatura ativa encontrada:', currentUser.subscription);
-        
-        // Se tiver subscription mas não tiver plan, criar plan a partir da subscription
-        if (!currentUser.plan) {
-            const planType = currentUser.subscription.planType || 'basic';
-            currentUser.plan = {
-                id: planType,
-                name: getPlanName(planType),
-                aulasPorSemana: currentUser.subscription.aulasPorSemana || getPlanAulas(planType),
-                status: 'active'
-            };
-            console.log('📝 Plan criado a partir da subscription:', currentUser.plan);
-        }
-        return true;
-    }
-    
-    console.log('❌ Nenhum plano ativo encontrado');
-    return false;
+    const badgeText = currentUser.isAdmin ? 'Admin' : 'Aluno';
+    userInfo.innerHTML = `
+        <span class="user-badge ${currentUser.isAdmin ? 'admin' : ''}">
+            <i class="fas fa-${currentUser.isAdmin ? 'crown' : 'user'}"></i>
+            ${badgeText}: ${currentUser.name || currentUser.email}
+        </span>
+    `;
+    checkSubscriptionStatus();
 }
 
-// Funções auxiliares para planos
-function getPlanName(planId) {
-    const names = {
-        basic: 'Básico',
-        intermediate: 'Intermediário',
-        advanced: 'Avançado',
-        premium: 'Premium'
-    };
-    return names[planId] || 'Básico';
-}
+// ============================================
+// 14. CARREGAR DADOS
+// ============================================
 
-function getPlanAulas(planId) {
-    const aulas = {
-        basic: 2,
-        intermediate: 3,
-        advanced: 4,
-        premium: 5
-    };
-    return aulas[planId] || 2;
-}
-
-// ===== FUNÇÃO MELHORADA PARA CARREGAR DADOS =====
 async function loadData() {
     if (loading) return;
     loading = true;
@@ -1121,10 +1073,8 @@ async function loadData() {
     try {
         scheduleEl.innerHTML = `<div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i> Carregando...</div>`;
         
-        // 1. Carrega as datas PRIMEIRO
         await loadDates();
         
-        // 2. Depois carrega disponibilidade e reservas
         const [availabilityRes, bookingsRes] = await Promise.all([
             fetchAPI('/admin/availability'),
             fetchAPI('/bookings')
@@ -1136,15 +1086,13 @@ async function loadData() {
         availability = availabilityRes.data;
         bookings = bookingsRes.data;
         
-        // 3. Verificar status da assinatura (importante!)
         await checkSubscriptionStatus();
         
         updateUserInfo();
         
-        // 👇 VERIFICAÇÃO CORRIGIDA PARA MOSTRAR PLANOS
         const precisaPlano = currentUser && 
                             !currentUser.isAdmin && 
-                            !userHasActivePlan(); // USA A NOVA FUNÇÃO
+                            !userHasActivePlan();
         
         console.log('🔍 Precisa de plano?', precisaPlano);
         console.log('👤 Usuário atual:', currentUser);
@@ -1154,13 +1102,11 @@ async function loadData() {
             showPlans();
         } else {
             console.log('📅 Mostrando agenda normal');
-            // Mostrar agenda normal
             renderSchedule();
             renderDayControls();
             renderMyBookings();
             startTimers();
             
-            // Mostrar seções que podem estar ocultas
             const myBookings = document.querySelector('.my-bookings');
             const adminPanel = document.getElementById('adminPanel');
             
@@ -1175,7 +1121,11 @@ async function loadData() {
         loading = false;
     }
 }
-// ===== INICIALIZAÇÃO =====
+
+// ============================================
+// 15. INICIALIZAÇÃO
+// ============================================
+
 document.addEventListener('DOMContentLoaded', function() {
     console.log('🚀 Sistema iniciado - Versão Melhorada');
     
@@ -1230,14 +1180,12 @@ document.addEventListener('DOMContentLoaded', function() {
             if (response.ok) {
                 currentUser = data.user || data.data || data;
                 
-                // 👉 FORÇAR VERIFICAÇÃO DA ASSINATURA
                 await checkSubscriptionStatus();
                 
                 localStorage.setItem('user', JSON.stringify(currentUser));
                 
                 showAppScreen();
                 showNotification(`Bem-vindo, ${currentUser.name}!`, 'success');
-
             } else {
                 showNotification(data.error || 'Falha no login', 'error');
                 submitBtn.disabled = false;
@@ -1410,7 +1358,10 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-// ===== ADICIONAR ESTILOS =====
+// ============================================
+// 16. ESTILOS ADICIONAIS
+// ============================================
+
 const additionalStyles = `
     .booking-info {
         display: flex;
