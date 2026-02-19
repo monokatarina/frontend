@@ -68,6 +68,26 @@ const toastContainer = document.getElementById('toastContainer');
 
 let modalContext = null;
 
+// COLOQUE ISSO LOGO APÓS as declarações de CONSTANTES (linha ~30)
+const getWeeklyBookingsCount = () => {
+    if (!currentUser) return 0;
+    
+    const now = new Date();
+    const weekStart = new Date(now);
+    weekStart.setDate(now.getDate() - now.getDay() + 1);
+    weekStart.setHours(0, 0, 0, 0);
+    
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekStart.getDate() + 5);
+    weekEnd.setHours(23, 59, 59, 999);
+    
+    return bookings.filter(b => {
+        if (b.userId !== currentUser.id) return false;
+        const bookDate = new Date(b.date + 'T00:00:00');
+        return bookDate >= weekStart && bookDate <= weekEnd;
+    }).length;
+};
+
 // ===== SISTEMA DE NOTIFICAÇÕES =====
 function showNotification(message, type = 'info', duration = 3000) {
     let container = document.getElementById('toastContainer');
