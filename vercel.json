@@ -1,0 +1,11 @@
+{
+  "rewrites": [
+    { "source": "/", "destination": "/public/index.html" },
+    { "source": "/plans", "destination": "/public/plans.html" },
+    { "source": "/admin", "destination": "/public/admin.html" }
+  ],
+  "builds": [
+    { "src": "public/**", "use": "@vercel/static" },
+    { "src": "src/**", "use": "@vercel/static" }
+  ]
+}

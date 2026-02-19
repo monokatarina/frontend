@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FitLife Agenda • Sistema de Agendamentos</title>
+    <link rel="stylesheet" href="../src/css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <!-- TELA DE AUTENTICAÇÃO -->
+    <div id="authScreen" class="auth-screen">
+        <div class="auth-container">
+            <div class="auth-box glass-effect">
+                <div class="auth-logo">
+                    <i class="fas fa-dumbbell logo-icon"></i>
+                    <h1>FitLife<span>Agenda</span></h1>
+                </div>
+                <p class="auth-subtitle">Sistema inteligente de agendamentos</p>
+                
+                <div class="auth-tabs">
+                    <button id="tabLogin" class="auth-tab active">
+                        <i class="fas fa-sign-in-alt"></i>
+                        Entrar
+                    </button>
+                    <button id="tabCadastro" class="auth-tab">
+                        <i class="fas fa-user-plus"></i>
+                        Criar conta
+                    </button>
+                </div>
+
+                <!-- Form Login -->
+                <form id="loginForm" class="auth-form active">
+                    <div class="form-group">
+                        <label for="loginEmail">
+                            <i class="fas fa-envelope"></i>
+                            Email
+                        </label>
+                        <input type="email" id="loginEmail" required 
+                               placeholder="seu@email.com" 
+                               class="input-glow">
+                    </div>
+                    <div class="form-group">
+                        <label for="loginPassword">
+                            <i class="fas fa-lock"></i>
+                            Senha
+                        </label>
+                        <input type="password" id="loginPassword" required 
+                               placeholder="••••••••" 
+                               class="input-glow">
+                    </div>
+                    <button type="submit" class="btn-auth btn-glow">
+                        <i class="fas fa-arrow-right"></i>
+                        Entrar
+                    </button>
+                    <div class="auth-hint">
+                        <i class="fas fa-info-circle"></i>
+                        Admin: admin@fitlife.com / admin123
+                    </div>
+                </form>
+
+                <!-- Form Cadastro -->
+                <form id="cadastroForm" class="auth-form">
+                    <div class="form-group">
+                        <label for="cadastroName">
+                            <i class="fas fa-user"></i>
+                            Nome Completo
+                        </label>
+                        <input type="text" id="cadastroName" required 
+                               placeholder="João Silva" 
+                               class="input-glow">
+                    </div>
+                    <div class="form-group">
+                        <label for="cadastroEmail">
+                            <i class="fas fa-envelope"></i>
+                            Email
+                        </label>
+                        <input type="email" id="cadastroEmail" required 
+                               placeholder="seu@email.com" 
+                               class="input-glow">
+                    </div>
+                    <div class="form-group">
+                        <label for="cadastroPhone">
+                            <i class="fas fa-phone"></i>
+                            Telefone
+                        </label>
+                        <input type="tel" id="cadastroPhone" required 
+                               placeholder="(11) 99999-9999" 
+                               class="input-glow">
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group half">
+                            <label for="cadastroPassword">
+                                <i class="fas fa-lock"></i>
+                                Senha
+                            </label>
+                            <input type="password" id="cadastroPassword" required 
+                                   placeholder="••••••••" 
+                                   class="input-glow">
+                        </div>
+                        <div class="form-group half">
+                            <label for="cadastroPassword2">
+                                <i class="fas fa-check-circle"></i>
+                                Confirmar
+                            </label>
+                            <input type="password" id="cadastroPassword2" required 
+                                   placeholder="••••••••" 
+                                   class="input-glow">
+                        </div>
+                    </div>
+                    <button type="submit" class="btn-auth btn-glow">
+                        <i class="fas fa-check"></i>
+                        Criar conta
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- TELA PRINCIPAL -->
+    <div id="appScreen" class="app-screen">
+        <header class="site-header glass-effect">
+            <div class="header-left">
+                <div class="logo-mini">
+                    <i class="fas fa-dumbbell"></i>
+                    <h1>FitLife<span>Agenda</span></h1>
+                </div>
+                <div id="userInfo" class="user-info"></div>
+            </div>
+            
+            <div class="header-right">
+                <div class="controls">
+                    <button id="refreshBtn" class="btn-icon" title="Atualizar">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                    
+                    <button id="plansBtn" class="btn-icon" title="Ver planos">
+                        <i class="fas fa-crown"></i>
+                    </button>
+                    
+                    <label class="admin-toggle">
+                        <input type="checkbox" id="adminMode">
+                        <span class="toggle-slider"></span>
+                        <span class="toggle-label">
+                            <i class="fas fa-crown"></i>
+                            Modo Admin
+                        </span>
+                    </label>
+                    
+                    <button id="logoutBtn" class="btn-logout">
+                        <i class="fas fa-sign-out-alt"></i>
+                        Sair
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <main class="container">
+            <!-- Aviso Semanal -->
+            <div class="weekly-warning" id="weeklyWarning">
+                <i class="fas fa-info-circle"></i>
+                <span>Carregando informações...</span>
+            </div>
+
+            <div class="main-grid">
+                <!-- Grade de Horários -->
+                <section class="schedule-wrapper card">
+                    <div class="schedule-header">
+                        <h2>
+                            <i class="fas fa-calendar-alt"></i>
+                            Grade de Horários
+                        </h2>
+                        
+                        <div class="legend">
+                            <div class="legend-item">
+                                <span class="dot available"></span>
+                                <span>Livre</span>
+                            </div>
+                            <div class="legend-item">
+                                <span class="dot partial"></span>
+                                <span>Parcial</span>
+                            </div>
+                            <div class="legend-item">
+                                <span class="dot booked"></span>
+                                <span>Lotado</span>
+                            </div>
+                            <div class="legend-item">
+                                <span class="dot disabled"></span>
+                                <span>Indisponível</span>
+                            </div>
+                            <div class="legend-item">
+                                <span class="dot my-booking"></span>
+                                <span>Minha reserva</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="schedule" class="schedule">
+                        <!-- Grid será renderizado via JavaScript -->
+                    </div>
+                </section>
+
+                <!-- Minhas Reservas -->
+                <section class="my-bookings card">
+                    <h2>
+                        <i class="fas fa-clock"></i>
+                        Minhas Reservas
+                    </h2>
+                    <div id="myBookingsList" class="bookings-list">
+                        <!-- Lista será renderizada via JavaScript -->
+                    </div>
+                </section>
+            </div>
+
+            <!-- Painel Admin -->
+            <section class="admin-panel card" id="adminPanel" hidden>
+                <h2>
+                    <i class="fas fa-crown"></i>
+                    Painel Administrativo
+                </h2>
+                <div class="day-controls" id="dayControls">
+                    <!-- Controles serão renderizados via JavaScript -->
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Modal de Reserva -->
+    <div id="modal" class="modal" hidden>
+        <div class="modal-content glass-effect">
+            <div class="modal-header">
+                <h3 id="modalTitle">
+                    <i class="fas fa-calendar-check"></i>
+                    Confirmar Reserva
+                </h3>
+                <button class="modal-close" id="modalClose">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="modal-body">
+                <div id="modalUserName" class="modal-user-info">
+                    <!-- Informações do usuário -->
+                </div>
+            </div>
+            
+            <div class="modal-actions">
+                <button id="modalCancel" class="btn-secondary">
+                    <i class="fas fa-times"></i>
+                    Cancelar
+                </button>
+                <button id="modalConfirm" class="btn-primary">
+                    <i class="fas fa-check"></i>
+                    Confirmar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <script src="../src/js/main-new.js"></script>
+</body>
+</html>
