@@ -334,7 +334,14 @@ function getWeekRange(date) {
     
     return { monday, sunday };
 }
-
+function getNextWeekRange() {
+    const today = new Date();
+    const nextWeek = new Date(today);
+    nextWeek.setDate(today.getDate() + 7);
+    
+    const { monday, sunday } = getWeekRange(nextWeek);
+    return { monday, sunday };
+}
 // Função para formatar range da semana
 function formatWeekRange(date) {
     const { monday, sunday } = getWeekRange(date);
@@ -402,52 +409,80 @@ function updateWeeklyWarning() {
     
     const planName = currentUser.plan.name || currentUser.plan.id;
     const planLimit = currentUser.plan.aulasPorSemana;
-    const weekRange = formatWeekRange(new Date());
+    const planColor = currentUser.plan.color || '#6366f1';
     
-    // Calcular quantas reservas o usuário tem na semana atual
+    // Dados da semana atual
+    const currentWeekRange = formatWeekRange(new Date());
     const currentWeekCount = countBookingsInWeek(new Date(), currentUser.id);
-    const remaining = planLimit - currentWeekCount;
+    const currentRemaining = planLimit - currentWeekCount;
     
-    let statusClass = 'info';
-    let statusIcon = 'fa-chart-line';
-    let statusMessage = '';
-    
-    if (currentWeekCount >= planLimit) {
-        statusClass = 'warning';
-        statusIcon = 'fa-exclamation-triangle';
-        statusMessage = '<span class="limit-reached">Limite semanal atingido!</span>';
-    } else {
-        statusMessage = `<span class="remaining">${remaining} vaga${remaining > 1 ? 's' : ''} restante${remaining > 1 ? 's' : ''}</span>`;
-    }
+    // Dados da próxima semana
+    const nextWeekDate = new Date();
+    nextWeekDate.setDate(nextWeekDate.getDate() + 7);
+    const nextWeekRange = formatWeekRange(nextWeekDate);
+    const nextWeekCount = countBookingsInWeek(nextWeekDate, currentUser.id);
+    const nextRemaining = planLimit - nextWeekCount;
     
     weeklyWarning.innerHTML = `
         <div class="warning-content">
-            <div class="warning-left">
-                <i class="fas ${statusIcon}"></i>
-                <div class="warning-text">
-                    <span class="plan-indicator" style="background: ${currentUser.plan.color || '#6366f1'}">
-                        <i class="fas ${PLANS[currentUser.plan.id]?.icon || 'fa-crown'}"></i>
-                        Plano ${planName}
-                    </span>
-                    <span class="week-info">
-                        <i class="fas fa-calendar-week"></i>
-                        Semana de ${weekRange}
-                    </span>
-                </div>
+            <div class="warning-header">
+                <span class="plan-indicator" style="background: ${planColor}">
+                    <i class="fas ${PLANS[currentUser.plan.id]?.icon || 'fa-crown'}"></i>
+                    Plano ${planName}
+                </span>
             </div>
-            <div class="warning-right">
-                <div class="progress-container">
-                    <div class="progress-bar" style="width: ${(currentWeekCount/planLimit)*100}%; background: ${currentUser.plan.color || '#6366f1'}"></div>
+            
+            <div class="weeks-container">
+                <!-- SEMANA ATUAL -->
+                <div class="week-card current">
+                    <div class="week-title">
+                        <i class="fas fa-calendar-check"></i>
+                        <span>Semana Atual</span>
+                        <span class="week-dates">${currentWeekRange}</span>
+                    </div>
+                    
+                    <div class="week-stats">
+                        <div class="progress-container">
+                            <div class="progress-bar" style="width: ${(currentWeekCount/planLimit)*100}%; background: ${planColor}"></div>
+                        </div>
+                        
+                        <div class="count-info">
+                            <span class="used"><strong>${currentWeekCount}</strong>/${planLimit} aulas</span>
+                            <span class="remaining ${currentRemaining > 0 ? 'positive' : 'zero'}">
+                                <i class="fas fa-${currentRemaining > 0 ? 'arrow-up' : 'exclamation-circle'}"></i>
+                                ${currentRemaining} vaga${currentRemaining !== 1 ? 's' : ''} restante${currentRemaining !== 1 ? 's' : ''}
+                            </span>
+                        </div>
+                    </div>
                 </div>
-                <div class="counter-info">
-                    <span class="current-count"><strong>${currentWeekCount}</strong>/${planLimit} aulas</span>
-                    ${statusMessage}
+                
+                <!-- PRÓXIMA SEMANA -->
+                <div class="week-card next">
+                    <div class="week-title">
+                        <i class="fas fa-calendar-plus"></i>
+                        <span>Próxima Semana</span>
+                        <span class="week-dates">${nextWeekRange}</span>
+                    </div>
+                    
+                    <div class="week-stats">
+                        <div class="progress-container">
+                            <div class="progress-bar" style="width: ${(nextWeekCount/planLimit)*100}%; background: ${planColor}"></div>
+                        </div>
+                        
+                        <div class="count-info">
+                            <span class="used"><strong>${nextWeekCount}</strong>/${planLimit} aulas</span>
+                            <span class="remaining ${nextRemaining > 0 ? 'positive' : 'zero'}">
+                                <i class="fas fa-${nextRemaining > 0 ? 'arrow-up' : 'exclamation-circle'}"></i>
+                                ${nextRemaining} vaga${nextRemaining !== 1 ? 's' : ''} restante${nextRemaining !== 1 ? 's' : ''}
+                            </span>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     `;
     
-    weeklyWarning.className = `weekly-warning ${statusClass}`;
+    weeklyWarning.className = 'weekly-warning info';
 }
 
 function updateWeeklyWarningNoPlan() {
@@ -1949,6 +1984,133 @@ const additionalStyles = `
         
         .btn-cancel {
             width: 100%;
+        }
+    .weeks-container {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+        margin-top: 15px;
+    }
+    
+    .week-card {
+        background: white;
+        border-radius: 12px;
+        padding: 16px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        transition: all 0.3s;
+    }
+    
+    .week-card.current {
+        border-left: 4px solid #3b82f6;
+    }
+    
+    .week-card.next {
+        border-left: 4px solid #8b5cf6;
+    }
+    
+    .week-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+    }
+    
+    .week-title {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 12px;
+        font-size: 14px;
+        flex-wrap: wrap;
+    }
+    
+    .week-title i {
+        font-size: 18px;
+    }
+    
+    .week-card.current .week-title i {
+        color: #3b82f6;
+    }
+    
+    .week-card.next .week-title i {
+        color: #8b5cf6;
+    }
+    
+    .week-title span:first-of-type {
+        font-weight: 600;
+        color: #1f2937;
+    }
+    
+    .week-dates {
+        background: #f3f4f6;
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-size: 12px;
+        color: #4b5563;
+    }
+    
+    .week-stats {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .progress-container {
+        width: 100%;
+        height: 8px;
+        background: #e5e7eb;
+        border-radius: 4px;
+        overflow: hidden;
+    }
+    
+    .progress-bar {
+        height: 100%;
+        transition: width 0.3s ease;
+    }
+    
+    .count-info {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 13px;
+    }
+    
+    .used {
+        color: #4b5563;
+    }
+    
+    .used strong {
+        color: #1f2937;
+        font-size: 16px;
+    }
+    
+    .remaining {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px 8px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+    
+    .remaining.positive {
+        background: #d1fae5;
+        color: #059669;
+    }
+    
+    .remaining.zero {
+        background: #fee2e2;
+        color: #dc2626;
+    }
+    
+    /* Responsividade */
+    @media (max-width: 768px) {
+        .weeks-container {
+            grid-template-columns: 1fr;
+            gap: 12px;
+        }
+        
+        .week-card {
+            padding: 12px;
         }
     }
 `;
