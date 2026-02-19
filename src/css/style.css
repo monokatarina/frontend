@@ -908,49 +908,484 @@ body {
     to { transform: rotate(360deg); }
 }
 
-/* ===== RESPONSIVIDADE ===== */
+/* ===== RESPONSIVIDADE MELHORADA ===== */
+
+/* Tablets e telas médias (768px - 1024px) */
 @media (max-width: 1024px) {
     .dashboard-grid {
         grid-template-columns: 1fr;
     }
+    
+    .main-grid {
+        gap: 16px;
+    }
+    
+    .plans-container {
+        grid-template-columns: repeat(2, 1fr);
+    }
 }
 
+/* Tablets pequenos e celulares grandes (768px) */
 @media (max-width: 768px) {
-    .app-header {
+    /* HEADER */
+    .site-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 16px;
+        padding: 12px 16px;
+    }
+    
+    .header-left {
+        width: 100%;
+        justify-content: space-between;
+        gap: 8px;
+    }
+    
+    .logo-mini h1 {
+        font-size: 18px;
+    }
+    
+    .header-right {
+        width: 100%;
+    }
+    
+    .header-right .controls {
+        width: 100%;
+        justify-content: flex-end;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+    
+    .admin-toggle {
+        padding: 4px 8px;
+        font-size: 12px;
+    }
+    
+    .admin-toggle .toggle-label i {
+        margin-right: 4px;
+    }
+    
+    .btn-logout {
+        padding: 6px 12px;
+        font-size: 12px;
+    }
+    
+    .btn-icon {
+        width: 36px;
+        height: 36px;
+        font-size: 16px;
+    }
+    
+    .user-badge {
+        font-size: 11px;
+        padding: 4px 8px;
+    }
+    
+    /* GRADE DE HORÁRIOS */
+    .schedule-header {
         flex-direction: column;
         align-items: flex-start;
         gap: 12px;
     }
     
-    .header-left {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 8px;
-    }
-    
-    .header-right .controls {
-        width: 100%;
-        justify-content: space-between;
-    }
-    
-    .schedule-header {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-    
     .legend {
         width: 100%;
-        justify-content: space-between;
+        justify-content: flex-start;
+        gap: 12px;
+        flex-wrap: wrap;
     }
     
-    .slot-btn {
-        padding: 12px 4px;
-        font-size: 12px;
+    .legend-item {
+        font-size: 11px;
+    }
+    
+    .dot {
+        width: 10px;
+        height: 10px;
+    }
+    
+    .grid {
+        min-width: 500px; /* Reduz um pouco para caber melhor */
+        grid-template-columns: 70px repeat(5, 1fr); /* Coluna de hora menor */
+    }
+    
+    .hour-header, .weekday-header {
+        padding: 12px 8px;
+        font-size: 13px;
     }
     
     .hour-label {
         padding: 12px 4px;
         font-size: 12px;
+    }
+    
+    .slot-btn {
+        padding: 12px 4px;
+        font-size: 11px;
+    }
+    
+    .slot-btn .count {
+        font-size: 10px;
+    }
+    
+    .slot-btn .label {
+        display: none; /* Esconde o texto "vagas"/"disponível" em telas pequenas */
+    }
+    
+    .slot-btn.available::after {
+        content: "✓";
+        font-size: 12px;
+        color: var(--success);
+    }
+    
+    .slot-btn.partial::after {
+        content: "⚠";
+        font-size: 12px;
+        color: var(--warning);
+    }
+    
+    /* MINHAS RESERVAS */
+    .my-booking-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+        padding: 12px;
+    }
+    
+    .booking-header {
+        width: 100%;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+    
+    .booking-datetime {
+        font-size: 13px;
+        width: 100%;
+        justify-content: space-between;
+    }
+    
+    .booking-timer {
+        width: 100%;
+        justify-content: center;
+        min-width: auto;
+        padding: 6px;
+        font-size: 12px;
+    }
+    
+    .btn-cancel {
+        width: 100%;
+        padding: 10px;
+        font-size: 13px;
+    }
+    
+    /* PAINEL ADMIN */
+    .day-controls {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+    }
+    
+    .day-control-btn {
+        padding: 10px;
+        font-size: 13px;
+    }
+    
+    /* MODAL */
+    .modal-content {
+        width: 95%;
+        padding: 20px;
+    }
+    
+    .modal-actions {
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .modal-actions button {
+        width: 100%;
+    }
+    
+    /* PLANOS */
+    .plans-container {
+        grid-template-columns: 1fr;
+        gap: 16px;
+        padding: 16px;
+    }
+    
+    .plan-card {
+        padding: 20px;
+    }
+    
+    .plan-card h3 {
+        font-size: 20px;
+    }
+    
+    .plan-card .price {
+        font-size: 28px;
+    }
+    
+    .section-title {
+        font-size: 22px;
+    }
+    
+    .plans-subtitle {
+        font-size: 14px;
+        margin-bottom: 20px;
+    }
+}
+
+/* Celulares pequenos (480px) */
+@media (max-width: 480px) {
+    .main-content,
+    .container {
+        padding: 0 12px;
+    }
+    
+    .card {
+        padding: 16px;
+    }
+    
+    /* HEADER */
+    .header-left {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
+    }
+    
+    .logo-mini {
+        width: 100%;
+        justify-content: space-between;
+    }
+    
+    .user-info {
+        width: 100%;
+        justify-content: flex-start;
+    }
+    
+    .header-right .controls {
+        justify-content: space-between;
+    }
+    
+    .admin-toggle .toggle-label span {
+        display: none; /* Esconde o texto "Modo Admin" */
+    }
+    
+    .admin-toggle .toggle-label i {
+        margin: 0;
+    }
+    
+    /* GRADE DE HORÁRIOS */
+    .schedule-wrapper {
+        overflow-x: auto; /* Garante scroll horizontal */
+    }
+    
+    .grid {
+        min-width: 450px; /* Mantém largura mínima para scroll */
+    }
+    
+    .hour-header, .weekday-header {
+        padding: 10px 4px;
+        font-size: 12px;
+    }
+    
+    .slot-btn {
+        padding: 10px 2px;
+    }
+    
+    /* LEGENDA */
+    .legend {
+        gap: 8px;
+    }
+    
+    .legend-item {
+        font-size: 10px;
+    }
+    
+    .dot {
+        width: 8px;
+        height: 8px;
+    }
+    
+    /* AVISO SEMANAL */
+    .weekly-warning {
+        padding: 12px;
+        font-size: 13px;
+    }
+    
+    .weekly-warning i {
+        font-size: 14px;
+    }
+    
+    /* TELA DE LOGIN */
+    .auth-container {
+        padding: 0 10px;
+    }
+    
+    .auth-box {
+        padding: 16px;
+    }
+    
+    .auth-tabs {
+        padding: 0 12px;
+    }
+    
+    .auth-tab {
+        padding: 8px;
+        font-size: 13px;
+    }
+    
+    .form-group input {
+        padding: 10px;
+        font-size: 13px;
+    }
+    
+    .btn-glow {
+        padding: 10px;
+        font-size: 14px;
+    }
+    
+    .auth-hint {
+        font-size: 11px;
+        padding: 8px;
+    }
+    
+    /* MODAL */
+    .modal-content {
+        padding: 16px;
+    }
+    
+    .modal-user-info {
+        padding: 12px;
+        font-size: 13px;
+    }
+    
+    /* NOTIFICAÇÕES */
+    .toast {
+        min-width: 250px;
+        padding: 10px 16px;
+        font-size: 13px;
+    }
+    
+    /* BADGES E ÍCONES */
+    .plan-badge {
+        font-size: 10px;
+        padding: 3px 8px;
+    }
+    
+    .cannot-cancel-badge {
+        font-size: 10px;
+    }
+}
+
+/* Celulares muito pequenos (320px) */
+@media (max-width: 360px) {
+    .grid {
+        min-width: 400px;
+    }
+    
+    .hour-header, .weekday-header {
+        font-size: 11px;
+        padding: 8px 2px;
+    }
+    
+    .slot-btn {
+        font-size: 10px;
+    }
+    
+    .booking-datetime {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
+    }
+    
+    .booking-timer {
+        font-size: 11px;
+    }
+    
+    .controls {
+        gap: 4px;
+    }
+    
+    .btn-icon {
+        width: 32px;
+        height: 32px;
+        font-size: 14px;
+    }
+}
+
+/* Ajustes para orientação paisagem em celulares */
+@media (max-height: 500px) and (orientation: landscape) {
+    .auth-screen {
+        padding: 10px;
+    }
+    
+    .auth-container {
+        max-width: 350px;
+    }
+    
+    .auth-box {
+        padding: 12px;
+    }
+    
+    .form-group {
+        margin-bottom: 8px;
+    }
+    
+    .auth-tabs {
+        margin-bottom: 8px;
+    }
+    
+    .modal-content {
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+}
+
+/* Melhorias para tablets em paisagem */
+@media (min-width: 768px) and (max-width: 1024px) and (orientation: landscape) {
+    .grid {
+        grid-template-columns: 80px repeat(5, 1fr);
+    }
+    
+    .plans-container {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* Acessibilidade - Aumentar área de clique em mobile */
+@media (max-width: 768px) {
+    .slot-btn,
+    .btn-cancel,
+    .day-control-btn,
+    .btn-select-plan,
+    .auth-tab,
+    .btn-glow {
+        min-height: 44px; /* Tamanho mínimo recomendado para toque */
+    }
+    
+    .btn-icon {
+        min-width: 44px;
+        min-height: 44px;
+    }
+}
+
+/* Impressão */
+@media print {
+    .auth-screen,
+    .admin-toggle,
+    .btn-logout,
+    .btn-icon,
+    .modal {
+        display: none !important;
+    }
+    
+    .app-screen {
+        display: block !important;
+    }
+    
+    .card {
+        box-shadow: none;
+        border: 1px solid #ddd;
     }
 }
 /* Adicione ao seu style.css */
