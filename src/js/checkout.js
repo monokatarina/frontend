@@ -65,26 +65,49 @@ const PLANS = {
 };
 
 // ============================================
-// INICIALIZAÇÃO
+// INICIALIZAÇÃO COM DEBUG
 // ============================================
 document.addEventListener('DOMContentLoaded', async () => {
+    console.log('🚀 ===== CHECKOUT INICIADO =====');
+    console.log('🌐 API URL:', API);
+    
     // Verificar login
     const savedUser = localStorage.getItem('user');
+    console.log('👤 Usuário no localStorage:', savedUser ? 'Encontrado' : 'Não encontrado');
+    
     if (!savedUser) {
+        console.log('❌ Nenhum usuário logado, redirecionando para home');
         window.location.href = '/';
         return;
     }
     
-    currentUser = JSON.parse(savedUser);
+    try {
+        currentUser = JSON.parse(savedUser);
+        console.log('✅ Usuário carregado:', currentUser.email);
+    } catch (e) {
+        console.error('❌ Erro ao parsear usuário:', e);
+        window.location.href = '/';
+        return;
+    }
     
     // Recuperar plano selecionado
     const planData = sessionStorage.getItem('selectedPlan');
+    console.log('📦 Plano no sessionStorage:', planData ? 'Encontrado' : 'Não encontrado');
+    
     if (!planData) {
+        console.log('❌ Nenhum plano selecionado, redirecionando para plans');
         window.location.href = '/plans';
         return;
     }
     
-    selectedPlan = JSON.parse(planData);
+    try {
+        selectedPlan = JSON.parse(planData);
+        console.log('✅ Plano carregado:', selectedPlan);
+    } catch (e) {
+        console.error('❌ Erro ao parsear plano:', e);
+        window.location.href = '/plans';
+        return;
+    }
     
     // Atualizar resumo
     updateOrderSummary();
@@ -94,6 +117,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     // Renderizar tabs
     renderPaymentTabs();
+    
+    console.log('✅ Checkout inicializado com sucesso');
 });
 
 // ============================================
@@ -101,6 +126,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 // ============================================
 function updateOrderSummary() {
     const plan = PLANS[selectedPlan.id] || selectedPlan;
+    console.log('📊 Atualizando resumo do pedido:', plan);
     
     document.getElementById('planSummary').innerHTML = `
         <div class="plan-detail">
@@ -125,17 +151,23 @@ function updateOrderSummary() {
 // MÉTODOS DE PAGAMENTO
 // ============================================
 async function loadPaymentMethods() {
+    console.log('🔄 Carregando métodos de pagamento...');
+    
     try {
         const response = await fetch(`${API}/payments/methods`);
+        console.log('📥 Resposta de métodos:', response.status);
+        
         const data = await response.json();
+        console.log('📦 Dados de métodos:', data);
         
         if (data.success) {
             paymentMethods = data.data.filter(m => 
                 ['pix', 'master', 'visa', 'elo', 'bolbradesco'].includes(m.id)
             );
+            console.log('✅ Métodos filtrados:', paymentMethods);
         }
     } catch (error) {
-        console.error('Erro ao carregar métodos:', error);
+        console.error('❌ Erro ao carregar métodos:', error);
     }
 }
 
@@ -162,6 +194,7 @@ function renderPaymentTabs() {
 }
 
 function switchPaymentMethod(method) {
+    console.log('🔄 Mudando método para:', method);
     currentMethod = method;
     
     // Atualizar tabs
@@ -184,58 +217,152 @@ function showPaymentContent(method) {
 }
 
 // ============================================
-// PROCESSAR PAGAMENTO PIX
+// PROCESSAR PAGAMENTO PIX - VERSÃO COM DEBUG
 // ============================================
 async function processPixPayment() {
+    console.log('🚀 ===== INICIANDO PROCESSO PIX =====');
+    
     const button = document.getElementById('pixButton');
     const originalText = button.innerHTML;
     
     button.disabled = true;
     button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Gerando PIX...';
     
+    // Limpar QR Code anterior
+    document.getElementById('qrCodeContainer').innerHTML = `
+        <i class="fas fa-spinner fa-spin fa-2x"></i>
+        <p>Conectando ao Mercado Pago...</p>
+    `;
+    
     try {
+        console.log('1️⃣ Solicitando CPF...');
         const cpf = await askCPF();
-        if (!cpf) return;
+        if (!cpf) {
+            console.log('❌ CPF não fornecido, cancelando');
+            resetPixButton();
+            return;
+        }
+        console.log('✅ CPF fornecido:', cpf);
+        
+        // Validar CPF
+        if (cpf.length !== 11) {
+            console.error('❌ CPF inválido - comprimento:', cpf.length);
+            showNotification('CPF deve ter 11 dígitos', 'error');
+            resetPixButton();
+            return;
+        }
+        
+        console.log('2️⃣ Preparando payload...');
+        const payload = {
+            userId: currentUser.id,
+            planType: selectedPlan.id,
+            payerInfo: {
+                documentNumber: cpf,
+                name: currentUser.name,
+                email: currentUser.email
+            }
+        };
+        console.log('📦 Payload:', JSON.stringify(payload, null, 2));
+        
+        console.log('3️⃣ Enviando requisição para:', `${API}/payments/pix`);
         
         const response = await fetch(`${API}/payments/pix`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                userId: currentUser.id,
-                planType: selectedPlan.id,
-                payerInfo: {
-                    documentNumber: cpf,
-                    name: currentUser.name,
-                    email: currentUser.email
-                }
-            })
+            headers: { 
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify(payload)
         });
         
-        const data = await response.json();
+        console.log('4️⃣ Status da resposta:', response.status);
+        console.log('📋 Headers:', response.headers);
         
-        if (data.success) {
+        // Tentar ler a resposta como texto primeiro para debug
+        const responseText = await response.text();
+        console.log('5️⃣ Resposta bruta:', responseText);
+        
+        // Tentar parsear como JSON
+        let data;
+        try {
+            data = JSON.parse(responseText);
+            console.log('6️⃣ Resposta parseada:', data);
+        } catch (e) {
+            console.error('❌ Erro ao parsear JSON:', e);
+            console.error('❌ Resposta não é JSON válido:', responseText);
+            throw new Error('Resposta inválida do servidor');
+        }
+        
+        if (data.success && data.data) {
+            console.log('✅ Pagamento criado com sucesso!');
+            console.log('📊 Dados completos:', data.data);
+            
+            // Verificar cada campo
+            console.log('   🔹 ID:', data.data.id);
+            console.log('   🔹 Status:', data.data.status);
+            console.log('   🔹 QR Code Base64:', data.data.qr_code_base64 ? 'Recebido' : 'Não recebido');
+            console.log('   🔹 Código PIX:', data.data.copy_paste ? 'Recebido' : 'Não recebido');
+            
             // Mostrar QR Code
             const qrContainer = document.getElementById('qrCodeContainer');
-            qrContainer.innerHTML = `
-                <img src="data:image/png;base64,${data.data.qr_code_base64}" 
-                     alt="QR Code PIX" style="max-width: 200px;">
-            `;
             
-            document.getElementById('pixCode').value = data.data.copy_paste;
+            if (data.data.qr_code_base64) {
+                console.log('✅ Exibindo QR Code');
+                qrContainer.innerHTML = `
+                    <img src="data:image/png;base64,${data.data.qr_code_base64}" 
+                         alt="QR Code PIX" 
+                         style="max-width: 200px; margin: 0 auto; border: 1px solid #ddd; border-radius: 10px;">
+                `;
+            } else {
+                console.warn('⚠️ QR Code não recebido');
+                qrContainer.innerHTML = `
+                    <i class="fas fa-exclamation-triangle" style="color: #f59e0b; font-size: 48px;"></i>
+                    <p>QR Code não disponível. Use o código abaixo:</p>
+                `;
+            }
+            
+            // Mostrar código PIX
+            if (data.data.copy_paste) {
+                console.log('✅ Exibindo código PIX');
+                document.getElementById('pixCode').value = data.data.copy_paste;
+            } else {
+                console.warn('⚠️ Código PIX não recebido');
+                document.getElementById('pixCode').value = 'Código não disponível';
+            }
             
             // Iniciar verificação de status
-            startPaymentCheck(data.data.id);
+            if (data.data.id) {
+                console.log('🔄 Iniciando verificação de status para ID:', data.data.id);
+                startPaymentCheck(data.data.id);
+            }
             
             showNotification('PIX gerado com sucesso!', 'success');
         } else {
+            console.error('❌ Erro na resposta:', data.error || 'Erro desconhecido');
             showNotification(data.error || 'Erro ao gerar PIX', 'error');
+            
+            document.getElementById('qrCodeContainer').innerHTML = `
+                <i class="fas fa-exclamation-circle" style="color: #ef4444; font-size: 48px;"></i>
+                <p>Erro: ${data.error || 'Tente novamente'}</p>
+            `;
+            
             resetPixButton();
         }
     } catch (error) {
-        console.error('Erro:', error);
-        showNotification('Erro ao processar pagamento', 'error');
+        console.error('❌ ERRO CRÍTICO:', error);
+        console.error('Stack:', error.stack);
+        
+        showNotification('Erro ao processar pagamento: ' + error.message, 'error');
+        
+        document.getElementById('qrCodeContainer').innerHTML = `
+            <i class="fas fa-exclamation-circle" style="color: #ef4444; font-size: 48px;"></i>
+            <p>Erro de conexão. Verifique o console.</p>
+        `;
+        
         resetPixButton();
     }
+    
+    console.log('🏁 ===== FIM DO PROCESSO PIX =====');
 }
 
 // ============================================
@@ -366,30 +493,43 @@ function validateCardFields() {
 }
 
 function startPaymentCheck(paymentId) {
+    console.log('🔄 Iniciando verificação de pagamento:', paymentId);
+    
     let attempts = 0;
     const maxAttempts = 30; // 2.5 minutos
     
+    if (qrCodeInterval) {
+        clearInterval(qrCodeInterval);
+    }
+    
     qrCodeInterval = setInterval(async () => {
         attempts++;
+        console.log(`⏱️ Verificação ${attempts}/${maxAttempts}`);
         
         try {
             const response = await fetch(`${API}/payments/payment/${paymentId}/status`);
             const data = await response.json();
             
+            console.log('📊 Status do pagamento:', data);
+            
             if (data.status === 'approved') {
+                console.log('✅ Pagamento aprovado!');
                 clearInterval(qrCodeInterval);
                 showSuccessModal();
             } else if (attempts >= maxAttempts) {
+                console.log('⏰ Tempo esgotado');
                 clearInterval(qrCodeInterval);
                 showNotification('Tempo esgotado. Gere um novo pagamento.', 'warning');
             }
         } catch (error) {
-            console.error('Erro ao verificar status:', error);
+            console.error('❌ Erro ao verificar status:', error);
         }
     }, 5000);
 }
 
 function showSuccessModal() {
+    console.log('🎉 Mostrando modal de sucesso');
+    
     const modal = document.getElementById('successModal');
     modal.style.display = 'flex';
     
@@ -402,6 +542,7 @@ function showSuccessModal() {
             active: true
         };
         localStorage.setItem('user', JSON.stringify(currentUser));
+        console.log('✅ Usuário atualizado com plano:', currentUser.plan);
     }
     
     // Countdown
@@ -420,6 +561,7 @@ function showSuccessModal() {
 }
 
 function redirectToAgenda() {
+    console.log('🔄 Redirecionando para agenda');
     window.location.href = '/';
 }
 
@@ -428,11 +570,19 @@ function copyPixCode() {
     pixCode.select();
     document.execCommand('copy');
     showNotification('Código PIX copiado!', 'success');
+    console.log('✅ Código PIX copiado');
 }
 
 function showNotification(message, type = 'info') {
-    // Usar função do main-new.js ou criar simples
-    alert(message);
+    console.log(`🔔 [${type}] ${message}`);
+    
+    // Tentar usar a notificação do main-new.js
+    if (window.showNotification) {
+        window.showNotification(message, type);
+    } else {
+        // Fallback para alert
+        alert(message);
+    }
 }
 
 function resetPixButton() {
@@ -446,3 +596,13 @@ function resetBoletoButton() {
     button.disabled = false;
     button.innerHTML = '<i class="fas fa-file-invoice"></i> Gerar Boleto';
 }
+
+// Expor funções para o HTML
+window.processPixPayment = processPixPayment;
+window.processCardPayment = processCardPayment;
+window.processBoletoPayment = processBoletoPayment;
+window.switchPaymentMethod = switchPaymentMethod;
+window.copyPixCode = copyPixCode;
+window.redirectToAgenda = redirectToAgenda;
+
+console.log('✅ checkout.js carregado com debug');
