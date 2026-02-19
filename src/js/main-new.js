@@ -16,29 +16,29 @@ const PLANS = {
         id: 'basic',
         name: 'Básico',
         aulasPorSemana: 2,
-        price: 97,
-        features: ['2 aulas por semana', 'Acesso a todos horários', 'Suporte por email']
+        price: 1,
+        features: ['2 aulas por semana', 'Acesso a todos horários', 'teste']
     },
     intermediate: {
         id: 'intermediate',
         name: 'Intermediário',
         aulasPorSemana: 3,
-        price: 147,
-        features: ['3 aulas por semana', 'Acesso a todos horários', 'Suporte prioritário']
+        price: 1,
+        features: ['3 aulas por semana', 'Acesso a todos horários', 'lletra boa ?']
     },
     advanced: {
         id: 'advanced',
         name: 'Avançado',
         aulasPorSemana: 4,
-        price: 197,
-        features: ['4 aulas por semana', 'Acesso a todos horários', 'Suporte VIP']
+        price: 1,
+        features: ['4 aulas por semana', 'Acesso a todos horários', 'tesrt']
     },
     premium: {
         id: 'premium',
         name: 'Premium',
         aulasPorSemana: 5,
-        price: 247,
-        features: ['5 aulas por semana', 'Acesso a todos horários', 'Suporte 24/7']
+        price: 1,
+        features: ['5 aulas por semana', 'Acesso a todos horários', 'teste ']
     }
 };
 
