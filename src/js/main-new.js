@@ -69,6 +69,8 @@ const modalCancel = document.getElementById('modalCancel');
 const modalConfirm = document.getElementById('modalConfirm');
 const modalClose = document.getElementById('modalClose');
 const toastContainer = document.getElementById('toastContainer');
+const adminMenuBtn = document.getElementById('adminMenuBtn');
+const adminDropdown = document.getElementById('adminDropdown');
 
 // ============================================
 // 1. FUNÇÕES UTILITÁRIAS BÁSICAS
@@ -159,6 +161,26 @@ const isBooked = (dateStr, hour) => {
         Number(b.hour) === Number(hour)
     );
 };
+
+
+// Menu dropdown do admin
+
+if (adminMenuBtn) {
+    adminMenuBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (currentUser?.isAdmin) {
+            adminDropdown.hidden = !adminDropdown.hidden;
+        } else {
+            showNotification('Apenas administradores', 'error');
+        }
+    });
+}
+// Fechar dropdown ao clicar fora
+document.addEventListener('click', (e) => {
+    if (!e.target.closest('.admin-menu')) {
+        if (adminDropdown) adminDropdown.hidden = true;
+    }
+});
 
 // ============================================
 // 2. FUNÇÕES DE CONTAGEM E VALIDAÇÃO

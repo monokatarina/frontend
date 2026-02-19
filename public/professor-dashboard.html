@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FitLife • Painel do Professor</title>
+    <link rel="stylesheet" href="../src/css/style.css">
+    <link rel="stylesheet" href="../src/css/professor.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="professor-container">
+        <!-- Header -->
+        <header class="professor-header glass-effect">
+            <div class="header-left">
+                <div class="logo-mini">
+                    <i class="fas fa-dumbbell"></i>
+                    <h1>FitLife<span>Professor</span></h1>
+                </div>
+                <div id="professorInfo" class="professor-info"></div>
+            </div>
+            
+            <div class="header-right">
+                <button id="refreshBtn" class="btn-icon" title="Atualizar">
+                    <i class="fas fa-sync-alt"></i>
+                </button>
+                <button id="todayBtn" class="btn-primary">
+                    <i class="fas fa-calendar-day"></i>
+                    Hoje
+                </button>
+                <a href="index.html" class="btn-secondary">
+                    <i class="fas fa-arrow-left"></i>
+                    Voltar
+                </a>
+                <button id="logoutBtn" class="btn-logout">
+                    <i class="fas fa-sign-out-alt"></i>
+                    Sair
+                </button>
+            </div>
+        </header>
+
+        <main class="professor-main">
+            <!-- Seletor de Data -->
+            <div class="date-selector card">
+                <div class="date-nav">
+                    <button id="prevDay" class="btn-icon">
+                        <i class="fas fa-chevron-left"></i>
+                    </button>
+                    <div class="current-date">
+                        <input type="date" id="datePicker" class="date-input">
+                        <h2 id="selectedDate">Carregando...</h2>
+                    </div>
+                    <button id="nextDay" class="btn-icon">
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Cards de Resumo -->
+            <div class="summary-cards">
+                <div class="summary-card total">
+                    <div class="summary-icon">
+                        <i class="fas fa-calendar-check"></i>
+                    </div>
+                    <div class="summary-info">
+                        <span class="summary-label">Total de Aulas</span>
+                        <span class="summary-value" id="totalAulas">0</span>
+                    </div>
+                </div>
+                
+                <div class="summary-card active">
+                    <div class="summary-icon">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <div class="summary-info">
+                        <span class="summary-label">Alunos</span>
+                        <span class="summary-value" id="totalAlunos">0</span>
+                    </div>
+                </div>
+                
+                <div class="summary-card completed">
+                    <div class="summary-icon">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <div class="summary-info">
+                        <span class="summary-label">Próxima Aula</span>
+                        <span class="summary-value" id="proximaAula">--:--</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Linha do Tempo das Aulas -->
+            <div class="timeline-container card">
+                <div class="timeline-header">
+                    <h2>
+                        <i class="fas fa-clock"></i>
+                        Linha do Tempo das Aulas
+                    </h2>
+                    <div class="timeline-filters">
+                        <button class="filter-btn active" data-filter="all">Todas</button>
+                        <button class="filter-btn" data-filter="pending">Pendentes</button>
+                        <button class="filter-btn" data-filter="completed">Concluídas</button>
+                    </div>
+                </div>
+
+                <div class="timeline" id="timeline">
+                    <!-- Aulas serão inseridas aqui -->
+                    <div class="loading-spinner">
+                        <i class="fas fa-spinner fa-spin"></i> Carregando aulas...
+                    </div>
+                </div>
+            </div>
+
+            <!-- Lista de Alunos por Horário -->
+            <div class="students-container card">
+                <h2>
+                    <i class="fas fa-users"></i>
+                    Alunos por Horário
+                </h2>
+                <div class="students-grid" id="studentsGrid">
+                    <!-- Grid será inserido aqui -->
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal de Detalhes da Aula -->
+    <div id="classModal" class="modal" hidden>
+        <div class="modal-content glass-effect">
+            <div class="modal-header">
+                <h3 id="classModalTitle">
+                    <i class="fas fa-info-circle"></i>
+                    Detalhes da Aula
+                </h3>
+                <button class="modal-close" id="modalClose">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="modal-body" id="classModalBody">
+                <!-- Conteúdo dinâmico -->
+            </div>
+            
+            <div class="modal-actions">
+                <button id="markCompleted" class="btn-success">
+                    <i class="fas fa-check"></i>
+                    Marcar como Concluída
+                </button>
+                <button id="modalCancel" class="btn-secondary">
+                    <i class="fas fa-times"></i>
+                    Fechar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="../src/js/professor-dashboard.js"></script>
+</body>
+</html>
