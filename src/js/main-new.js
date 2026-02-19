@@ -1028,9 +1028,9 @@ function onSlotClick(e) {
     const isAvailable = btn.dataset.available === 'true';
     const bookCount = Number(btn.dataset.bookCount);
 
-    // VERIFICAÇÃO DE HORÁRIO PASSADO
+    // VERIFICAÇÃO DE HORÁRIO PASSADO - AGORA COM MODAL
     if (isPastDateTime(date, h)) {
-        showNotification('Não é possível agendar em horários que já passaram', 'error');
+        showPastTimeModal(date, h); // <-- NOVO MODAL
         return;
     }
 
@@ -1097,7 +1097,6 @@ function onSlotClick(e) {
 
     openBookingModal(date, h);
 }
-
 // Modal para redirecionar para planos
 function showPlanRequiredModal() {
     let modal = document.getElementById('planRequiredModal');
@@ -1145,6 +1144,63 @@ function showPlanRequiredModal() {
     modal.style.display = 'flex';
     setTimeout(() => modal.classList.add('show'), 10);
 }
+// MODAL PARA HORÁRIO PASSADO
+function showPastTimeModal(date, hour) {
+    // Criar modal se não existir
+    let modal = document.getElementById('pastTimeModal');
+    
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'pastTimeModal';
+        modal.className = 'modal';
+        modal.innerHTML = `
+            <div class="modal-content past-time-modal">
+                <div class="modal-header">
+                    <h3><i class="fas fa-clock" style="color: #ef4444;"></i> Horário indisponível</h3>
+                    <button class="modal-close" onclick="closePastTimeModal()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="past-time-icon">
+                        <i class="fas fa-hourglass-end"></i>
+                    </div>
+                    <p class="past-time-message">
+                        Este horário <strong id="pastDateTime"></strong> já passou.
+                    </p>
+                    <p class="past-time-suggestion">
+                        <i class="fas fa-lightbulb"></i>
+                        Que tal escolher um horário futuro?
+                    </p>
+                </div>
+                <div class="modal-actions">
+                    <button class="btn-primary" onclick="closePastTimeModal()" style="width: 100%;">
+                        <i class="fas fa-check"></i>
+                        Entendi
+                    </button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+    }
+    
+    // Formatar data e hora para exibição
+    const formattedDate = formatDate(date);
+    const dateTimeStr = `${formattedDate} às ${hour}:00`;
+    document.getElementById('pastDateTime').textContent = dateTimeStr;
+    
+    modal.style.display = 'flex';
+    setTimeout(() => modal.classList.add('show'), 10);
+}
+
+// Função global para fechar o modal
+window.closePastTimeModal = function() {
+    const modal = document.getElementById('pastTimeModal');
+    if (modal) {
+        modal.classList.remove('show');
+        setTimeout(() => modal.style.display = 'none', 300);
+    }
+};
 
 // Funções globais para o modal
 window.closePlanModal = function() {
@@ -1167,8 +1223,7 @@ window.redirectToPlans = function() {
 function openBookingModal(date, h) {
     // Verificar novamente se é horário passado (segurança)
     if (isPastDateTime(date, h)) {
-        showNotification('Não é possível agendar em horários que já passaram', 'error');
-        closeModal();
+        showPastTimeModal(date, h); // <-- USAR O MESMO MODAL
         return;
     }
     
@@ -1181,12 +1236,6 @@ function openBookingModal(date, h) {
     const weekRange = formatWeekRange(new Date(date));
     
     const timeValidation = validateBookingTime(date, h);
-    
-    // Se for horário passado, não abre o modal
-    if (!timeValidation.valid) {
-        showNotification(timeValidation.message, 'error');
-        return;
-    }
     
     modalTitle.innerHTML = `
         <i class="fas fa-calendar-check"></i>
@@ -1582,6 +1631,80 @@ document.addEventListener('DOMContentLoaded', function() {
 // ============================================
 
 const additionalStyles = `
+
+    /* Modal de horário passado */
+    .past-time-modal {
+        max-width: 380px !important;
+        text-align: center;
+    }
+
+    .past-time-icon {
+        font-size: 64px;
+        color: #ef4444;
+        margin: 20px 0;
+        animation: shake 0.5s ease;
+    }
+
+    .past-time-icon i {
+        filter: drop-shadow(0 4px 8px rgba(239, 68, 68, 0.3));
+    }
+
+    .past-time-message {
+        font-size: 16px;
+        color: #1f2937;
+        margin-bottom: 15px;
+        line-height: 1.5;
+    }
+
+    .past-time-message strong {
+        color: #ef4444;
+        font-weight: 700;
+        background: #fee2e2;
+        padding: 2px 8px;
+        border-radius: 20px;
+        display: inline-block;
+        margin: 5px 0;
+    }
+
+    .past-time-suggestion {
+        background: #f3f4f6;
+        padding: 12px;
+        border-radius: 8px;
+        color: #4b5563;
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        margin-top: 10px;
+    }
+
+    .past-time-suggestion i {
+        color: #f59e0b;
+        font-size: 16px;
+    }
+
+    @keyframes shake {
+        0%, 100% { transform: translateX(0); }
+        10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+        20%, 40%, 60%, 80% { transform: translateX(5px); }
+    }
+
+    /* Responsividade */
+    @media (max-width: 480px) {
+        .past-time-icon {
+            font-size: 48px;
+        }
+        
+        .past-time-message {
+            font-size: 14px;
+        }
+        
+        .past-time-suggestion {
+            font-size: 12px;
+            padding: 10px;
+        }
+    }
     .past-slot {
         opacity: 0.4;
         cursor: not-allowed;
