@@ -65,7 +65,7 @@ const PLANS = {
 };
 
 // ============================================
-// INICIALIZAÇÃO COM DEBUG
+// INICIALIZAÇÃO
 // ============================================
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('🚀 ===== CHECKOUT INICIADO =====');
@@ -217,7 +217,111 @@ function showPaymentContent(method) {
 }
 
 // ============================================
-// PROCESSAR PAGAMENTO PIX - VERSÃO COM DEBUG
+// SISTEMA DE NOTIFICAÇÃO CORRIGIDO
+// ============================================
+function showNotification(message, type = 'info') {
+    console.log(`🔔 [${type}] ${message}`);
+    
+    // Criar notificação visual diretamente
+    createNotification(message, type);
+}
+
+function createNotification(message, type = 'info') {
+    // Cores baseadas no tipo
+    const colors = {
+        success: '#10b981',
+        error: '#ef4444',
+        warning: '#f59e0b',
+        info: '#3b82f6'
+    };
+    
+    const icons = {
+        success: 'fa-check-circle',
+        error: 'fa-exclamation-circle',
+        warning: 'fa-exclamation-triangle',
+        info: 'fa-info-circle'
+    };
+    
+    // Remover notificações anteriores do mesmo tipo se houver muitas
+    const existingNotifications = document.querySelectorAll('.custom-notification');
+    if (existingNotifications.length > 3) {
+        existingNotifications[0].remove();
+    }
+    
+    // Criar elemento de notificação
+    const notification = document.createElement('div');
+    notification.className = 'custom-notification';
+    notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: white;
+        color: #1f2937;
+        padding: 16px 20px;
+        border-radius: 12px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        z-index: 10000;
+        animation: slideIn 0.3s ease;
+        border-left: 4px solid ${colors[type]};
+        max-width: 350px;
+        font-family: 'Inter', sans-serif;
+    `;
+    
+    notification.innerHTML = `
+        <i class="fas ${icons[type]}" style="color: ${colors[type]}; font-size: 20px;"></i>
+        <span style="flex: 1; font-size: 14px;">${message}</span>
+        <button onclick="this.parentElement.remove()" style="background: none; border: none; cursor: pointer; color: #9ca3af; font-size: 16px;">
+            <i class="fas fa-times"></i>
+        </button>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Remover após 4 segundos
+    setTimeout(() => {
+        if (notification.parentNode) {
+            notification.style.animation = 'slideOut 0.3s ease';
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.remove();
+                }
+            }, 300);
+        }
+    }, 4000);
+}
+
+// Adicionar estilos para as notificações
+const notificationStyles = document.createElement('style');
+notificationStyles.textContent = `
+    @keyframes slideIn {
+        from {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+    
+    @keyframes slideOut {
+        from {
+            transform: translateX(0);
+            opacity: 1;
+        }
+        to {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+    }
+`;
+document.head.appendChild(notificationStyles);
+
+// ============================================
+// PROCESSAR PAGAMENTO PIX
 // ============================================
 async function processPixPayment() {
     console.log('🚀 ===== INICIANDO PROCESSO PIX =====');
@@ -573,18 +677,6 @@ function copyPixCode() {
     console.log('✅ Código PIX copiado');
 }
 
-function showNotification(message, type = 'info') {
-    console.log(`🔔 [${type}] ${message}`);
-    
-    // Tentar usar a notificação do main-new.js
-    if (window.showNotification) {
-        window.showNotification(message, type);
-    } else {
-        // Fallback para alert
-        alert(message);
-    }
-}
-
 function resetPixButton() {
     const button = document.getElementById('pixButton');
     button.disabled = false;
@@ -605,4 +697,4 @@ window.switchPaymentMethod = switchPaymentMethod;
 window.copyPixCode = copyPixCode;
 window.redirectToAgenda = redirectToAgenda;
 
-console.log('✅ checkout.js carregado com debug');
+console.log('✅ checkout.js carregado com correções');
