@@ -1,6 +1,6 @@
 // ============================================
 // FRONTEND - SISTEMA DE AGENDAMENTO
-// VERSÃO COM CONTROLE DE PLANOS
+// VERSÃO COM VISUALIZAÇÃO SEMANAL MELHORADA
 // ============================================
 
 // ===== CONFIGURAÇÕES =====
@@ -299,7 +299,7 @@ function updatePlanInfo() {
     
     // Atualizar aviso semanal com base no plano
     if (currentUser.plan) {
-        updateWeeklyWarningWithPlan(currentUser.plan.aulasPorSemana);
+        updateWeeklyWarning();
     } else {
         updateWeeklyWarningNoPlan();
     }
@@ -315,43 +315,70 @@ function getPlanAulas(planId) {
 }
 
 // ============================================
-// 3. FUNÇÕES DE AVISO SEMANAL
+// 3. FUNÇÕES DE AVISO SEMANAL MELHORADAS
 // ============================================
 
-function updateWeeklyWarningWithPlan(limite) {
-    if (!weeklyWarning) return;
+// Função para obter o range da semana de uma data
+function getWeekRange(date) {
+    const d = new Date(date);
+    const day = d.getDay(); // 0 = domingo, 1 = segunda, ...
     
-    const weeklyCount = getWeeklyBookingsCount();
+    // Ajustar para segunda como primeiro dia da semana
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+    const monday = new Date(d.setDate(diff));
+    monday.setHours(0, 0, 0, 0);
     
-    if (weeklyCount >= limite) {
-        weeklyWarning.innerHTML = `
-            <i class="fas fa-exclamation-triangle"></i>
-            <span><strong>Atenção!</strong> Você atingiu o limite de ${limite} agendamentos do seu plano</span>
-            <a href="/plans" class="warning-link">Gerenciar plano</a>
-        `;
-        weeklyWarning.className = 'weekly-warning warning';
-    } else {
-        weeklyWarning.innerHTML = `
-            <i class="fas fa-chart-line"></i>
-            <span>Agendamentos esta semana: <strong>${weeklyCount}/${limite}</strong></span>
-            <span class="plan-info">Plano ${currentUser?.plan?.name || 'Ativo'}</span>
-        `;
-        weeklyWarning.className = 'weekly-warning info';
-    }
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+    sunday.setHours(23, 59, 59, 999);
+    
+    return { monday, sunday };
 }
 
-function updateWeeklyWarningNoPlan() {
-    if (!weeklyWarning) return;
+// Função para formatar range da semana
+function formatWeekRange(date) {
+    const { monday, sunday } = getWeekRange(date);
     
-    weeklyWarning.innerHTML = `
-        <i class="fas fa-info-circle"></i>
-        <span>Você não possui um plano ativo.</span>
-        <a href="/plans" class="warning-link" style="background: var(--primary);">
-            <i class="fas fa-crown"></i>
-            Escolher plano
-        </a>
-    `;
-    weeklyWarning.className = 'weekly-warning warning';
+    const formatDayMonth = (d) => {
+        return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+    };
+    
+    return `${formatDayMonth(monday)} a ${formatDayMonth(sunday)}`;
+}
+
+// Função para agrupar reservas por semana
+function groupBookingsByWeek(bookings) {
+    const grouped = {};
+    
+    bookings.forEach(booking => {
+        const bookingDate = new Date(booking.date + 'T00:00:00');
+        const { monday } = getWeekRange(bookingDate);
+        const weekKey = monday.toISOString().split('T')[0];
+        
+        if (!grouped[weekKey]) {
+            grouped[weekKey] = {
+                weekStart: monday,
+                weekKey: weekKey,
+                bookings: []
+            };
+        }
+        
+        grouped[weekKey].bookings.push(booking);
+    });
+    
+    // Ordenar semanas da mais recente para a mais antiga
+    return Object.values(grouped).sort((a, b) => b.weekStart - a.weekStart);
+}
+
+// Função para contar reservas em uma semana específica
+function countBookingsInWeek(weekStart, userId) {
+    const { monday, sunday } = getWeekRange(weekStart);
+    
+    return bookings.filter(b => {
+        if (b.userId !== userId) return false;
+        const bookDate = new Date(b.date + 'T00:00:00');
+        return bookDate >= monday && bookDate <= sunday;
+    }).length;
 }
 
 function updateWeeklyWarning() {
@@ -359,42 +386,94 @@ function updateWeeklyWarning() {
     
     if (currentUser?.isAdmin) {
         weeklyWarning.innerHTML = `
-            <i class="fas fa-crown"></i>
-            <span>Modo Administrador - Você tem acesso total</span>
+            <div class="warning-content">
+                <i class="fas fa-crown"></i>
+                <span>Modo Administrador - Você tem acesso total</span>
+            </div>
         `;
         weeklyWarning.className = 'weekly-warning admin';
         return;
     }
     
-    if (currentUser?.plan && userHasActivePlan()) {
-        updateWeeklyWarningWithPlan(currentUser.plan.aulasPorSemana);
-    } else {
+    if (!currentUser?.plan || !userHasActivePlan()) {
         updateWeeklyWarningNoPlan();
+        return;
     }
+    
+    const planName = currentUser.plan.name || currentUser.plan.id;
+    const planLimit = currentUser.plan.aulasPorSemana;
+    const weekRange = formatWeekRange(new Date());
+    
+    // Calcular quantas reservas o usuário tem na semana atual
+    const currentWeekCount = countBookingsInWeek(new Date(), currentUser.id);
+    const remaining = planLimit - currentWeekCount;
+    
+    let statusClass = 'info';
+    let statusIcon = 'fa-chart-line';
+    let statusMessage = '';
+    
+    if (currentWeekCount >= planLimit) {
+        statusClass = 'warning';
+        statusIcon = 'fa-exclamation-triangle';
+        statusMessage = '<span class="limit-reached">Limite semanal atingido!</span>';
+    } else {
+        statusMessage = `<span class="remaining">${remaining} vaga${remaining > 1 ? 's' : ''} restante${remaining > 1 ? 's' : ''}</span>`;
+    }
+    
+    weeklyWarning.innerHTML = `
+        <div class="warning-content">
+            <div class="warning-left">
+                <i class="fas ${statusIcon}"></i>
+                <div class="warning-text">
+                    <span class="plan-indicator" style="background: ${currentUser.plan.color || '#6366f1'}">
+                        <i class="fas ${PLANS[currentUser.plan.id]?.icon || 'fa-crown'}"></i>
+                        Plano ${planName}
+                    </span>
+                    <span class="week-info">
+                        <i class="fas fa-calendar-week"></i>
+                        Semana de ${weekRange}
+                    </span>
+                </div>
+            </div>
+            <div class="warning-right">
+                <div class="progress-container">
+                    <div class="progress-bar" style="width: ${(currentWeekCount/planLimit)*100}%; background: ${currentUser.plan.color || '#6366f1'}"></div>
+                </div>
+                <div class="counter-info">
+                    <span class="current-count"><strong>${currentWeekCount}</strong>/${planLimit} aulas</span>
+                    ${statusMessage}
+                </div>
+            </div>
+        </div>
+    `;
+    
+    weeklyWarning.className = `weekly-warning ${statusClass}`;
+}
+
+function updateWeeklyWarningNoPlan() {
+    if (!weeklyWarning) return;
+    
+    weeklyWarning.innerHTML = `
+        <div class="warning-content">
+            <i class="fas fa-info-circle"></i>
+            <span>Você não possui um plano ativo.</span>
+            <a href="/plans" class="warning-link" style="background: var(--primary);">
+                <i class="fas fa-crown"></i>
+                Escolher plano
+            </a>
+        </div>
+    `;
+    weeklyWarning.className = 'weekly-warning warning';
 }
 
 // ============================================
 // 4. FUNÇÕES DE CONTAGEM E VALIDAÇÃO
 // ============================================
 
-// Conta reservas do usuário na semana atual
+// Conta reservas do usuário na semana atual (para compatibilidade)
 const getWeeklyBookingsCount = () => {
     if (!currentUser) return 0;
-    
-    const now = new Date();
-    const weekStart = new Date(now);
-    weekStart.setDate(now.getDate() - now.getDay() + 1);
-    weekStart.setHours(0, 0, 0, 0);
-    
-    const weekEnd = new Date(weekStart);
-    weekEnd.setDate(weekStart.getDate() + 5);
-    weekEnd.setHours(23, 59, 59, 999);
-    
-    return bookings.filter(b => {
-        if (b.userId !== currentUser.id) return false;
-        const bookDate = new Date(b.date + 'T00:00:00');
-        return bookDate >= weekStart && bookDate <= weekEnd;
-    }).length;
+    return countBookingsInWeek(new Date(), currentUser.id);
 };
 
 // Valida se pode cancelar uma reserva
@@ -470,7 +549,7 @@ function getCancellationMessage(cancelCheck) {
             return `⏰ Período de graça: você tem ${cancelCheck.minutesLeft} minutos para cancelar esta reserva (aula em menos de ${CANCEL_LIMIT_HOURS}h).`;
         
         case 'too_late':
-            return `❌ Cancelamento não permitido. A aula começa em ${cancelCheck.timeMessage} e o limite é de ${CANCEL_LIMIT_HOURS}h de antecedência.`;
+            return `❌ Cancelamento não permitido. Aula começa em ${cancelCheck.timeMessage}.`;
         
         default:
             return 'Não é possível cancelar esta reserva';
@@ -485,7 +564,7 @@ function validateBookingTime(date, hour) {
     if (bookingDate - now < CANCEL_LIMIT_HOURS * 60 * 60 * 1000) {
         return {
             valid: true,
-            warning: `⏰ Esta aula começará em menos de ${CANCEL_LIMIT_HOURS}h. Você terá apenas ${PROXIMITY_GRACE_MINUTES} minutos para cancelar após a reserva.`
+            warning: `⏰ Aula em menos de ${CANCEL_LIMIT_HOURS}h. Você terá apenas ${PROXIMITY_GRACE_MINUTES} minutos para cancelar.`
         };
     }
     
@@ -621,7 +700,6 @@ function createSlot(wd, h) {
     } else if (bookCount > 0) {
         slot.classList.add('partial');
         slot.innerHTML = `<span class="count">${bookCount}/4</span><span class="label"> vagas</span>`;
-        // Só desabilita se não tiver plano
         if (!hasActivePlan) {
             slot.disabled = true;
             slot.classList.add('requires-plan');
@@ -630,7 +708,6 @@ function createSlot(wd, h) {
     } else {
         slot.classList.add('available');
         slot.innerHTML = `<span class="count">0/4</span><span class="label"> Disponível</span>`;
-        // Só desabilita se não tiver plano
         if (!hasActivePlan) {
             slot.disabled = true;
             slot.classList.add('requires-plan');
@@ -682,6 +759,10 @@ function renderSchedule() {
     updateWeeklyWarning();
 }
 
+// ============================================
+// 7. RENDERIZAÇÃO DE RESERVAS POR SEMANA
+// ============================================
+
 function renderMyBookings() {
     const el = document.getElementById('myBookingsList');
     if (!el) return;
@@ -696,52 +777,102 @@ function renderMyBookings() {
     const myBookings = bookings.filter(b => b.userId === currentUser.id);
     
     if (myBookings.length === 0) {
-        el.innerHTML = '<p class="empty-message"><i class="fas fa-calendar-times"></i> Você não possui reservas ativas</p>';
+        el.innerHTML = '<p class="empty-message"><i class="fas fa-calendar-times"></i> Você não possui reservas</p>';
         return;
     }
 
-    myBookings.sort((a, b) => new Date(a.date) - new Date(b.date)).forEach(booking => {
-        const item = document.createElement('div');
-        item.className = 'my-booking-item';
+    // Agrupar reservas por semana
+    const groupedByWeek = groupBookingsByWeek(myBookings);
+    
+    groupedByWeek.forEach(weekGroup => {
+        const weekStart = weekGroup.weekStart;
+        const weekBookings = weekGroup.bookings.sort((a, b) => new Date(a.date) - new Date(b.date));
         
-        const bookingDateTime = new Date(`${booking.date}T${String(booking.hour).padStart(2, '0')}:00:00`);
-        const datetimeStr = bookingDateTime.toISOString();
+        // Calcular quantas reservas nesta semana
+        const weekCount = weekBookings.length;
+        const planLimit = currentUser.plan?.aulasPorSemana || 5;
         
-        const cancelCheck = canCancelBooking(booking);
-        const canCancel = cancelCheck.canCancel;
-        const formattedDate = formatDate(booking.date);
-        const timeRemaining = formatTimeRemaining(bookingDateTime);
+        // Criar header da semana
+        const weekHeader = document.createElement('div');
+        weekHeader.className = 'week-header';
         
-        item.innerHTML = `
-            <div class="booking-info">
-                <div class="booking-header">
-                    <div class="booking-datetime">
-                        <i class="fas fa-calendar-day"></i>
-                        <span>${formattedDate}</span>
-                        <strong>${booking.hour}:00</strong>
-                    </div>
-                    <div class="booking-timer" data-datetime="${datetimeStr}">
-                        <i class="fas fa-hourglass-half"></i>
-                        <span class="${timeRemaining.class}">${timeRemaining.text}</span>
-                    </div>
-                </div>
-                <div class="booking-footer">
-                    ${!canCancel ? '<span class="cannot-cancel-badge"><i class="fas fa-lock"></i> Cancelamento bloqueado</span>' : ''}
-                </div>
+        const isCurrentWeek = getWeekRange(new Date()).monday.toISOString().split('T')[0] === weekGroup.weekKey;
+        
+        weekHeader.innerHTML = `
+            <div class="week-title">
+                <i class="fas fa-calendar-alt"></i>
+                <span>Semana de ${formatWeekRange(weekStart)}</span>
+                ${isCurrentWeek ? '<span class="current-week-badge">Semana atual</span>' : ''}
             </div>
-            <button class="btn-cancel" data-id="${booking.id}" ${!canCancel ? 'disabled' : ''}>
-                <i class="fas fa-times"></i>
-                <span>Cancelar</span>
-            </button>
+            <div class="week-stats">
+                <div class="week-progress">
+                    <div class="progress-bar-small" style="width: ${(weekCount/planLimit)*100}%; background: ${currentUser.plan?.color || '#6366f1'}"></div>
+                </div>
+                <span class="week-count"><strong>${weekCount}</strong>/${planLimit} aulas</span>
+            </div>
         `;
         
-        const cancelBtn = item.querySelector('.btn-cancel');
-        cancelBtn.addEventListener('click', () => cancelBooking(booking.id));
+        el.appendChild(weekHeader);
         
-        el.appendChild(item);
+        // Renderizar cada reserva da semana
+        weekBookings.forEach(booking => {
+            const item = createBookingItem(booking);
+            el.appendChild(item);
+        });
     });
     
     startTimers();
+}
+
+function createBookingItem(booking) {
+    const item = document.createElement('div');
+    item.className = 'my-booking-item';
+    
+    const bookingDateTime = new Date(`${booking.date}T${String(booking.hour).padStart(2, '0')}:00:00`);
+    const datetimeStr = bookingDateTime.toISOString();
+    
+    const cancelCheck = canCancelBooking(booking);
+    const canCancel = cancelCheck.canCancel;
+    const formattedDate = formatDate(booking.date);
+    const timeRemaining = formatTimeRemaining(bookingDateTime);
+    const weekRange = formatWeekRange(bookingDateTime);
+    
+    // Determinar se é semana atual
+    const isCurrentWeek = getWeekRange(new Date()).monday.toISOString().split('T')[0] === 
+                          getWeekRange(bookingDateTime).monday.toISOString().split('T')[0];
+    
+    item.innerHTML = `
+        <div class="booking-info">
+            <div class="booking-main">
+                <div class="booking-datetime">
+                    <i class="fas fa-calendar-day"></i>
+                    <span class="booking-date">${formattedDate}</span>
+                    <span class="booking-hour">${booking.hour}:00</span>
+                </div>
+                <div class="booking-week">
+                    <i class="fas fa-calendar-week"></i>
+                    <span>${weekRange}</span>
+                    ${isCurrentWeek ? '<span class="current-week-tag">Atual</span>' : ''}
+                </div>
+            </div>
+            <div class="booking-timer" data-datetime="${datetimeStr}">
+                <i class="fas fa-hourglass-half"></i>
+                <span class="${timeRemaining.class}">${timeRemaining.text}</span>
+            </div>
+            <div class="booking-footer">
+                ${!canCancel ? '<span class="cannot-cancel-badge"><i class="fas fa-lock"></i> Não pode cancelar</span>' : ''}
+            </div>
+        </div>
+        <button class="btn-cancel" data-id="${booking.id}" ${!canCancel ? 'disabled' : ''}>
+            <i class="fas fa-times"></i>
+            <span>Cancelar</span>
+        </button>
+    `;
+    
+    const cancelBtn = item.querySelector('.btn-cancel');
+    cancelBtn.addEventListener('click', () => cancelBooking(booking.id));
+    
+    return item;
 }
 
 function renderDayControls() {
@@ -798,7 +929,7 @@ function renderDayControls() {
 }
 
 // ============================================
-// 7. FUNÇÕES DE AÇÃO
+// 8. FUNÇÕES DE AÇÃO
 // ============================================
 
 async function cancelBooking(id) {
@@ -874,8 +1005,6 @@ function onSlotClick(e) {
     // VERIFICAÇÃO PRINCIPAL: Usuário tem plano ativo?
     if (!currentUser.isAdmin && !userHasActivePlan()) {
         showNotification('Você precisa escolher um plano primeiro', 'warning');
-        
-        // Criar modal personalizado para redirecionamento
         showPlanRequiredModal();
         return;
     }
@@ -911,7 +1040,6 @@ function onSlotClick(e) {
 
 // Modal para redirecionar para planos
 function showPlanRequiredModal() {
-    // Criar modal se não existir
     let modal = document.getElementById('planRequiredModal');
     
     if (!modal) {
@@ -973,7 +1101,7 @@ window.redirectToPlans = function() {
 };
 
 // ============================================
-// 8. FUNÇÕES DE MODAL DE RESERVA
+// 9. FUNÇÕES DE MODAL DE RESERVA
 // ============================================
 
 function openBookingModal(date, h) {
@@ -983,6 +1111,7 @@ function openBookingModal(date, h) {
     const bookCount = bookedList.length;
     const availableSpots = 4 - bookCount;
     const weeklyCount = getWeeklyBookingsCount();
+    const weekRange = formatWeekRange(new Date(date));
     
     const timeValidation = validateBookingTime(date, h);
     
@@ -1001,13 +1130,14 @@ function openBookingModal(date, h) {
         <div class="user-info-detail">
             <p><i class="fas fa-user"></i> <strong>${currentUser.name}</strong></p>
             <p><i class="fas fa-crown" style="color: ${currentUser.plan?.color || '#6366f1'}"></i> 
-                <strong>Plano: ${currentUser.plan?.name || 'Ativo'}</strong>
+                <strong>Plano ${currentUser.plan?.name || 'Ativo'}</strong> (${currentUser.plan?.aulasPorSemana || 0}/semana)
             </p>
+            <p><i class="fas fa-calendar-week"></i> <strong>Semana de ${weekRange}</strong></p>
             <p class="${availableSpots > 0 ? 'text-success' : 'text-danger'}">
                 <i class="fas fa-users"></i> Vagas disponíveis: ${availableSpots}/4
             </p>
             <p>
-                <i class="fas fa-chart-line"></i> Agendamentos na semana: ${weeklyCount}/${currentUser.plan?.aulasPorSemana || 0}
+                <i class="fas fa-chart-line"></i> Seus agendamentos nesta semana: ${weeklyCount}/${currentUser.plan?.aulasPorSemana || 0}
             </p>
             ${warningHtml}
         </div>
@@ -1031,7 +1161,7 @@ function closeModal() {
 }
 
 // ============================================
-// 9. FUNÇÕES DE PLANOS (REDIRECIONAMENTO)
+// 10. FUNÇÕES DE PLANOS (REDIRECIONAMENTO)
 // ============================================
 
 function showPlans() {
@@ -1045,7 +1175,6 @@ async function selectPlan(planId) {
         return;
     }
 
-    // Salvar plano selecionado e redirecionar para checkout
     const selectedPlanData = {
         id: planId,
         name: PLANS[planId].name,
@@ -1058,7 +1187,7 @@ async function selectPlan(planId) {
 }
 
 // ============================================
-// 10. CONTROLE DE TELAS
+// 11. CONTROLE DE TELAS
 // ============================================
 
 function showAuthScreen() {
@@ -1075,7 +1204,7 @@ function showAppScreen() {
 }
 
 // ============================================
-// 11. CARREGAR DADOS
+// 12. CARREGAR DADOS
 // ============================================
 
 async function loadData() {
@@ -1121,11 +1250,11 @@ async function loadData() {
 }
 
 // ============================================
-// 12. INICIALIZAÇÃO
+// 13. INICIALIZAÇÃO
 // ============================================
 
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('🚀 Sistema iniciado - Versão com Planos');
+    console.log('🚀 Sistema iniciado - Versão com Visualização Semanal');
     
     const loginForm = document.getElementById('loginForm');
     const cadastroForm = document.getElementById('cadastroForm');
@@ -1376,7 +1505,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // ============================================
-// 13. ESTILOS ADICIONAIS
+// 14. ESTILOS ADICIONAIS MELHORADOS
 // ============================================
 
 const additionalStyles = `
@@ -1458,8 +1587,32 @@ const additionalStyles = `
         z-index: 10;
     }
     
-    /* Aviso semanal melhorado */
+    /* ===== AVISO SEMANAL MELHORADO ===== */
     .weekly-warning {
+        background: white;
+        border-radius: 12px;
+        padding: 16px 20px;
+        margin-bottom: 24px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        transition: all 0.3s;
+    }
+    
+    .weekly-warning.warning {
+        border-left: 4px solid #f59e0b;
+        background: #fff3cd;
+    }
+    
+    .weekly-warning.info {
+        border-left: 4px solid #3b82f6;
+        background: #dbeafe;
+    }
+    
+    .weekly-warning.admin {
+        border-left: 4px solid #8b5cf6;
+        background: #ede9fe;
+    }
+    
+    .warning-content {
         display: flex;
         align-items: center;
         justify-content: space-between;
@@ -1467,31 +1620,96 @@ const additionalStyles = `
         gap: 16px;
     }
     
-    .weekly-warning.warning {
-        background: #fff3cd;
-        color: #856404;
-        border-left: 4px solid #f59e0b;
+    .warning-left {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
     }
     
-    .weekly-warning.info {
-        background: #d1e7ff;
-        color: #0c63e4;
-        border-left: 4px solid #0d6efd;
+    .warning-left i {
+        font-size: 24px;
     }
     
-    .weekly-warning.admin {
-        background: #e8d5ff;
-        color: #6f42c1;
-        border-left: 4px solid #6f42c1;
+    .warning-text {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+    
+    .plan-indicator {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 12px;
+        border-radius: 20px;
+        color: white;
+        font-size: 13px;
+        font-weight: 600;
+        width: fit-content;
+    }
+    
+    .week-info {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 13px;
+        color: #4b5563;
+    }
+    
+    .warning-right {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        flex-wrap: wrap;
+    }
+    
+    .progress-container {
+        width: 200px;
+        height: 8px;
+        background: rgba(0,0,0,0.1);
+        border-radius: 4px;
+        overflow: hidden;
+    }
+    
+    .progress-bar {
+        height: 100%;
+        transition: width 0.3s ease;
+    }
+    
+    .counter-info {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-size: 14px;
+    }
+    
+    .current-count {
+        font-weight: 600;
+        color: #1f2937;
+    }
+    
+    .remaining {
+        color: #059669;
+        font-weight: 600;
+        background: rgba(5,150,105,0.1);
+        padding: 4px 8px;
+        border-radius: 20px;
+    }
+    
+    .limit-reached {
+        color: #dc2626;
+        font-weight: 600;
+        background: rgba(220,38,38,0.1);
+        padding: 4px 8px;
+        border-radius: 20px;
     }
     
     .warning-link {
         display: inline-flex;
         align-items: center;
         gap: 8px;
-        padding: 6px 16px;
-        background: #f59e0b;
-        color: white;
+        padding: 8px 16px;
         border-radius: 30px;
         text-decoration: none;
         font-size: 13px;
@@ -1500,54 +1718,237 @@ const additionalStyles = `
     }
     
     .warning-link:hover {
-        background: #d97706;
         transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
     }
     
-    .plan-info {
-        background: rgba(13,110,253,0.1);
+    /* ===== RESERVAS POR SEMANA ===== */
+    .week-header {
+        background: #f8fafc;
+        padding: 12px 16px;
+        margin: 16px 0 8px 0;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 12px;
+        border: 1px solid #e2e8f0;
+    }
+    
+    .week-title {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-weight: 600;
+        color: #1e293b;
+    }
+    
+    .current-week-badge {
+        background: #3b82f6;
+        color: white;
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-size: 11px;
+        font-weight: 600;
+    }
+    
+    .week-stats {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+    }
+    
+    .progress-bar-small {
+        height: 6px;
+        width: 100px;
+        background: #e2e8f0;
+        border-radius: 3px;
+        overflow: hidden;
+    }
+    
+    .progress-bar-small div {
+        height: 100%;
+        transition: width 0.3s ease;
+    }
+    
+    .week-count {
+        font-size: 13px;
+        font-weight: 500;
+        color: #475569;
+    }
+    
+    .my-booking-item {
+        background: white;
+        border-radius: 8px;
+        padding: 12px 16px;
+        margin-bottom: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 12px;
+        border: 1px solid #e2e8f0;
+        transition: all 0.2s;
+    }
+    
+    .my-booking-item:hover {
+        border-color: #94a3b8;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+    
+    .booking-main {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+    
+    .booking-datetime {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 14px;
+    }
+    
+    .booking-date {
+        font-weight: 600;
+        color: #1e293b;
+    }
+    
+    .booking-hour {
+        background: #f1f5f9;
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-weight: 600;
+        color: #334155;
+    }
+    
+    .booking-week {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12px;
+        color: #64748b;
+    }
+    
+    .current-week-tag {
+        background: #3b82f6;
+        color: white;
+        padding: 2px 6px;
+        border-radius: 10px;
+        font-size: 10px;
+        font-weight: 600;
+    }
+    
+    .booking-timer {
+        display: flex;
+        align-items: center;
+        gap: 6px;
         padding: 4px 12px;
+        background: #f1f5f9;
         border-radius: 20px;
         font-size: 12px;
         font-weight: 600;
     }
     
-    /* Modal de plano necessário */
-    #planRequiredModal .modal-content {
-        max-width: 400px;
+    .booking-timer .critical {
+        color: #dc2626;
+        animation: pulse 1s infinite;
     }
     
-    #planRequiredModal ul {
-        list-style: none;
-        padding: 0;
+    .booking-timer .warning {
+        color: #f59e0b;
     }
     
-    #planRequiredModal li {
-        margin: 8px 0;
-        color: #4b5563;
+    .booking-timer .moderate {
+        color: #3b82f6;
     }
     
-    /* Responsividade */
+    .booking-timer .safe {
+        color: #10b981;
+    }
+    
+    .booking-timer.expired {
+        background: #e2e8f0;
+        color: #64748b;
+    }
+    
+    .booking-footer {
+        margin-top: 4px;
+    }
+    
+    .cannot-cancel-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 2px 8px;
+        background: #fee2e2;
+        color: #dc2626;
+        border-radius: 12px;
+        font-size: 10px;
+    }
+    
+    .btn-cancel {
+        padding: 6px 12px;
+        background: #ef4444;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    
+    .btn-cancel:hover:not(:disabled) {
+        background: #dc2626;
+        transform: translateY(-1px);
+    }
+    
+    .btn-cancel:disabled {
+        background: #cbd5e1;
+        cursor: not-allowed;
+        opacity: 0.5;
+    }
+    
+    @keyframes pulse {
+        0% { opacity: 1; }
+        50% { opacity: 0.6; }
+        100% { opacity: 1; }
+    }
+    
     @media (max-width: 768px) {
-        .user-info {
+        .warning-content {
             flex-direction: column;
             align-items: flex-start;
+        }
+        
+        .progress-container {
             width: 100%;
         }
         
-        .plan-badge {
+        .counter-info {
             width: 100%;
-            justify-content: center;
+            justify-content: space-between;
         }
         
-        .weekly-warning {
+        .week-header {
             flex-direction: column;
-            text-align: center;
+            align-items: flex-start;
         }
         
-        .warning-link {
+        .week-stats {
             width: 100%;
-            justify-content: center;
+            justify-content: space-between;
+        }
+        
+        .my-booking-item {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        
+        .btn-cancel {
+            width: 100%;
         }
     }
 `;
