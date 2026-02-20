@@ -2140,7 +2140,7 @@ body {
 .admin-dropdown {
     position: absolute;
     top: 100%;
-    right: 0;
+    right: auto;
     background: white;
     border-radius: var(--radius-md);
     box-shadow: var(--shadow-lg);
