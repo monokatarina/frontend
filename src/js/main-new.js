@@ -1146,59 +1146,84 @@ function showPlanRequiredModal() {
 }
 // MODAL PARA HORÁRIO PASSADO
 function showPastTimeModal(date, hour) {
-    // Criar modal se não existir
-    let modal = document.getElementById('pastTimeModal');
-    
-    if (!modal) {
-        modal = document.createElement('div');
-        modal.id = 'pastTimeModal';
-        modal.className = 'modal';
-        modal.innerHTML = `
-            <div class="modal-content past-time-modal">
-                <div class="modal-header">
-                    <h3><i class="fas fa-clock" style="color: #ef4444;"></i> Horário indisponível</h3>
-                    <button class="modal-close" onclick="closePastTimeModal()">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    <div class="past-time-icon">
-                        <i class="fas fa-hourglass-end"></i>
-                    </div>
-                    <p class="past-time-message">
-                        Este horário <strong id="pastDateTime"></strong> já passou.
-                    </p>
-                    <p class="past-time-suggestion">
-                        <i class="fas fa-lightbulb"></i>
-                        Que tal escolher um horário futuro?
-                    </p>
-                </div>
-                <div class="modal-actions">
-                    <button class="btn-primary" onclick="closePastTimeModal()" style="width: 100%;">
-                        <i class="fas fa-check"></i>
-                        Entendi
-                    </button>
-                </div>
-            </div>
-        `;
-        document.body.appendChild(modal);
+    // Fechar qualquer modal existente primeiro
+    const existingModal = document.getElementById('pastTimeModal');
+    if (existingModal) {
+        existingModal.remove();
     }
+    
+    // Criar modal
+    const modal = document.createElement('div');
+    modal.id = 'pastTimeModal';
+    modal.className = 'modal';
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
     
     // Formatar data e hora para exibição
     const formattedDate = formatDate(date);
     const dateTimeStr = `${formattedDate} às ${hour}:00`;
-    document.getElementById('pastDateTime').textContent = dateTimeStr;
     
-    modal.style.display = 'flex';
-    setTimeout(() => modal.classList.add('show'), 10);
+    modal.innerHTML = `
+        <div class="modal-content past-time-modal">
+            <div class="modal-header">
+                <h3>
+                    <i class="fas fa-clock"></i>
+                    Horário indisponível
+                </h3>
+                <button class="modal-close" onclick="closePastTimeModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="past-time-icon">
+                    <i class="fas fa-hourglass-end"></i>
+                </div>
+                <p class="past-time-message">
+                    Este horário <br>
+                    <strong>${dateTimeStr}</strong> <br>
+                    já passou.
+                </p>
+                <div class="past-time-suggestion">
+                    <i class="fas fa-lightbulb"></i>
+                    <span>Que tal escolher um horário futuro?</span>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-primary" onclick="closePastTimeModal()">
+                    <i class="fas fa-check"></i>
+                    Entendi
+                </button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Mostrar modal com animação
+    setTimeout(() => {
+        modal.style.display = 'flex';
+        setTimeout(() => modal.classList.add('show'), 10);
+    }, 10);
+    
+    // Fechar ao clicar fora
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            closePastTimeModal();
+        }
+    });
 }
 
-// Função global para fechar o modal
+
+// Função global para fechar o modal - CORRIGIDA
 window.closePastTimeModal = function() {
     const modal = document.getElementById('pastTimeModal');
     if (modal) {
         modal.classList.remove('show');
-        setTimeout(() => modal.style.display = 'none', 300);
+        setTimeout(() => {
+            if (modal.parentNode) {
+                modal.remove();
+            }
+        }, 300);
     }
 };
 
@@ -1631,11 +1656,56 @@ document.addEventListener('DOMContentLoaded', function() {
 // ============================================
 
 const additionalStyles = `
-
-    /* Modal de horário passado */
+    /* Modal de horário passado - CORRIGIDO */
     .past-time-modal {
         max-width: 380px !important;
         text-align: center;
+        position: relative;
+        background: white;
+        border-radius: 16px;
+        padding: 24px;
+    }
+
+    .past-time-modal .modal-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 16px;
+        padding-bottom: 12px;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .past-time-modal .modal-header h3 {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 18px;
+        color: #1f2937;
+        margin: 0;
+    }
+
+    .past-time-modal .modal-header h3 i {
+        color: #ef4444;
+    }
+
+    .past-time-modal .modal-close {
+        background: none;
+        border: none;
+        font-size: 20px;
+        cursor: pointer;
+        color: #9ca3af;
+        transition: color 0.2s;
+        padding: 4px 8px;
+        border-radius: 4px;
+    }
+
+    .past-time-modal .modal-close:hover {
+        color: #4b5563;
+        background: #f3f4f6;
+    }
+
+    .past-time-modal .modal-body {
+        padding: 8px 0;
     }
 
     .past-time-icon {
@@ -1660,7 +1730,7 @@ const additionalStyles = `
         color: #ef4444;
         font-weight: 700;
         background: #fee2e2;
-        padding: 2px 8px;
+        padding: 4px 12px;
         border-radius: 20px;
         display: inline-block;
         margin: 5px 0;
@@ -1676,7 +1746,7 @@ const additionalStyles = `
         align-items: center;
         justify-content: center;
         gap: 8px;
-        margin-top: 10px;
+        margin: 20px 0;
     }
 
     .past-time-suggestion i {
@@ -1684,12 +1754,35 @@ const additionalStyles = `
         font-size: 16px;
     }
 
+    .past-time-modal .modal-actions {
+        display: flex;
+        justify-content: center;
+        margin-top: 24px;
+    }
+
+    .past-time-modal .btn-primary {
+        background: #3b82f6;
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        width: 100%;
+    }
+
+    .past-time-modal .btn-primary:hover {
+        background: #2563eb;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+    }
+
     @keyframes shake {
         0%, 100% { transform: translateX(0); }
         10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
         20%, 40%, 60%, 80% { transform: translateX(5px); }
     }
-
     /* Responsividade */
     @media (max-width: 480px) {
         .past-time-icon {
