@@ -1835,7 +1835,7 @@ const additionalStyles = `
         font-size: 13px;
         font-weight: 600;
         color: white;
-        position: relative;
+        position: unset;
     }
     
     .plan-badge.no-plan {
