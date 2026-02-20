@@ -770,7 +770,7 @@ body {
 }
 
 .plan-badge {
-    position: absolute;
+    position: unset;
     top: 12px;
     right: 12px;
     padding: 4px 12px;
