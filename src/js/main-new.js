@@ -377,15 +377,20 @@ function groupBookingsByWeek(bookings) {
     return Object.values(grouped).sort((a, b) => b.weekStart - a.weekStart);
 }
 
-// Função para contar reservas em uma semana específica
-function countBookingsInWeek(weekStart, userId) {
-    const { monday, sunday } = getWeekRange(weekStart);
+// ============================================
+// FUNÇÃO PARA CONTAR RESERVAS EM UMA SEMANA ESPECÍFICA
+// ============================================
+function countBookingsInWeek(date, userId) {
+    const { monday, sunday } = getWeekRange(date);
     
-    return bookings.filter(b => {
+    const count = bookings.filter(b => {
         if (b.userId !== userId) return false;
         const bookDate = new Date(b.date + 'T00:00:00');
         return bookDate >= monday && bookDate <= sunday;
     }).length;
+    
+    console.log(`📊 Semana de ${formatWeekRange(date)}: ${count} reservas`);
+    return count;
 }
 
 function updateWeeklyWarning() {
@@ -484,23 +489,140 @@ function updateWeeklyWarning() {
     
     weeklyWarning.className = 'weekly-warning info';
 }
-
-function updateWeeklyWarningNoPlan() {
+// Versão simplificada para usuários sem plano
+function updateWeeklyWarning() {
     if (!weeklyWarning) return;
+    
+    if (currentUser?.isAdmin) {
+        weeklyWarning.innerHTML = `
+            <div class="warning-content">
+                <i class="fas fa-crown"></i>
+                <span>Modo Administrador - Você tem acesso total</span>
+            </div>
+        `;
+        weeklyWarning.className = 'weekly-warning admin';
+        return;
+    }
+    
+    if (!currentUser?.plan || !userHasActivePlan()) {
+        updateWeeklyWarningNoPlan();
+        return;
+    }
+    
+    const planName = currentUser.plan.name || currentUser.plan.id;
+    const planLimit = currentUser.plan.aulasPorSemana;
+    const planColor = currentUser.plan.color || '#6366f1';
+    
+    // Dados da semana atual
+    const currentWeekRange = formatWeekRange(new Date());
+    const currentWeekCount = countBookingsInWeek(new Date(), currentUser.id);
+    const currentRemaining = planLimit - currentWeekCount;
+    const isCurrentWeekFull = currentWeekCount >= planLimit;
+    
+    // Dados da próxima semana
+    const nextWeekDate = new Date();
+    nextWeekDate.setDate(nextWeekDate.getDate() + 7);
+    const nextWeekRange = formatWeekRange(nextWeekDate);
+    const nextWeekCount = countBookingsInWeek(nextWeekDate, currentUser.id);
+    const nextRemaining = planLimit - nextWeekCount;
+    const hasNextWeekBookings = nextWeekCount > 0;
     
     weeklyWarning.innerHTML = `
         <div class="warning-content">
-            <i class="fas fa-info-circle"></i>
-            <span>Você não possui um plano ativo.</span>
-            <a href="/plans" class="warning-link" style="background: var(--primary);">
-                <i class="fas fa-crown"></i>
-                Escolher plano
-            </a>
+            <div class="warning-header">
+                <span class="plan-indicator" style="background: ${planColor}">
+                    <i class="fas ${PLANS[currentUser.plan.id]?.icon || 'fa-crown'}"></i>
+                    Plano ${planName} • ${planLimit} aulas/semana
+                </span>
+            </div>
+            
+            <div class="weeks-container">
+                <!-- SEMANA ATUAL -->
+                <div class="week-card ${isCurrentWeekFull ? 'full' : 'current'}">
+                    <div class="week-title">
+                        <i class="fas fa-calendar-check"></i>
+                        <span>Semana Atual</span>
+                        <span class="week-dates">${currentWeekRange}</span>
+                        ${isCurrentWeekFull ? '<span class="limit-badge">Limite atingido</span>' : ''}
+                    </div>
+                    
+                    <div class="week-stats">
+                        <div class="progress-container">
+                            <div class="progress-bar" style="width: ${(currentWeekCount/planLimit)*100}%; background: ${planColor}"></div>
+                        </div>
+                        
+                        <div class="count-info">
+                            <span class="used">
+                                <strong>${currentWeekCount}</strong>/${planLimit} aulas
+                                ${currentWeekCount > 0 ? '<i class="fas fa-check-circle" style="color: #10b981; margin-left: 5px;"></i>' : ''}
+                            </span>
+                            
+                            ${isCurrentWeekFull ? 
+                                `<span class="limit-message">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                    Limite semanal atingido
+                                </span>` : 
+                                `<span class="remaining positive">
+                                    <i class="fas fa-arrow-up"></i>
+                                    ${currentRemaining} vaga${currentRemaining !== 1 ? 's' : ''} restante${currentRemaining !== 1 ? 's' : ''}
+                                </span>`
+                            }
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- PRÓXIMA SEMANA -->
+                <div class="week-card next ${hasNextWeekBookings ? 'has-bookings' : ''}">
+                    <div class="week-title">
+                        <i class="fas fa-calendar-plus"></i>
+                        <span>Próxima Semana</span>
+                        <span class="week-dates">${nextWeekRange}</span>
+                        ${hasNextWeekBookings ? '<span class="bookings-badge">Aulas agendadas</span>' : ''}
+                    </div>
+                    
+                    <div class="week-stats">
+                        <div class="progress-container">
+                            <div class="progress-bar" style="width: ${(nextWeekCount/planLimit)*100}%; background: ${planColor}"></div>
+                        </div>
+                        
+                        <div class="count-info">
+                            <span class="used">
+                                <strong>${nextWeekCount}</strong>/${planLimit} aulas
+                                ${nextWeekCount > 0 ? '<i class="fas fa-check-circle" style="color: #10b981; margin-left: 5px;"></i>' : ''}
+                            </span>
+                            
+                            ${nextWeekCount > 0 ? 
+                                `<span class="next-bookings">
+                                    <i class="fas fa-calendar-check"></i>
+                                    ${nextWeekCount} aula${nextWeekCount !== 1 ? 's' : ''} marcada${nextWeekCount !== 1 ? 's' : ''}
+                                </span>` : 
+                                `<span class="remaining neutral">
+                                    <i class="fas fa-clock"></i>
+                                    Nenhuma aula agendada
+                                </span>`
+                            }
+                        </div>
+                    </div>
+                    
+                    ${nextWeekCount > 0 ? `
+                        <div class="next-week-details">
+                            <i class="fas fa-info-circle"></i>
+                            Você já tem aula${nextWeekCount !== 1 ? 's' : ''} marcada${nextWeekCount !== 1 ? 's' : ''} para a próxima semana
+                        </div>
+                    ` : ''}
+                </div>
+            </div>
         </div>
     `;
-    weeklyWarning.className = 'weekly-warning warning';
+    
+    weeklyWarning.className = 'weekly-warning info';
+    
+    // Se atingiu o limite, mostrar modal informativo (uma vez por sessão)
+    if (isCurrentWeekFull && !sessionStorage.getItem('limitModalShown')) {
+        sessionStorage.setItem('limitModalShown', 'true');
+        showLimitReachedModal(planLimit, currentWeekCount, planName);
+    }
 }
-
 // ============================================
 // 4. FUNÇÕES DE CONTAGEM E VALIDAÇÃO
 // ============================================
@@ -1265,6 +1387,136 @@ window.closePastTimeModal = function() {
             }
         }, 300);
     }
+};
+
+// ============================================
+// MODAL DE LIMITE SEMANAL ATINGIDO
+// ============================================
+function showLimitReachedModal(limit, used, planName) {
+    // Fechar modal existente se houver
+    const existingModal = document.getElementById('limitReachedModal');
+    if (existingModal) {
+        existingModal.remove();
+    }
+    
+    const modal = document.createElement('div');
+    modal.id = 'limitReachedModal';
+    modal.className = 'modal';
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+    
+    modal.innerHTML = `
+        <div class="modal-content limit-modal">
+            <div class="modal-header">
+                <h3>
+                    <i class="fas fa-exclamation-circle" style="color: #f59e0b;"></i>
+                    Limite semanal atingido
+                </h3>
+                <button class="modal-close" onclick="closeLimitModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="limit-icon">
+                    <i class="fas fa-chart-line"></i>
+                </div>
+                
+                <p class="limit-message-main">
+                    Você já utilizou <strong>${used} de ${limit} aulas</strong> disponíveis nesta semana.
+                </p>
+                
+                <div class="progress-container large">
+                    <div class="progress-bar" style="width: ${(used/limit)*100}%; background: #f59e0b;"></div>
+                </div>
+                
+                <div class="limit-info">
+                    <p>
+                        <i class="fas fa-info-circle"></i>
+                        Para agendar mais aulas nesta semana, você precisará fazer um upgrade de plano.
+                    </p>
+                </div>
+                
+                <div class="plans-comparison">
+                    <h4>Planos disponíveis:</h4>
+                    
+                    <div class="plan-option">
+                        <div class="plan-name">
+                            <i class="fas fa-seedling" style="color: #10b981;"></i>
+                            Plano Básico
+                        </div>
+                        <div class="plan-limit">2 aulas/semana</div>
+                    </div>
+                    
+                    <div class="plan-option">
+                        <div class="plan-name">
+                            <i class="fas fa-fire" style="color: #3b82f6;"></i>
+                            Plano Intermediário
+                        </div>
+                        <div class="plan-limit">3 aulas/semana</div>
+                    </div>
+                    
+                    <div class="plan-option">
+                        <div class="plan-name">
+                            <i class="fas fa-rocket" style="color: #f59e0b;"></i>
+                            Plano Avançado
+                        </div>
+                        <div class="plan-limit">4 aulas/semana</div>
+                    </div>
+                    
+                    <div class="plan-option highlight">
+                        <div class="plan-name">
+                            <i class="fas fa-crown" style="color: #8b5cf6;"></i>
+                            Plano Premium
+                        </div>
+                        <div class="plan-limit">5 aulas/semana</div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-primary" onclick="redirectToUpgrade()">
+                    <i class="fas fa-crown"></i>
+                    Fazer upgrade de plano
+                </button>
+                <button class="btn-secondary" onclick="closeLimitModal()">
+                    <i class="fas fa-clock"></i>
+                    Agendar para próxima semana
+                </button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    setTimeout(() => {
+        modal.style.display = 'flex';
+        setTimeout(() => modal.classList.add('show'), 10);
+    }, 10);
+    
+    // Fechar ao clicar fora
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            closeLimitModal();
+        }
+    });
+}
+
+// Funções globais para o modal de limite
+window.closeLimitModal = function() {
+    const modal = document.getElementById('limitReachedModal');
+    if (modal) {
+        modal.classList.remove('show');
+        setTimeout(() => {
+            if (modal.parentNode) {
+                modal.remove();
+            }
+        }, 300);
+    }
+};
+
+// Redirecionar para página de planos
+window.redirectToUpgrade = function() {
+    closeLimitModal();
+    window.location.href = '/plans';
 };
 
 // Funções globais para o modal
@@ -2417,68 +2669,206 @@ const additionalStyles = `
         font-size: 12px;
         font-weight: 600;
     }
-    // Adicione na seção additionalStyles
-    .fixed-booking-option {
-        margin-top: 20px;
-        padding: 15px;
-        background: #f8fafc;
-        border-radius: 8px;
+    /* Estilos para o modal de limite */
+    .limit-modal {
+        max-width: 450px !important;
         text-align: center;
     }
 
-    .fixed-booking-option hr {
-        margin: 0 0 15px 0;
-        border: none;
-        border-top: 1px solid #e2e8f0;
+    .limit-icon {
+        font-size: 48px;
+        color: #f59e0b;
+        margin: 20px 0;
     }
 
-    .fixed-booking-option p {
-        margin: 8px 0;
+    .limit-message-main {
+        font-size: 16px;
+        color: #1f2937;
+        margin: 15px 0;
+        font-weight: 500;
+    }
+
+    .limit-message-main strong {
+        color: #f59e0b;
+        font-size: 20px;
+    }
+
+    .progress-container.large {
+        width: 100%;
+        height: 12px;
+        margin: 20px 0;
+    }
+
+    .limit-info {
+        background: #fff7ed;
+        border-left: 4px solid #f59e0b;
+        padding: 15px;
+        border-radius: 8px;
+        margin: 20px 0;
+        text-align: left;
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+    }
+
+    .limit-info i {
+        color: #f59e0b;
+        font-size: 18px;
+        margin-top: 2px;
+    }
+
+    .limit-info p {
+        color: #7b5a3a;
+        font-size: 14px;
+        margin: 0;
+    }
+
+    .plans-comparison {
+        background: #f8fafc;
+        padding: 15px;
+        border-radius: 8px;
+        margin: 15px 0;
+        text-align: left;
+    }
+
+    .plans-comparison h4 {
+        color: #334155;
+        margin-bottom: 12px;
+        font-size: 14px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .plan-option {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 10px;
+        border-bottom: 1px solid #e2e8f0;
+    }
+
+    .plan-option:last-child {
+        border-bottom: none;
+    }
+
+    .plan-option.highlight {
+        background: #f1f5f9;
+        border-radius: 6px;
+        margin-top: 5px;
+    }
+
+    .plan-name {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-weight: 500;
         color: #334155;
     }
 
-    .fixed-description {
-        font-size: 13px;
-        color: #64748b;
-        margin-bottom: 15px !important;
+    .plan-limit {
+        background: #e2e8f0;
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-size: 12px;
+        color: #475569;
     }
 
-    .btn-fixed {
-        background: #8b5cf6;
+    /* Estilos para os cards de semana melhorados */
+    .week-card.full {
+        border-left: 4px solid #f59e0b;
+        background: #fff7ed;
+    }
+
+    .week-card.has-bookings {
+        border-left: 4px solid #10b981;
+    }
+
+    .limit-badge {
+        background: #f59e0b;
         color: white;
-        border: none;
-        padding: 10px 20px;
-        border-radius: 6px;
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-size: 10px;
         font-weight: 600;
-        cursor: pointer;
-        transition: all 0.2s;
+        margin-left: auto;
     }
 
-    .btn-fixed:hover {
-        background: #7c3aed;
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+    .bookings-badge {
+        background: #10b981;
+        color: white;
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-size: 10px;
+        font-weight: 600;
+        margin-left: auto;
     }
-    
-    .remaining.positive {
-        background: #d1fae5;
-        color: #059669;
-    }
-    
-    .remaining.zero {
+
+    .limit-message {
+        display: flex;
+        align-items: center;
+        gap: 4px;
         background: #fee2e2;
         color: #dc2626;
+        padding: 4px 8px;
+        border-radius: 20px;
+        font-size: 11px;
+        font-weight: 600;
     }
-    
+
+    .limit-message i {
+        font-size: 12px;
+    }
+
+    .remaining.neutral {
+        background: #f1f5f9;
+        color: #475569;
+    }
+
+    .next-bookings {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        background: #d1fae5;
+        color: #059669;
+        padding: 4px 8px;
+        border-radius: 20px;
+        font-size: 11px;
+        font-weight: 600;
+    }
+
+    .next-week-details {
+        margin-top: 12px;
+        padding: 10px;
+        background: #eff6ff;
+        border-radius: 6px;
+        font-size: 12px;
+        color: #1e40af;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .next-week-details i {
+        color: #3b82f6;
+    }
+
     /* Responsividade */
     @media (max-width: 768px) {
-        .weeks-container {
-            grid-template-columns: 1fr;
-            gap: 12px;
+        .limit-modal {
+            width: 95%;
+            padding: 20px;
         }
         
-        .week-card {
-            padding: 12px;
+        .plan-option {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 5px;
+        }
+        
+        .limit-info {
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
         }
     }
 `;
