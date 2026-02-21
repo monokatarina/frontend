@@ -1097,6 +1097,46 @@ function onSlotClick(e) {
 
     openBookingModal(date, h);
 }
+
+// ============================================
+// FUNÇÃO PARA CRIAR AULA FIXA
+// ============================================
+async function createFixedBooking(weekday, hour) {
+  if (!currentUser) {
+    showNotification('Faça login primeiro', 'error');
+    return;
+  }
+
+  if (!confirm(`Deseja transformar esta aula em fixa?\n\nIsso significa que você terá aula automática toda ${weekdays[weekday-1]} às ${hour}:00.`)) {
+    return;
+  }
+
+  try {
+    const response = await fetch(`${API}/fixed-bookings`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userId: currentUser.id,
+        weekday: weekday,
+        hour: hour
+      })
+    });
+
+    const data = await response.json();
+
+    if (response.ok) {
+      showNotification('Aula fixa criada com sucesso!', 'success');
+      loadData(); // Recarregar dados
+    } else {
+      showNotification(data.error || 'Erro ao criar aula fixa', 'error');
+    }
+  } catch (error) {
+    console.error('Erro:', error);
+    showNotification('Erro ao conectar com o servidor', 'error');
+  }
+}
+
+
 // Modal para redirecionar para planos
 function showPlanRequiredModal() {
     let modal = document.getElementById('planRequiredModal');
@@ -1253,7 +1293,7 @@ function openBookingModal(date, h) {
     }
     
     modalContext = { date, hour: h };
-    
+    const weekday = new Date(date).getDay(); // 1-5
     const bookedList = isBooked(date, h);
     const bookCount = bookedList.length;
     const availableSpots = 4 - bookCount;
@@ -1272,6 +1312,18 @@ function openBookingModal(date, h) {
             <i class="fas fa-exclamation-triangle"></i>
             ${timeValidation.message}
         </div>` : '';
+    const fixedButtonHtml = `
+        <div class="fixed-booking-option">
+        <hr>
+        <p><i class="fas fa-repeat"></i> <strong>Quer tornar este horário fixo?</strong></p>
+        <p class="fixed-description">Isso criará uma aula automática toda ${weekdays[weekday-1]} às ${h}:00.</p>
+        <button class="btn-secondary btn-fixed" onclick="createFixedBooking(${weekday}, ${h})">
+            <i class="fas fa-calendar-plus"></i>
+            Tornar Fixo
+        </button>
+        </div>
+    `;
+    modalUserName.innerHTML += fixedButtonHtml;
     
     modalUserName.innerHTML = `
         <div class="user-info-detail">
@@ -2364,6 +2416,48 @@ const additionalStyles = `
         border-radius: 20px;
         font-size: 12px;
         font-weight: 600;
+    }
+    // Adicione na seção additionalStyles
+    .fixed-booking-option {
+        margin-top: 20px;
+        padding: 15px;
+        background: #f8fafc;
+        border-radius: 8px;
+        text-align: center;
+    }
+
+    .fixed-booking-option hr {
+        margin: 0 0 15px 0;
+        border: none;
+        border-top: 1px solid #e2e8f0;
+    }
+
+    .fixed-booking-option p {
+        margin: 8px 0;
+        color: #334155;
+    }
+
+    .fixed-description {
+        font-size: 13px;
+        color: #64748b;
+        margin-bottom: 15px !important;
+    }
+
+    .btn-fixed {
+        background: #8b5cf6;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 6px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .btn-fixed:hover {
+        background: #7c3aed;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
     }
     
     .remaining.positive {
