@@ -324,7 +324,32 @@ const adminToggleContainer = document.querySelector('.admin-toggle');
 // ============================================
 // 1. FUNÇÕES UTILITÁRIAS BÁSICAS
 // ============================================
+// ============================================
+// LIMPAR DADOS CORROMPIDOS
+// ============================================
+function limparDadosCorrompidos() {
+    const savedUser = localStorage.getItem('user');
+    if (savedUser) {
+        try {
+            const user = JSON.parse(savedUser);
+            // Se o ID for muito alto (8) e não for admin, pode ser problema
+            if (user.id > 5 && !user.isAdmin) {
+                console.warn('⚠️ Possível usuário corrompido detectado (ID:', user.id, ')');
+                
+                // Perguntar se quer limpar
+                if (confirm('Detectamos um problema com seus dados salvos. Deseja fazer login novamente?')) {
+                    localStorage.removeItem('user');
+                    window.location.reload();
+                }
+            }
+        } catch (e) {
+            localStorage.removeItem('user');
+        }
+    }
+}
 
+// Executar no início
+limparDadosCorrompidos();
 // Sistema de notificações
 function showNotification(message, type = 'info', duration = 3000) {
     let container = document.getElementById('toastContainer');
@@ -2482,7 +2507,75 @@ function showAppScreen() {
 // ============================================
 // 12. CARREGAR DADOS
 // ============================================
+// ============================================
+// DIAGNÓSTICO DO SISTEMA
+// ============================================
+async function diagnosticarSistema() {
+    console.log('🔍 ===== DIAGNÓSTICO DO SISTEMA =====');
+    
+    // 1. Verificar usuário no localStorage
+    const savedUser = localStorage.getItem('user');
+    console.log('📦 localStorage.user:', savedUser ? 'EXISTE' : 'NÃO EXISTE');
+    if (savedUser) {
+        try {
+            const user = JSON.parse(savedUser);
+            console.log('👤 Usuário no localStorage:', { 
+                id: user.id, 
+                name: user.name, 
+                email: user.email 
+            });
+        } catch (e) {
+            console.log('❌ Erro ao parsear localStorage.user');
+        }
+    }
+    
+    // 2. Testar endpoints de usuário
+    console.log('\n📡 Testando endpoints do usuário:');
+    
+    // Tentar buscar usuário por ID se existir no localStorage
+    if (savedUser) {
+        const user = JSON.parse(savedUser);
+        
+        try {
+            const response = await fetch(`${API}/auth/me?userId=${user.id}`, {
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' }
+            });
+            console.log(`📡 /auth/me?userId=${user.id}: ${response.status}`);
+            
+            if (response.ok) {
+                const data = await response.json();
+                console.log('✅ Usuário encontrado no backend!');
+            } else {
+                const error = await response.json();
+                console.log(`❌ Usuário NÃO encontrado: ${error.error}`);
+            }
+        } catch (error) {
+            console.log(`❌ Erro na requisição: ${error.message}`);
+        }
+    }
+    
+    // 3. Verificar conexão com backend
+    console.log('\n📡 Testando conectividade geral:');
+    const endpoints = ['/auth/me', '/bookings', '/admin/availability', '/admin/dates'];
+    
+    for (const endpoint of endpoints) {
+        try {
+            const response = await fetch(`${API}${endpoint}`, {
+                method: 'HEAD',
+                credentials: 'include'
+            });
+            console.log(`📡 ${endpoint}: ${response.status}`);
+        } catch (error) {
+            console.log(`📡 ${endpoint}: FALHA - ${error.message}`);
+        }
+    }
+    
+    console.log('🔍 ===== FIM DO DIAGNÓSTICO =====\n');
+}
 
+// Executar diagnóstico ao iniciar
+diagnosticarSistema();
 async function loadData() {
     if (loading) return;
     loading = true;
