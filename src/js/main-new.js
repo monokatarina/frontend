@@ -2486,6 +2486,8 @@ function showAppScreen() {
 async function loadData() {
     if (loading) return;
     loading = true;
+
+    await testAPIEndpoints();
     
     try {
         scheduleEl.innerHTML = `<div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i> Carregando...</div>`;
