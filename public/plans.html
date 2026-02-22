@@ -35,9 +35,44 @@
             opacity: 0.9;
         }
         
+        /* ===== CATEGORIAS ===== */
+        .categoria-header {
+            grid-column: 1 / -1;
+            text-align: left;
+            margin: 40px 0 20px 0;
+            padding: 0 10px;
+        }
+        
+        .categoria-header h2 {
+            font-size: 28px;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 5px;
+        }
+        
+        .categoria-header h2 i {
+            font-size: 32px;
+        }
+        
+        .categoria-header p {
+            font-size: 16px;
+            color: rgba(255,255,255,0.8);
+            margin-left: 42px;
+        }
+        
+        .categoria-normal h2 i {
+            color: #10b981;
+        }
+        
+        .categoria-danca h2 i {
+            color: #ec4899;
+        }
+        
         .plans-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
             gap: 24px;
             margin-bottom: 30px;
         }
@@ -53,12 +88,20 @@
             overflow: hidden;
             animation: fadeInUp 0.5s ease-out forwards;
             opacity: 0;
+            border: 2px solid transparent;
         }
         
-        .plan-card:nth-child(1) { animation-delay: 0.1s; }
-        .plan-card:nth-child(2) { animation-delay: 0.2s; }
-        .plan-card:nth-child(3) { animation-delay: 0.3s; }
-        .plan-card:nth-child(4) { animation-delay: 0.4s; }
+        .plan-card.normal_2x { border-top: 4px solid #10b981; }
+        .plan-card.normal_3x { border-top: 4px solid #3b82f6; }
+        .plan-card.normal_5x { border-top: 4px solid #8b5cf6; }
+        .plan-card.danca_2x { border-top: 4px solid #ec4899; }
+        .plan-card.danca_3x { border-top: 4px solid #ec4899; }
+        
+        .plan-card:nth-child(2) { animation-delay: 0.1s; }
+        .plan-card:nth-child(3) { animation-delay: 0.2s; }
+        .plan-card:nth-child(4) { animation-delay: 0.3s; }
+        .plan-card:nth-child(5) { animation-delay: 0.4s; }
+        .plan-card:nth-child(6) { animation-delay: 0.5s; }
         
         @keyframes fadeInUp {
             from {
@@ -93,9 +136,27 @@
             font-weight: 600;
         }
         
+        .plan-card .categoria-tag {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+            background: #f3f4f6;
+            color: #4b5563;
+        }
+        
+        .plan-card.normal_2x .categoria-tag { background: #d1fae5; color: #065f46; }
+        .plan-card.normal_3x .categoria-tag { background: #dbeafe; color: #1e40af; }
+        .plan-card.normal_5x .categoria-tag { background: #ede9fe; color: #5b21b6; }
+        .plan-card.danca_2x .categoria-tag,
+        .plan-card.danca_3x .categoria-tag { background: #fce7f3; color: #9d174d; }
+        
         .plan-card h3 {
             font-size: 28px;
-            margin-bottom: 16px;
+            margin: 20px 0 8px 0;
             color: #1f2937;
         }
         
@@ -103,13 +164,35 @@
             font-size: 42px;
             font-weight: 700;
             color: #6366f1;
-            margin-bottom: 24px;
+            margin-bottom: 16px;
         }
+        
+        .plan-card.normal_2x .price { color: #10b981; }
+        .plan-card.normal_3x .price { color: #3b82f6; }
+        .plan-card.normal_5x .price { color: #8b5cf6; }
+        .plan-card.danca_2x .price,
+        .plan-card.danca_3x .price { color: #ec4899; }
         
         .plan-card .price span {
             font-size: 16px;
             font-weight: normal;
             color: #6b7280;
+        }
+        
+        .plan-card .horarios-info {
+            background: #f3f4f6;
+            padding: 10px;
+            border-radius: 8px;
+            margin: 15px 0;
+            font-size: 13px;
+            color: #4b5563;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .plan-card .horarios-info i {
+            color: #f59e0b;
         }
         
         .features {
@@ -126,6 +209,7 @@
         
         .feature i {
             color: #10b981;
+            font-size: 14px;
         }
         
         .btn-select {
@@ -178,17 +262,41 @@
                 transform: translateY(0);
             }
         }
+
+        /* Responsividade */
+        @media (max-width: 768px) {
+            .categoria-header h2 {
+                font-size: 24px;
+            }
+            
+            .categoria-header p {
+                font-size: 14px;
+                margin-left: 34px;
+            }
+            
+            .plan-card {
+                padding: 24px 20px;
+            }
+            
+            .plan-card h3 {
+                font-size: 24px;
+            }
+            
+            .plan-card .price {
+                font-size: 36px;
+            }
+        }
     </style>
 </head>
 <body>
     <div class="plans-container">
         <div class="plans-header">
             <h1><i class="fas fa-crown"></i> Escolha seu plano</h1>
-            <p>Selecione o plano ideal para seus objetivos</p>
+            <p>Selecione a categoria e o plano ideal para seus objetivos</p>
         </div>
 
         <div class="plans-grid" id="plansGrid">
-            <!-- Cards serão inseridos via JS -->
+            <!-- Cards serão inseridos via JavaScript -->
         </div>
 
         <div style="text-align: center; margin-top: 20px;">
@@ -199,6 +307,204 @@
         </div>
     </div>
 
+    <script>
+        // ============================================
+        // CONFIGURAÇÃO DOS PLANOS (cópia do plans.js)
+        // ============================================
+        const PLANS = {
+            // Treino Normal
+            normal_2x: {
+                id: 'normal_2x',
+                name: 'Treino Normal 2x',
+                categoria: 'normal',
+                aulasPorSemana: 2,
+                price: 400.00,
+                color: '#10b981',
+                icon: 'fa-dumbbell',
+                horarios: 'Todos os horários',
+                description: 'Treino normal 2 vezes por semana',
+                features: [
+                    '2 aulas por semana',
+                    'Acesso a todos horários',
+                    'Suporte básico',
+                    'Acesso ao app mobile'
+                ]
+            },
+            normal_3x: {
+                id: 'normal_3x',
+                name: 'Treino Normal 3x',
+                categoria: 'normal',
+                aulasPorSemana: 3,
+                price: 510.00,
+                color: '#3b82f6',
+                icon: 'fa-dumbbell',
+                horarios: 'Todos os horários',
+                description: 'Treino normal 3 vezes por semana',
+                features: [
+                    '3 aulas por semana',
+                    'Acesso a todos horários',
+                    'Suporte prioritário',
+                    'Acesso ao app mobile',
+                    'Avaliação mensal'
+                ]
+            },
+            normal_5x: {
+                id: 'normal_5x',
+                name: 'Treino Normal 5x',
+                categoria: 'normal',
+                aulasPorSemana: 5,
+                price: 800.00,
+                color: '#8b5cf6',
+                icon: 'fa-crown',
+                horarios: 'Todos os horários',
+                description: 'Treino normal 5 vezes por semana',
+                features: [
+                    '5 aulas por semana',
+                    'Acesso a todos horários',
+                    'Suporte VIP',
+                    'Acesso ao app mobile',
+                    'Avaliação semanal',
+                    'Acompanhamento personalizado'
+                ]
+            },
+            
+            // Dança
+            danca_2x: {
+                id: 'danca_2x',
+                name: 'Dança 2x',
+                categoria: 'danca',
+                aulasPorSemana: 2,
+                price: 79.00,
+                color: '#ec4899',
+                icon: 'fa-music',
+                horarios: '14:00 e 15:00',
+                description: 'Aulas de dança 2 vezes por semana',
+                features: [
+                    '2 aulas de dança por semana',
+                    'Horários: 14:00 e 15:00',
+                    'Professores especializados',
+                    'Turmas reduzidas'
+                ]
+            },
+            danca_3x: {
+                id: 'danca_3x',
+                name: 'Dança 3x',
+                categoria: 'danca',
+                aulasPorSemana: 3,
+                price: 89.00,
+                color: '#ec4899',
+                icon: 'fa-music',
+                horarios: '14:00 e 15:00',
+                description: 'Aulas de dança 3 vezes por semana',
+                features: [
+                    '3 aulas de dança por semana',
+                    'Horários: 14:00 e 15:00',
+                    'Professores especializados',
+                    'Turmas reduzidas',
+                    'Coreografias exclusivas'
+                ]
+            }
+        };
+
+        // Mapeamento das categorias
+        const PLANOS_POR_CATEGORIA = {
+            normal: ['normal_2x', 'normal_3x', 'normal_5x'],
+            danca: ['danca_2x', 'danca_3x']
+        };
+
+        // ============================================
+        // RENDERIZAÇÃO DOS PLANOS
+        // ============================================
+        function renderPlans() {
+            const grid = document.getElementById('plansGrid');
+            if (!grid) return;
+            
+            grid.innerHTML = '';
+            
+            // Cabeçalho Treino Normal
+            const normalHeader = document.createElement('div');
+            normalHeader.className = 'categoria-header';
+            normalHeader.innerHTML = `
+                <h2><i class="fas fa-dumbbell" style="color: #10b981;"></i> Treinos Normais</h2>
+                <p>Musculação e condicionamento físico • Horários: 6h-12h e 16h-19h</p>
+            `;
+            grid.appendChild(normalHeader);
+            
+            // Planos Normais
+            PLANOS_POR_CATEGORIA.normal.forEach(id => {
+                const card = createPlanCard(id, PLANS[id]);
+                grid.appendChild(card);
+            });
+            
+            // Cabeçalho Dança
+            const dancaHeader = document.createElement('div');
+            dancaHeader.className = 'categoria-header';
+            dancaHeader.innerHTML = `
+                <h2><i class="fas fa-music" style="color: #ec4899;"></i> Aulas de Dança</h2>
+                <p>Dança • Horários disponíveis: 14:00 e 15:00 (segunda a sexta)</p>
+            `;
+            grid.appendChild(dancaHeader);
+            
+            // Planos de Dança
+            PLANOS_POR_CATEGORIA.danca.forEach(id => {
+                const card = createPlanCard(id, PLANS[id]);
+                grid.appendChild(card);
+            });
+        }
+
+        function createPlanCard(id, plan) {
+            const card = document.createElement('div');
+            card.className = `plan-card ${id}`;
+            card.dataset.plan = id;
+            
+            const categoriaNome = plan.categoria === 'normal' ? 'Treino' : 'Dança';
+            
+            card.innerHTML = `
+                <span class="categoria-tag">${categoriaNome}</span>
+                <div class="plan-icon" style="color: ${plan.color}; font-size: 32px; margin-top: 20px;">
+                    <i class="fas ${plan.icon}"></i>
+                </div>
+                <h3>${plan.name}</h3>
+                <div class="price">
+                    R$ ${plan.price.toFixed(2)}
+                    <span>/mês</span>
+                </div>
+                <div class="horarios-info">
+                    <i class="fas fa-clock"></i>
+                    <span>${plan.horarios}</span>
+                </div>
+                <div class="features">
+                    ${plan.features.map(f => `
+                        <div class="feature">
+                            <i class="fas fa-check-circle" style="color: ${plan.color}"></i>
+                            <span>${f}</span>
+                        </div>
+                    `).join('')}
+                </div>
+                <button class="btn-select" style="background: ${plan.color}; color: white;">
+                    <i class="fas fa-crown"></i>
+                    Escolher plano
+                </button>
+            `;
+
+            card.addEventListener('click', () => selectPlan(id));
+            return card;
+        }
+
+        // ============================================
+        // FUNÇÃO DE SELEÇÃO (será substituída pelo plans.js)
+        // ============================================
+        function selectPlan(planId) {
+            // Esta função será sobrescrita pelo plans.js
+            console.log('Plano selecionado:', planId);
+            // O plans.js substituirá esta função
+        }
+
+        // Renderizar ao carregar
+        document.addEventListener('DOMContentLoaded', renderPlans);
+    </script>
+
+    <!-- Carregar plans.js depois para sobrescrever a função selectPlan -->
     <script src="../src/js/plans.js"></script>
 </body>
 </html>
