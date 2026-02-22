@@ -674,9 +674,13 @@ function extractCPF(cpf) {
 // ============================================
 // MOSTRAR PAGAMENTO PIX
 // ============================================
+// ============================================
+// MOSTRAR PAGAMENTO PIX (VERSÃO ATUALIZADA)
+// ============================================
 function showPixPayment(data) {
     const qrContainer = document.getElementById('qrCodeContainer');
     const pixCode = document.getElementById('pixCode');
+    const pixButton = document.getElementById('pixButton');
     
     if (qrContainer && data.qr_code_base64) {
         qrContainer.innerHTML = `<img src="data:image/png;base64,${data.qr_code_base64}" alt="QR Code PIX">`;
@@ -686,8 +690,31 @@ function showPixPayment(data) {
         pixCode.value = data.qr_code;
     }
     
+    // Mudar texto do botão
+    if (pixButton) {
+        pixButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Aguardando pagamento...';
+        // Não desabilitar para não atrapalhar, mas mudar o texto
+    }
+    
     // Mostrar notificação
     showNotification('Pagamento PIX gerado! Escaneie o código ou copie a chave.', 'success');
+    
+    // Adicionar mensagem de aguardando
+    const pixContainer = document.querySelector('.pix-container');
+    if (pixContainer) {
+        const waitingMsg = document.createElement('div');
+        waitingMsg.className = 'pix-waiting';
+        waitingMsg.style.cssText = `
+            background: #fff3cd;
+            color: #856404;
+            padding: 10px;
+            border-radius: 8px;
+            margin: 10px 0;
+            font-size: 14px;
+        `;
+        waitingMsg.innerHTML = '<i class="fas fa-clock"></i> Aguardando confirmação do pagamento...';
+        pixContainer.appendChild(waitingMsg);
+    }
 }
 
 // ============================================
