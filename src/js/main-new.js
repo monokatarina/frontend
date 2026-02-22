@@ -362,19 +362,36 @@ function showNotification(message, type = 'info', duration = 3000) {
 
 // Carrega datas do backend
 // Carrega datas do backend (VERSÃO CORRIGIDA - SEM ERRO)
+// Carrega datas do backend (VERSÃO SUPER SEGURA)
 async function loadDates() {
     try {
         const response = await fetch(`${API}/admin/dates`);
+        
         if (!response.ok) {
-            console.warn('⚠️ Resposta não ok, usando datas locais');
+            console.warn('⚠️ Resposta não ok, gerando datas locais');
             return generateLocalDates();
         }
+        
+        // Verificar se a resposta é JSON
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            console.warn('⚠️ Resposta não é JSON, gerando datas locais');
+            return generateLocalDates();
+        }
+        
         const data = await response.json();
-        nextDates = data.data;
-        console.log('📅 Datas carregadas:', nextDates);
-        return nextDates;
+        
+        if (data.success && data.data) {
+            nextDates = data.data;
+            console.log('📅 Datas carregadas:', nextDates);
+            return nextDates;
+        } else {
+            console.warn('⚠️ Formato de resposta inválido, gerando datas locais');
+            return generateLocalDates();
+        }
+        
     } catch (error) {
-        console.warn('⚠️ Erro ao carregar datas, usando locais:', error.message);
+        console.warn('⚠️ Erro ao carregar datas, gerando localmente:', error.message);
         return generateLocalDates();
     }
 }
