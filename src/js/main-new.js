@@ -43,6 +43,9 @@ function normalizeUserPlans() {
 // ============================================
 // FUNÇÃO PARA ATUALIZAR DADOS DO USUÁRIO DO BACKEND
 // ============================================
+// ============================================
+// FUNÇÃO PARA ATUALIZAR DADOS DO USUÁRIO DO BACKEND
+// ============================================
 async function refreshUserData() {
     if (!currentUser) return;
     
@@ -51,7 +54,10 @@ async function refreshUserData() {
         
         // Buscar dados atualizados do usuário
         const response = await fetch(`${API}/auth/me`, {
-            credentials: 'include'
+            credentials: 'include',
+            headers: {
+                'X-User-ID': currentUser.id // Enviar ID no header como fallback
+            }
         });
         
         if (response.ok) {
@@ -64,7 +70,9 @@ async function refreshUserData() {
                 currentUser = { ...oldUser, ...updatedUser };
                 
                 // Normalizar planos
-                normalizeUserPlans();
+                if (typeof normalizeUserPlans === 'function') {
+                    normalizeUserPlans();
+                }
                 
                 // Salvar no localStorage
                 localStorage.setItem('user', JSON.stringify(currentUser));
@@ -73,21 +81,30 @@ async function refreshUserData() {
                 
                 // Atualizar interface
                 updatePlanInfo();
-                updateWeeklyWarning();
-                renderSchedule();
                 
                 return true;
             }
         } else {
+            console.log('⚠️ Não foi possível atualizar do backend, usando dados locais');
+            
             // Tentar buscar status da assinatura
             await checkSubscriptionStatus();
-            normalizeUserPlans();
+            
+            if (typeof normalizeUserPlans === 'function') {
+                normalizeUserPlans();
+            }
+            
             localStorage.setItem('user', JSON.stringify(currentUser));
             updatePlanInfo();
-            updateWeeklyWarning();
         }
     } catch (error) {
         console.error('❌ Erro ao atualizar usuário:', error);
+        
+        // Mesmo com erro, tentar normalizar os dados locais
+        if (typeof normalizeUserPlans === 'function') {
+            normalizeUserPlans();
+        }
+        updatePlanInfo();
     }
     
     return false;
@@ -306,16 +323,26 @@ const isBooked = (dateStr, hour) => {
 // ============================================
 
 // Verifica se usuário tem plano ativo
-function userHasActivePlan() {  // <-- SUBSTITUIR função antiga
+function userHasActivePlan() {
     if (!currentUser) return false;
     if (currentUser.isAdmin) return true;
     
-    // NOVA VERSÃO: verificar múltiplos planos
-    return currentUser.plans && 
-           Array.isArray(currentUser.plans) && 
-           currentUser.plans.length > 0;
+    // Verificar plans array
+    if (currentUser.plans && Array.isArray(currentUser.plans) && currentUser.plans.length > 0) {
+        return true;
+    }
+    
+    // Fallback para estrutura antiga
+    if (currentUser.plan && currentUser.plan.active) {
+        return true;
+    }
+    
+    if (currentUser.subscription && currentUser.subscription.status === 'active') {
+        return true;
+    }
+    
+    return false;
 }
-
 // Verifica status da assinatura no backend e sincroniza dados de plano no frontend
 async function checkSubscriptionStatus() {
     if (!currentUser || currentUser.isAdmin) return;
@@ -2085,6 +2112,25 @@ function closeModal() {
         modalConfirm.disabled = false;
         modalConfirm.innerHTML = 'Confirmar';
     }, 300);
+}
+
+// ============================================
+// FUNÇÃO PARA AVISO QUANDO NÃO TEM PLANO
+// ============================================
+function updateWeeklyWarningNoPlan() {
+    if (!weeklyWarning) return;
+    
+    weeklyWarning.innerHTML = `
+        <div class="warning-content warning">
+            <i class="fas fa-exclamation-triangle"></i>
+            <span>Você não possui um plano ativo</span>
+            <button class="btn-small" onclick="window.location.href='/plans'">
+                <i class="fas fa-crown"></i>
+                Ver planos
+            </button>
+        </div>
+    `;
+    weeklyWarning.className = 'weekly-warning warning';
 }
 
 function startPlanChecker() {
