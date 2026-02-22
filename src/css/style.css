@@ -160,6 +160,39 @@ body {
     box-shadow: var(--shadow-md);
 }
 
+/* Botao de planos no header (fallback estatico) */
+.btn-plans {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border: none;
+    border-radius: 30px;
+    background: linear-gradient(135deg, #8b5cf6, #6366f1);
+    color: white;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.3s;
+    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+}
+
+.btn-plans:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(139, 92, 246, 0.4);
+    background: linear-gradient(135deg, #7c3aed, #4f46e5);
+}
+
+.btn-plans.has-plan {
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+}
+
+.btn-plans.has-plan:hover {
+    background: linear-gradient(135deg, #d97706, #b45309);
+    box-shadow: 0 6px 16px rgba(245, 158, 11, 0.4);
+}
+
 /* ===== TELA DE AUTENTICAÇÃO ===== */
 .auth-screen {
     min-height: 100vh;
@@ -974,6 +1007,14 @@ body {
         width: 36px;
         height: 36px;
         font-size: 16px;
+    }
+
+    .btn-plans span {
+        display: none;
+    }
+
+    .btn-plans {
+        padding: 8px 12px;
     }
     
     .user-badge {
