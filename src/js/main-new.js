@@ -307,43 +307,121 @@ async function checkSubscriptionStatus() {
     }
 }
 // ============================================
+// FUNÇÃO PARA NORMALIZAR O PLANO DO USUÁRIO
+// ============================================
+function normalizeUserPlan() {
+    if (!currentUser) return;
+    
+    // Se o plano for uma string (como está no JSON), converter para objeto
+    if (typeof currentUser.plan === 'string') {
+        const planId = currentUser.plan;
+        const planData = PLANS[planId];
+        
+        if (planData) {
+            currentUser.plan = {
+                id: planId,
+                name: planData.name,
+                categoria: planData.categoria,
+                aulasPorSemana: planData.aulasPorSemana,
+                horariosPermitidos: planData.horariosPermitidos,
+                diasPermitidos: planData.diasPermitidos,
+                color: planData.color,
+                icon: planData.icon,
+                active: true
+            };
+            console.log('✅ Plano normalizado:', currentUser.plan);
+        }
+    }
+    
+    // Se for admin, não precisa normalizar
+    if (currentUser.isAdmin) return;
+    
+    // Se ainda não tem plano, criar objeto padrão
+    if (!currentUser.plan) {
+        currentUser.plan = {
+            id: null,
+            categoria: null,
+            aulasPorSemana: 0,
+            horariosPermitidos: [],
+            diasPermitidos: [1,2,3,4,5]
+        };
+    }
+}
+
+// ============================================
+// FUNÇÃO PARA VERIFICAR SE HORÁRIO É PERMITIDO PELO PLANO
+// ============================================
+function isHorarioPermitido(weekday, hour) {
+    // Se não tem usuário logado, permite (vai pedir login depois)
+    if (!currentUser) return true;
+    
+    // Admin pode tudo
+    if (currentUser.isAdmin) return true;
+    
+    // Se não tem plano ativo, não permite
+    if (!currentUser.plan || !currentUser.plan.active) return false;
+    
+    const plan = currentUser.plan;
+    
+    // Verificar se o dia é permitido
+    if (plan.diasPermitidos && !plan.diasPermitidos.includes(weekday)) {
+        console.log(`🚫 Dia ${weekday} não permitido para plano ${plan.id}`);
+        return false;
+    }
+    
+    // Verificar se o horário é permitido
+    if (plan.horariosPermitidos && !plan.horariosPermitidos.includes(hour)) {
+        console.log(`🚫 Horário ${hour} não permitido para plano ${plan.id}`);
+        return false;
+    }
+    
+    return true;
+}
+// ============================================
 // ADICIONE ESTA FUNÇÃO
 // ============================================
 async function verificarStatusPagamentoUsuario() {
-    if (!currentUser) return { status: 'ativo' };
-    
+    if (!currentUser) return { status: 'ativo', mensagem: '' };
+
     try {
-        // Tentar obter do backend (se tiver rota)
-        const response = await fetch(`${API}/payments/status/${currentUser.id}`);
+        const response = await fetch(`${API}/payments/status/${currentUser.id}`, {
+            credentials: 'include'
+        });
+
         if (response.ok) {
-            const data = await response.json();
-            return data;
+            const payload = await response.json();
+            const data = payload?.data || payload || {};
+            return {
+                status: data.status || 'ativo',
+                mensagem: data.mensagem || ''
+            };
         }
     } catch (error) {
-        console.log('Usando status simulado');
+        console.log('Nao foi possivel consultar status de pagamento no backend:', error?.message || error);
     }
-    
-    // Simulação para teste (remover em produção)
-    const vencimentoSimulado = new Date();
-    vencimentoSimulado.setDate(vencimentoSimulado.getDate() - 3);
-    
-    const hoje = new Date();
-    const diffTime = hoje - vencimentoSimulado;
-    const diasEmAtraso = Math.max(0, Math.floor(diffTime / (1000 * 60 * 60 * 24)));
-    
-    if (diasEmAtraso <= 0) {
-        return { status: 'ativo' };
-    } else if (diasEmAtraso <= 7) {
+
+    // Fallback local baseado em dados do usuario (sem forcar atraso artificial)
+    const pagamento = currentUser.pagamento || {};
+    const status = pagamento.status || 'ativo';
+
+    if (status === 'em_atraso') {
+        const dias = Number(pagamento.diasEmAtraso || 0);
         return {
             status: 'em_atraso',
-            mensagem: `⚠️ Pagamento pendente há ${diasEmAtraso} dias. Você tem mais ${7 - diasEmAtraso} dias para regularizar.`
-        };
-    } else {
-        return {
-            status: 'bloqueado',
-            mensagem: '❌ Plano suspenso por falta de pagamento.'
+            mensagem: dias > 0
+                ? `Pagamento pendente ha ${dias} dias. Regularize para evitar bloqueio.`
+                : 'Pagamento pendente. Regularize para evitar bloqueio.'
         };
     }
+
+    if (status === 'bloqueado') {
+        return {
+            status: 'bloqueado',
+            mensagem: 'Plano suspenso por falta de pagamento.'
+        };
+    }
+
+    return { status: 'ativo', mensagem: '' };
 }
 // Fun��o para atualizar o bot�o de planos
 function updatePlansButton() {
@@ -524,180 +602,194 @@ function countBookingsInWeek(date, userId) {
 
 async function updateWeeklyWarning() {
     if (!weeklyWarning) return;
-    
-    if (currentUser?.isAdmin) {
+
+    try {
+        if (currentUser?.isAdmin) {
+            weeklyWarning.innerHTML = `
+                <div class="warning-content">
+                    <i class="fas fa-crown"></i>
+                    <span>Modo Administrador - Acesso total</span>
+                </div>
+            `;
+            weeklyWarning.className = 'weekly-warning admin';
+            return;
+        }
+
+        if (!currentUser?.plan || !userHasActivePlan()) {
+            updateWeeklyWarningNoPlan();
+            return;
+        }
+
+        const statusPagamento = await verificarStatusPagamentoUsuario();
+
+        const plan = currentUser.plan;
+        const planName = plan.name || plan.id;
+        const planLimit = Number(plan.aulasPorSemana || 0);
+        const planColor = plan.color || '#6366f1';
+
+        const today = new Date();
+        const nextWeekDate = new Date();
+        nextWeekDate.setDate(today.getDate() + 7);
+
+        const nextWeekRange = formatWeekRange(nextWeekDate);
+        const nextWeekCount = countBookingsInWeek(nextWeekDate, currentUser.id);
+        const nextRemaining = Math.max(0, planLimit - nextWeekCount);
+        const hasNextWeekBookings = nextWeekCount > 0;
+
+        const currentWeekRange = formatWeekRange(today);
+        const currentWeekCount = countBookingsInWeek(today, currentUser.id);
+        const hasCurrentWeekBookings = currentWeekCount > 0;
+
+        let pagamentoHtml = '';
+        if (statusPagamento?.status === 'em_atraso') {
+            pagamentoHtml = `
+                <div class="pagamento-aviso atraso">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <span>${statusPagamento.mensagem || 'Pagamento pendente. Regularize para evitar bloqueio.'}</span>
+                    <button class="btn-small" onclick="window.location.href='/plans'">Regularizar</button>
+                </div>
+            `;
+        } else if (statusPagamento?.status === 'bloqueado') {
+            pagamentoHtml = `
+                <div class="pagamento-aviso bloqueado">
+                    <i class="fas fa-times-circle"></i>
+                    <span>${statusPagamento.mensagem || 'Plano suspenso por falta de pagamento.'}</span>
+                    <button class="btn-small" onclick="window.location.href='/plans'">Regularizar</button>
+                </div>
+            `;
+        }
+
+        let categoriaMsg = '';
+        let infoExtra = '';
+
+        if (plan.categoria === 'danca') {
+            categoriaMsg = 'Aulas de danca disponiveis apenas as 14:00 e 15:00';
+            infoExtra = `
+                <div class="info-danca">
+                    <i class="fas fa-music"></i>
+                    <span>${categoriaMsg}</span>
+                </div>
+            `;
+        } else {
+            categoriaMsg = 'Treinos normais em todos os horarios';
+            infoExtra = `
+                <div class="info-badge">
+                    <i class="fas fa-info-circle"></i>
+                    <span>${categoriaMsg}</span>
+                </div>
+            `;
+        }
+
+        const planPrice = Number(plan.price || 0);
+
         weeklyWarning.innerHTML = `
             <div class="warning-content">
-                <i class="fas fa-crown"></i>
-                <span>Modo Administrador - Acesso total</span>
-            </div>
-        `;
-        weeklyWarning.className = 'weekly-warning admin';
-        return;
-    }
-    
-    if (!currentUser?.plan || !userHasActivePlan()) {
-        updateWeeklyWarningNoPlan();
-        return;
-    }
+                <div class="warning-header">
+                    <span class="plan-indicator" style="background: ${planColor}">
+                        <i class="fas ${PLANS[plan.id]?.icon || plan.icon || 'fa-crown'}"></i>
+                        ${planName} - R$ ${planPrice.toFixed(2)}/mes
+                    </span>
+                    ${infoExtra}
+                </div>
 
-    // NOVO: verificar status de pagamento
-    const statusPagamento = await verificarStatusPagamentoUsuario();
-    
-    const planName = currentUser.plan.name || currentUser.plan.id;
-    const planLimit = currentUser.plan.aulasPorSemana;
-    const planColor = currentUser.plan.color || '#6366f1';
-    
-    const today = new Date();
-    const nextWeekDate = new Date();
-    nextWeekDate.setDate(today.getDate() + 7);
-
-    const nextWeekRange = formatWeekRange(nextWeekDate);
-    const nextWeekCount = countBookingsInWeek(nextWeekDate, currentUser.id);
-    const nextRemaining = planLimit - nextWeekCount;
-    const hasNextWeekBookings = nextWeekCount > 0;
-
-    const currentWeekRange = formatWeekRange(today);
-    const currentWeekCount = countBookingsInWeek(today, currentUser.id);
-    const hasCurrentWeekBookings = currentWeekCount > 0;
-
-    // MENSAGEM DE PAGAMENTO
-    let pagamentoHtml = '';
-    if (statusPagamento.status === 'em_atraso') {
-        pagamentoHtml = `
-            <div class="pagamento-aviso atraso">
-                <i class="fas fa-exclamation-triangle"></i>
-                <span>${statusPagamento.mensagem}</span>
-                <button class="btn-small" onclick="window.location.href='/plans'">Regularizar</button>
-            </div>
-        `;
-    } else if (statusPagamento.status === 'bloqueado') {
-        pagamentoHtml = `
-            <div class="pagamento-aviso bloqueado">
-                <i class="fas fa-times-circle"></i>
-                <span>${statusPagamento.mensagem}</span>
-                <button class="btn-small" onclick="window.location.href='/plans'">Regularizar</button>
-            </div>
-        `;
-    }
-
-    // MENSAGEM SOBRE CATEGORIA
-    let categoriaMsg = '';
-    if (currentUser.plan.categoria === 'danca') {
-        categoriaMsg = 'Aulas de danca disponiveis apenas as 14:00 e 15:00';
-    } else {
-        categoriaMsg = 'Treinos normais em todos os horarios';
-    }
-
-    const planPrice = Number(currentUser.plan.price || 0);
-
-    weeklyWarning.innerHTML = `
-        <div class="warning-content">
-            <div class="warning-header">
-                <span class="plan-indicator" style="background: ${planColor}">
-                    <i class="fas ${PLANS[currentUser.plan.id]?.icon || 'fa-crown'}"></i>
-                    ${planName} - R$ ${planPrice.toFixed(2)}/mes
-                </span>
-                <span class="info-badge">
-                    <i class="fas fa-info-circle"></i>
-                    ${categoriaMsg}
-                </span>
-            </div>
-
-            ${pagamentoHtml}
-            
-            <div class="weeks-container">
-                <div class="week-card current ${!hasCurrentWeekBookings ? 'empty' : ''}">
-                    <div class="week-title">
-                        <i class="fas fa-calendar-alt"></i>
-                        <span>Semana em andamento</span>
-                        <span class="week-dates">${currentWeekRange}</span>
-                        ${hasCurrentWeekBookings ? '<span class="bookings-badge">Aulas marcadas</span>' : '<span class="no-bookings-badge">Sem aulas</span>'}
+                ${pagamentoHtml}
+                
+                <div class="weeks-container">
+                    <div class="week-card current ${!hasCurrentWeekBookings ? 'empty' : ''}">
+                        <div class="week-title">
+                            <i class="fas fa-calendar-alt"></i>
+                            <span>Semana em andamento</span>
+                            <span class="week-dates">${currentWeekRange}</span>
+                            ${hasCurrentWeekBookings ? '<span class="bookings-badge">Aulas marcadas</span>' : '<span class="no-bookings-badge">Sem aulas</span>'}
+                        </div>
+                        
+                        <div class="week-stats">
+                            ${hasCurrentWeekBookings ? `
+                                <div class="progress-container">
+                                    <div class="progress-bar" style="width: ${(currentWeekCount/Math.max(1, planLimit))*100}%; background: ${planColor}"></div>
+                                </div>
+                                
+                                <div class="count-info">
+                                    <span class="used">
+                                        <strong>${currentWeekCount}</strong>/${planLimit} aulas
+                                        <i class="fas fa-check-circle" style="color: #10b981; margin-left: 5px;"></i>
+                                    </span>
+                                    <span class="current-bookings">
+                                        <i class="fas fa-calendar-check"></i>
+                                        ${currentWeekCount} aula${currentWeekCount !== 1 ? 's' : ''} marcada${currentWeekCount !== 1 ? 's' : ''}
+                                    </span>
+                                </div>
+                            ` : `
+                                <div class="empty-week-message">
+                                    <i class="fas fa-clock"></i>
+                                    <span>Nenhuma aula marcada para esta semana</span>
+                                </div>
+                            `}
+                        </div>
+                        
+                        <div class="week-footer ${!hasCurrentWeekBookings ? 'info' : ''}">
+                            <i class="fas fa-exclamation-circle"></i>
+                            <span>Agendamentos para esta semana ja estao encerrados.</span>
+                        </div>
                     </div>
                     
-                    <div class="week-stats">
-                        ${hasCurrentWeekBookings ? `
+                    <div class="week-card next ${hasNextWeekBookings ? 'has-bookings' : 'available'}">
+                        <div class="week-title">
+                            <i class="fas fa-calendar-plus"></i>
+                            <span>Semana disponivel para agendamento</span>
+                            <span class="week-dates">${nextWeekRange}</span>
+                            ${hasNextWeekBookings ? '<span class="bookings-badge">Aulas agendadas</span>' : '<span class="available-badge">Disponivel</span>'}
+                        </div>
+                        
+                        <div class="week-stats">
                             <div class="progress-container">
-                                <div class="progress-bar" style="width: ${(currentWeekCount/planLimit)*100}%; background: ${planColor}"></div>
+                                <div class="progress-bar" style="width: ${(nextWeekCount/Math.max(1, planLimit))*100}%; background: ${planColor}"></div>
                             </div>
                             
                             <div class="count-info">
                                 <span class="used">
-                                    <strong>${currentWeekCount}</strong>/${planLimit} aulas
-                                    <i class="fas fa-check-circle" style="color: #10b981; margin-left: 5px;"></i>
+                                    <strong>${nextWeekCount}</strong>/${planLimit} aulas
+                                    ${nextWeekCount > 0 ? '<i class="fas fa-check-circle" style="color: #10b981; margin-left: 5px;"></i>' : ''}
                                 </span>
-                                <span class="current-bookings">
-                                    <i class="fas fa-calendar-check"></i>
-                                    ${currentWeekCount} aula${currentWeekCount !== 1 ? 's' : ''} marcada${currentWeekCount !== 1 ? 's' : ''}
-                                </span>
+                                
+                                ${nextWeekCount > 0 ? 
+                                    `<span class="next-bookings">
+                                        <i class="fas fa-calendar-check"></i>
+                                        ${nextWeekCount} aula${nextWeekCount !== 1 ? 's' : ''} agendada${nextWeekCount !== 1 ? 's' : ''}
+                                    </span>` : 
+                                    `<span class="remaining positive">
+                                        <i class="fas fa-arrow-up"></i>
+                                        ${nextRemaining} vaga${nextRemaining !== 1 ? 's' : ''} disponive${nextRemaining !== 1 ? 'is' : 'l'}
+                                    </span>`
+                                }
+                            </div>
+                        </div>
+                        
+                        ${hasNextWeekBookings ? `
+                            <div class="next-week-details">
+                                <i class="fas fa-info-circle"></i>
+                                Voce ja tem aula${nextWeekCount !== 1 ? 's' : ''} marcada${nextWeekCount !== 1 ? 's' : ''} para a proxima semana
                             </div>
                         ` : `
-                            <div class="empty-week-message">
-                                <i class="fas fa-clock"></i>
-                                <span>Nenhuma aula marcada para esta semana</span>
+                            <div class="next-week-details available">
+                                <i class="fas fa-calendar-plus"></i>
+                                <span>Vagas disponiveis para a semana de ${nextWeekRange}</span>
                             </div>
                         `}
                     </div>
-                    
-                    <div class="week-footer ${!hasCurrentWeekBookings ? 'info' : ''}">
-                        <i class="fas fa-exclamation-circle"></i>
-                        <span>Agendamentos para esta semana ja estao encerrados.</span>
-                    </div>
-                </div>
-                
-                <div class="week-card next ${hasNextWeekBookings ? 'has-bookings' : 'available'}">
-                    <div class="week-title">
-                        <i class="fas fa-calendar-plus"></i>
-                        <span>Semana disponivel para agendamento</span>
-                        <span class="week-dates">${nextWeekRange}</span>
-                        ${hasNextWeekBookings ? '<span class="bookings-badge">Aulas agendadas</span>' : '<span class="available-badge">Disponivel</span>'}
-                    </div>
-                    
-                    <div class="week-stats">
-                        <div class="progress-container">
-                            <div class="progress-bar" style="width: ${(nextWeekCount/planLimit)*100}%; background: ${planColor}"></div>
-                        </div>
-                        
-                        <div class="count-info">
-                            <span class="used">
-                                <strong>${nextWeekCount}</strong>/${planLimit} aulas
-                                ${nextWeekCount > 0 ? '<i class="fas fa-check-circle" style="color: #10b981; margin-left: 5px;"></i>' : ''}
-                            </span>
-                            
-                            ${nextWeekCount > 0 ? 
-                                `<span class="next-bookings">
-                                    <i class="fas fa-calendar-check"></i>
-                                    ${nextWeekCount} aula${nextWeekCount !== 1 ? 's' : ''} agendada${nextWeekCount !== 1 ? 's' : ''}
-                                </span>` : 
-                                `<span class="remaining positive">
-                                    <i class="fas fa-arrow-up"></i>
-                                    ${nextRemaining} vaga${nextRemaining !== 1 ? 's' : ''} disponive${nextRemaining !== 1 ? 'is' : 'l'}
-                                </span>`
-                            }
-                        </div>
-                    </div>
-                    
-                    ${hasNextWeekBookings ? `
-                        <div class="next-week-details">
-                            <i class="fas fa-info-circle"></i>
-                            Voce ja tem aula${nextWeekCount !== 1 ? 's' : ''} marcada${nextWeekCount !== 1 ? 's' : ''} para a proxima semana
-                        </div>
-                    ` : `
-                        <div class="next-week-details available">
-                            <i class="fas fa-calendar-plus"></i>
-                            <span>Vagas disponiveis para a semana de ${nextWeekRange}</span>
-                        </div>
-                    `}
                 </div>
             </div>
-        </div>
-    `;
-    
-    weeklyWarning.className = 'weekly-warning info';
-    
-    if (nextWeekCount >= planLimit && !sessionStorage.getItem('limitModalShown')) {
-        sessionStorage.setItem('limitModalShown', 'true');
-        showLimitReachedModal(planLimit, nextWeekCount, planName);
+        `;
+
+        weeklyWarning.className = 'weekly-warning info';
+
+        if (nextWeekCount >= planLimit && !sessionStorage.getItem('limitModalShown')) {
+            sessionStorage.setItem('limitModalShown', 'true');
+            showLimitReachedModal(planLimit, nextWeekCount, planName);
+        }
+    } catch (error) {
+        console.error('Erro ao atualizar aviso semanal:', error);
+        updateWeeklyWarningNoPlan();
     }
 }
 // 4. FUNÇÕES DE CONTAGEM E VALIDAÇÃO
@@ -937,12 +1029,20 @@ function createSlot(wd, h) {
         return slot;
     }
     
-    // ===== NOVO: VERIFICAR SE HORÁRIO É PERMITIDO PELO PLANO =====
-    if (currentUser?.plan && !verificarHorarioPermitido(wd, h)) {
+    // ===== ÚNICA VERIFICAÇÃO DE HORÁRIO PERMITIDO =====
+    if (!isHorarioPermitido(wd, h)) {
         slot.classList.add('disabled', 'plano-nao-permite');
-        slot.innerHTML = '<i class="fas fa-clock"></i><span class="label"> Indisponível</span>';
+        
+        // Mensagem específica para dança
+        if (currentUser?.plan?.categoria === 'danca') {
+            slot.innerHTML = '<i class="fas fa-music"></i><span class="label"> Só 14h e 15h</span>';
+            slot.title = 'Seu plano de dança permite apenas horários 14:00 e 15:00';
+        } else {
+            slot.innerHTML = '<i class="fas fa-ban"></i><span class="label"> Indisponível no seu plano</span>';
+            slot.title = 'Este horário não está disponível no seu plano';
+        }
+        
         slot.disabled = true;
-        slot.title = 'Este horário não está disponível no seu plano';
         return slot;
     }
     
@@ -1794,6 +1894,9 @@ async function loadData() {
         bookings = bookingsRes.data;
         
         await checkSubscriptionStatus();
+        
+        // ===== NOVO: NORMALIZAR PLANO DO USUÁRIO =====
+        normalizeUserPlan();
         
         // Renderizar interface
         renderSchedule();
@@ -3118,177 +3221,223 @@ const additionalStyles = `
             font-size: 11px;
         }
     }
+/* ============================= */
+/* BOTÃO DE PLANOS */
+/* ============================= */
 
-    /* Botão de planos no header - ESTILO CONSISTENTE */
+.btn-plans {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: auto;
+    min-width: 40px;
+    height: 40px;
+    padding: 0 16px;
+    background: white;
+    color: #8b5cf6;
+    border: 1px solid #e2e8f0;
+    border-radius: 30px;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.btn-plans:hover {
+    background: #f8fafc;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    border-color: #8b5cf6;
+    color: #7c3aed;
+}
+
+.btn-plans i {
+    font-size: 16px;
+    color: inherit;
+    transition: color 0.2s;
+}
+
+.btn-plans span {
+    display: inline;
+}
+
+/* Botão quando já possui plano (Upgrade) */
+.btn-plans.has-plan {
+    color: #f59e0b;
+    border-color: #f59e0b;
+}
+
+.btn-plans.has-plan:hover {
+    background: #fff7ed;
+    border-color: #d97706;
+    color: #d97706;
+}
+
+
+/* ============================= */
+/* AVISOS DE PAGAMENTO */
+/* ============================= */
+
+.pagamento-aviso {
+    margin: 15px 0;
+    padding: 12px 16px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 14px;
+}
+
+.pagamento-aviso.atraso {
+    background: #fff3cd;
+    border-left: 4px solid #f59e0b;
+    color: #856404;
+}
+
+.pagamento-aviso.bloqueado {
+    background: #fee2e2;
+    border-left: 4px solid #dc2626;
+    color: #991b1b;
+}
+
+.pagamento-aviso .btn-small {
+    background: white;
+    border: 1px solid currentColor;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-left: auto;
+    transition: all 0.2s ease;
+}
+
+.pagamento-aviso.atraso .btn-small:hover {
+    background: #f59e0b;
+    color: white;
+}
+
+.pagamento-aviso.bloqueado .btn-small:hover {
+    background: #dc2626;
+    color: white;
+}
+
+
+/* ============================= */
+/* INFORMAÇÕES DE DANÇA */
+/* ============================= */
+
+.info-danca {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #fce7f3;
+    color: #9d174d;
+    padding: 8px 16px;
+    border-radius: 30px;
+    font-size: 13px;
+    font-weight: 500;
+    margin-left: auto;
+}
+
+.info-danca i {
+    color: #ec4899;
+    font-size: 16px;
+}
+
+
+/* ============================= */
+/* SLOTS BLOQUEADOS PELO PLANO */
+/* ============================= */
+
+.slot-btn.plano-nao-permite {
+    opacity: 0.6;
+    background: #f3f4f6;
+    cursor: not-allowed;
+    position: relative;
+    border: 1px dashed #d1d5db;
+}
+
+.slot-btn.plano-nao-permite .label {
+    font-size: 10px;
+    display: block;
+    margin-top: 2px;
+    color: #6b7280;
+}
+
+.slot-btn.plano-nao-permite i {
+    color: #9ca3af;
+    font-size: 14px;
+}
+
+.slot-btn.plano-nao-permite:hover::after {
+    content: attr(title);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #333;
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+    white-space: nowrap;
+    z-index: 10;
+    margin-bottom: 5px;
+}
+
+
+/* ============================= */
+/* RESPONSIVIDADE */
+/* ============================= */
+
+@media (max-width: 768px) {
+
     .btn-plans {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 6px;
-        width: auto;
-        min-width: 40px;
+        width: 40px;
         height: 40px;
-        padding: 0 16px;
-        background: white;
-        color: #8b5cf6;
-        border: 1px solid #e2e8f0;
-        border-radius: 30px;
-        font-weight: 600;
-        font-size: 14px;
-        cursor: pointer;
-        transition: all 0.2s;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-    }
-
-    .btn-plans:hover {
-        background: #f8fafc;
-        transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-        border-color: #8b5cf6;
-        color: #7c3aed;
-    }
-
-    .btn-plans i {
-        font-size: 16px;
-        color: #8b5cf6;
-        transition: color 0.2s;
-    }
-
-    .btn-plans:hover i {
-        color: #7c3aed;
+        padding: 0;
+        border-radius: 50%;
     }
 
     .btn-plans span {
-        display: inline;
+        display: none;
     }
 
-    /* Quando o usuário já tem plano (botão Upgrade) */
-    .btn-plans.has-plan {
-        background: white;
-        color: #f59e0b;
-        border-color: #f59e0b;
+    .btn-plans i {
+        font-size: 18px;
     }
 
-    .btn-plans.has-plan i {
-        color: #f59e0b;
+    .limit-modal {
+        width: 95%;
+        padding: 20px;
     }
 
-    .btn-plans.has-plan:hover {
-        background: #fff7ed;
-        border-color: #d97706;
-        color: #d97706;
+    .plan-option {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 5px;
     }
 
-    .btn-plans.has-plan:hover i {
-        color: #d97706;
-    }
-
-    /* Versão mobile */
-    @media (max-width: 768px) {
-        .btn-plans {
-            width: 40px;
-            height: 40px;
-            padding: 0;
-            border-radius: 50%;
-        }
-        
-        .btn-plans span {
-            display: none;
-        }
-        
-        .btn-plans i {
-            margin: 0;
-            font-size: 18px;
-        }
-    }
-    /* Responsividade */
-    @media (max-width: 768px) {
-        .limit-modal {
-            width: 95%;
-            padding: 20px;
-        }
-        
-        .plan-option {
-            flex-direction: column;
-            align-items: flex-start;
-            gap: 5px;
-        }
-        
-        .limit-info {
-            flex-direction: column;
-            align-items: center;
-            text-align: center;
-        }
-    }
-
-    /* Estilos para avisos de pagamento */
-    .pagamento-aviso {
-        margin: 15px 0;
-        padding: 12px 16px;
-        border-radius: 8px;
-        display: flex;
+    .limit-info {
+        flex-direction: column;
         align-items: center;
-        gap: 12px;
-        font-size: 14px;
+        text-align: center;
     }
 
-    .pagamento-aviso.atraso {
-        background: #fff3cd;
-        border-left: 4px solid #f59e0b;
-        color: #856404;
+    .info-danca {
+        width: 100%;
+        margin: 10px 0 0 0;
+        justify-content: center;
     }
 
-    .pagamento-aviso.bloqueado {
-        background: #fee2e2;
-        border-left: 4px solid #dc2626;
-        color: #991b1b;
+    .warning-header {
+        flex-direction: column;
+        align-items: flex-start;
     }
-
-    .pagamento-aviso .btn-small {
-        background: white;
-        border: 1px solid currentColor;
-        padding: 4px 12px;
-        border-radius: 20px;
-        font-size: 12px;
-        font-weight: 600;
-        cursor: pointer;
-        margin-left: auto;
-        transition: all 0.2s;
-    }
-
-    .pagamento-aviso.atraso .btn-small {
-        color: #f59e0b;
-        border-color: #f59e0b;
-    }
-
-    .pagamento-aviso.atraso .btn-small:hover {
-        background: #f59e0b;
-        color: white;
-    }
-
-    .pagamento-aviso.bloqueado .btn-small {
-        color: #dc2626;
-        border-color: #dc2626;
-    }
-
-    .pagamento-aviso.bloqueado .btn-small:hover {
-        background: #dc2626;
-        color: white;
-    }
-
-    /* Slots nao permitidos */
-    .slot-btn.plano-nao-permite {
-        opacity: 0.5;
-        background: #f1f5f9;
-        cursor: not-allowed;
-        position: relative;
-    }
-
-    .slot-btn.plano-nao-permite .label {
-        font-size: 10px;
-        display: block;
-        margin-top: 2px;
-    }`;
+`;
 
 const styleSheet = document.createElement('style');
 styleSheet.textContent = additionalStyles;
