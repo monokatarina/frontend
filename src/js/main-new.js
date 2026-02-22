@@ -400,7 +400,7 @@ function updateWeeklyWarning() {
         weeklyWarning.innerHTML = `
             <div class="warning-content">
                 <i class="fas fa-crown"></i>
-                <span>Modo Administrador - Você tem acesso total</span>
+                <span>Modo Administrador - Voc\u00EA tem acesso total</span>
             </div>
         `;
         weeklyWarning.className = 'weekly-warning admin';
@@ -420,7 +420,7 @@ function updateWeeklyWarning() {
     const today = new Date();
     const dayOfWeek = today.getDay(); // 0=Dom, 1=Seg, ..., 6=Sáb
     
-    // PRÓXIMA SEMANA (sempre disponível para agendamento)
+    // PRÓXIMA SEMANA (sempre dispon\u00EDvel para agendamento)
     const nextWeekDate = new Date();
     nextWeekDate.setDate(today.getDate() + 7);
     const nextWeekRange = formatWeekRange(nextWeekDate);
@@ -436,9 +436,9 @@ function updateWeeklyWarning() {
     // MENSAGEM INFORMATIVA SOBRE AGENDAMENTOS
     let infoMessage = '';
     if (dayOfWeek === 6 || dayOfWeek === 0) {
-        infoMessage = 'Aos finais de semana, os agendamentos já são para a próxima semana.';
+        infoMessage = 'Aos finais de semana, os agendamentos j\u00E1 s\u00E3o para a pr\u00F3xima semana.';
     } else {
-        infoMessage = 'Os agendamentos disponíveis são sempre para a próxima semana.';
+        infoMessage = 'Os agendamentos dispon\u00EDveis s\u00E3o sempre para a pr\u00F3xima semana.';
     }
     
     weeklyWarning.innerHTML = `
@@ -446,7 +446,7 @@ function updateWeeklyWarning() {
             <div class="warning-header">
                 <span class="plan-indicator" style="background: ${planColor}">
                     <i class="fas ${PLANS[currentUser.plan.id]?.icon || 'fa-crown'}"></i>
-                    Plano ${planName} • ${planLimit} aulas/semana
+                    Plano ${planName} - ${planLimit} aulas/semana
                 </span>
                 <span class="info-badge">
                     <i class="fas fa-info-circle"></i>
@@ -490,17 +490,17 @@ function updateWeeklyWarning() {
                     
                     <div class="week-footer ${!hasCurrentWeekBookings ? 'info' : ''}">
                         <i class="fas fa-exclamation-circle"></i>
-                        <span>Agendamentos para esta semana já estão encerrados.</span>
+                        <span>Agendamentos para esta semana j\u00E1 est\u00E3o encerrados.</span>
                     </div>
                 </div>
                 
-                <!-- PRÓXIMA SEMANA (Disponível para agendamento) -->
+                <!-- PRÓXIMA SEMANA (Dispon\u00EDvel para agendamento) -->
                 <div class="week-card next ${hasNextWeekBookings ? 'has-bookings' : 'available'}">
                     <div class="week-title">
                         <i class="fas fa-calendar-plus"></i>
-                        <span>Semana disponível para agendamento</span>
+                        <span>Semana dispon\u00EDvel para agendamento</span>
                         <span class="week-dates">${nextWeekRange}</span>
-                        ${hasNextWeekBookings ? '<span class="bookings-badge">Aulas agendadas</span>' : '<span class="available-badge">Disponível</span>'}
+                        ${hasNextWeekBookings ? '<span class="bookings-badge">Aulas agendadas</span>' : '<span class="available-badge">Dispon\u00EDvel</span>'}
                     </div>
                     
                     <div class="week-stats">
@@ -521,7 +521,7 @@ function updateWeeklyWarning() {
                                 </span>` : 
                                 `<span class="remaining positive">
                                     <i class="fas fa-arrow-up"></i>
-                                    ${nextRemaining} vaga${nextRemaining !== 1 ? 's' : ''} disponíve${nextRemaining !== 1 ? 'is' : 'l'}
+                                    ${nextRemaining} vaga${nextRemaining !== 1 ? 's' : ''} dispon\u00EDve${nextRemaining !== 1 ? 'is' : 'l'}
                                 </span>`
                             }
                         </div>
@@ -530,12 +530,12 @@ function updateWeeklyWarning() {
                     ${hasNextWeekBookings ? `
                         <div class="next-week-details">
                             <i class="fas fa-info-circle"></i>
-                            Você já tem aula${nextWeekCount !== 1 ? 's' : ''} marcada${nextWeekCount !== 1 ? 's' : ''} para a próxima semana
+                            Voc\u00EA j\u00E1 tem aula${nextWeekCount !== 1 ? 's' : ''} marcada${nextWeekCount !== 1 ? 's' : ''} para a pr\u00F3xima semana
                         </div>
                     ` : `
                         <div class="next-week-details available">
                             <i class="fas fa-calendar-plus"></i>
-                            <span>Vagas disponíveis para a semana de ${nextWeekRange}</span>
+                            <span>Vagas dispon\u00EDveis para a semana de ${nextWeekRange}</span>
                         </div>
                     `}
                 </div>
@@ -2944,5 +2944,7 @@ styleSheet.textContent = additionalStyles;
 document.head.appendChild(styleSheet);
 
 console.log('âœ… CÃ³digo carregado completamente!');
+
+
 
 
