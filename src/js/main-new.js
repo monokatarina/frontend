@@ -82,6 +82,7 @@ const adminMenuBtn = document.getElementById('adminMenuBtn');
 const adminDropdown = document.getElementById('adminDropdown');
 const plansMenuBtn = document.getElementById('plansMenuBtn');
 const adminMenuContainer = document.getElementById('adminMenuContainer');
+const adminToggleContainer = document.querySelector('.admin-toggle');
 
 // ============================================
 // 1. FUNÇÕES UTILITÁRIAS BÁSICAS
@@ -322,6 +323,17 @@ function updatePlanInfo() {
 
     if (adminMenuContainer) {
         adminMenuContainer.style.display = currentUser?.isAdmin ? '' : 'none';
+    }
+
+    if (adminToggleContainer) {
+        adminToggleContainer.style.display = currentUser?.isAdmin ? 'flex' : 'none';
+    }
+
+    if (!currentUser?.isAdmin) {
+        adminMode = false;
+        const adminToggleInput = document.getElementById('adminMode');
+        if (adminToggleInput) adminToggleInput.checked = false;
+        if (adminPanel) adminPanel.hidden = true;
     }
     
     // Atualizar aviso semanal com base no plano
@@ -3094,6 +3106,8 @@ styleSheet.textContent = additionalStyles;
 document.head.appendChild(styleSheet);
 
 console.log('✅ Código carregado completamente!');
+
+
 
 
 
