@@ -254,7 +254,7 @@ async function checkSubscriptionStatus() {
     }
 }
 
-// FunÁ„o para atualizar o bot„o de planos
+// FunÔøΩÔøΩo para atualizar o botÔøΩo de planos
 function updatePlansButton() {
     const plansBtn = document.getElementById('plansMenuBtn');
     if (!plansBtn) return;
@@ -443,11 +443,11 @@ function updateWeeklyWarning() {
     const planLimit = currentUser.plan.aulasPorSemana;
     const planColor = currentUser.plan.color || '#6366f1';
     
-    // DATA ATUAL PARA REFER NCIA
+    // DATA ATUAL PARA REFERÔøΩNCIA
     const today = new Date();
-    const dayOfWeek = today.getDay(); // 0=Dom, 1=Seg, ..., 6=S·b
+    const dayOfWeek = today.getDay(); // 0=Dom, 1=Seg, ..., 6=SÔøΩb
     
-    // PR”XIMA SEMANA (sempre dispon\u00EDvel para agendamento)
+    // PRÔøΩXIMA SEMANA (sempre dispon\u00EDvel para agendamento)
     const nextWeekDate = new Date();
     nextWeekDate.setDate(today.getDate() + 7);
     const nextWeekRange = formatWeekRange(nextWeekDate);
@@ -455,7 +455,7 @@ function updateWeeklyWarning() {
     const nextRemaining = planLimit - nextWeekCount;
     const hasNextWeekBookings = nextWeekCount > 0;
     
-    // SEMANA ATUAL (apenas para visualizaÁ„o de aulas j· marcadas)
+    // SEMANA ATUAL (apenas para visualizaÔøΩÔøΩo de aulas jÔøΩ marcadas)
     const currentWeekRange = formatWeekRange(today);
     const currentWeekCount = countBookingsInWeek(today, currentUser.id);
     const hasCurrentWeekBookings = currentWeekCount > 0;
@@ -521,7 +521,7 @@ function updateWeeklyWarning() {
                     </div>
                 </div>
                 
-                <!-- PR”XIMA SEMANA (Dispon\u00EDvel para agendamento) -->
+                <!-- PRÔøΩXIMA SEMANA (Dispon\u00EDvel para agendamento) -->
                 <div class="week-card next ${hasNextWeekBookings ? 'has-bookings' : 'available'}">
                     <div class="week-title">
                         <i class="fas fa-calendar-plus"></i>
@@ -572,7 +572,7 @@ function updateWeeklyWarning() {
     
     weeklyWarning.className = 'weekly-warning info';
     
-    // Se atingiu o limite na prÛxima semana, mostrar modal informativo
+    // Se atingiu o limite na prÔøΩxima semana, mostrar modal informativo
     if (nextWeekCount >= planLimit && !sessionStorage.getItem('limitModalShown')) {
         sessionStorage.setItem('limitModalShown', 'true');
         showLimitReachedModal(planLimit, nextWeekCount, planName);
@@ -1596,7 +1596,7 @@ async function selectPlan(planId) {
 // ============================================
 
 // ============================================
-// CRIAR BOT√O FLUTUANTE PARA MOBILE
+// CRIAR BOTÔøΩO FLUTUANTE PARA MOBILE
 // ============================================
 function createFloatingPlansButton() {
     if (document.getElementById('floatingPlansBtn')) return;
@@ -1611,7 +1611,7 @@ function createFloatingPlansButton() {
 
     floatingBtn.addEventListener('click', () => {
         if (!currentUser) {
-            showNotification('FaÁa login para ver os planos', 'warning');
+            showNotification('FaÔøΩa login para ver os planos', 'warning');
             showAuthScreen();
             return;
         }
@@ -1842,11 +1842,11 @@ document.addEventListener('DOMContentLoaded', function() {
         showNotification(adminMode ? 'Modo admin ativado' : 'Modo admin desativado', 'info');
     });
     
-    // ===== BOT√O DE PLANOS (sempre visÌvel) =====
+    // ===== BOTÔøΩO DE PLANOS (sempre visÔøΩvel) =====
     if (plansMenuBtn) {
         plansMenuBtn.addEventListener('click', () => {
             if (!currentUser) {
-                showNotification('FaÁa login para ver os planos', 'warning');
+                showNotification('FaÔøΩa login para ver os planos', 'warning');
                 showAuthScreen();
                 return;
             }
@@ -2984,113 +2984,86 @@ const additionalStyles = `
         }
     }
 
-    /* Bot„o de planos no header */
+    /* Bot√£o de planos no header - ESTILO CONSISTENTE */
     .btn-plans {
         display: flex;
         align-items: center;
-        gap: 8px;
-        padding: 8px 16px;
-        background: linear-gradient(135deg, #8b5cf6, #6366f1);
-        color: white;
-        border: none;
+        justify-content: center;
+        gap: 6px;
+        width: auto;
+        min-width: 40px;
+        height: 40px;
+        padding: 0 16px;
+        background: white;
+        color: #8b5cf6;
+        border: 1px solid #e2e8f0;
         border-radius: 30px;
         font-weight: 600;
         font-size: 14px;
         cursor: pointer;
-        transition: all 0.3s;
-        box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+        transition: all 0.2s;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
     }
 
     .btn-plans:hover {
+        background: #f8fafc;
         transform: translateY(-2px);
-        box-shadow: 0 6px 16px rgba(139, 92, 246, 0.4);
-        background: linear-gradient(135deg, #7c3aed, #4f46e5);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        border-color: #8b5cf6;
+        color: #7c3aed;
     }
 
     .btn-plans i {
         font-size: 16px;
+        color: #8b5cf6;
+        transition: color 0.2s;
     }
 
+    .btn-plans:hover i {
+        color: #7c3aed;
+    }
+
+    .btn-plans span {
+        display: inline;
+    }
+
+    /* Quando o usu√°rio j√° tem plano (bot√£o Upgrade) */
     .btn-plans.has-plan {
-        background: linear-gradient(135deg, #f59e0b, #d97706);
-        box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+        background: white;
+        color: #f59e0b;
+        border-color: #f59e0b;
+    }
+
+    .btn-plans.has-plan i {
+        color: #f59e0b;
     }
 
     .btn-plans.has-plan:hover {
-        background: linear-gradient(135deg, #d97706, #b45309);
-        box-shadow: 0 6px 16px rgba(245, 158, 11, 0.4);
+        background: #fff7ed;
+        border-color: #d97706;
+        color: #d97706;
     }
 
-    /* Bot„o flutuante para mobile */
-    .floating-plans-btn {
-        position: fixed;
-        bottom: 20px;
-        right: 20px;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        padding: 12px 24px;
-        background: linear-gradient(135deg, #8b5cf6, #6366f1);
-        color: white;
-        border: none;
-        border-radius: 50px;
-        font-weight: 700;
-        font-size: 16px;
-        cursor: pointer;
-        transition: all 0.3s;
-        box-shadow: 0 8px 20px rgba(139, 92, 246, 0.4);
-        z-index: 1000;
-        animation: float 3s ease-in-out infinite;
+    .btn-plans.has-plan:hover i {
+        color: #d97706;
     }
 
-    .floating-plans-btn:hover {
-        transform: translateY(-4px);
-        box-shadow: 0 12px 28px rgba(139, 92, 246, 0.5);
-        background: linear-gradient(135deg, #7c3aed, #4f46e5);
-    }
-
-    .floating-plans-btn i {
-        font-size: 20px;
-    }
-
-    @keyframes float {
-        0%, 100% {
-            transform: translateY(0);
-        }
-        50% {
-            transform: translateY(-5px);
-        }
-    }
-
-    .plans-badge {
-        position: absolute;
-        top: -5px;
-        right: -5px;
-        background: #ef4444;
-        color: white;
-        font-size: 10px;
-        padding: 2px 6px;
-        border-radius: 10px;
-        font-weight: 700;
-    }
-
-    @media (min-width: 769px) {
-        .floating-plans-btn {
-            display: none;
-        }
-    }
-
+    /* Vers√£o mobile */
     @media (max-width: 768px) {
+        .btn-plans {
+            width: 40px;
+            height: 40px;
+            padding: 0;
+            border-radius: 50%;
+        }
+        
         .btn-plans span {
             display: none;
         }
-
-        .btn-plans {
-            padding: 8px 12px;
-        }
-
-        .floating-plans-btn {
-            display: flex;
+        
+        .btn-plans i {
+            margin: 0;
+            font-size: 18px;
         }
     }
     /* Responsividade */
