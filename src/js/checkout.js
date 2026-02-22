@@ -331,97 +331,6 @@ async function processBoletoPayment() {
     
     await processPayment('boleto', button);
 }
-
-// ============================================
-// FUNÇÃO GENÉRICA DE PROCESSAMENTO
-// ============================================
-async function processPayment(method, button) {
-// ============================================
-// FUNÇÃO GENÉRICA DE PROCESSAMENTO (VERSÃO COM MONITORAMENTO)
-// ============================================
-async function processPayment(method, button) {
-    if (!currentUser) {
-        showError('Usuário não autenticado');
-        return;
-    }
-    
-    if (selectedPlans.length === 0) {
-        showError('Nenhum plano selecionado');
-        return;
-    }
-    
-    // Desabilitar botão
-    const originalText = button.innerHTML;
-    button.disabled = true;
-    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processando...';
-    
-    try {
-        console.log(`📤 Processando pagamento via ${method} para planos:`, selectedPlans);
-        
-        // Coletar dados do pagamento
-        const paymentData = {
-            userId: currentUser.id,
-            planIds: selectedPlans,
-            paymentMethod: method,
-            payerInfo: {
-                name: currentUser.name,
-                email: currentUser.email,
-                phone: currentUser.phone || '',
-                documentType: 'CPF',
-                documentNumber: extractCPF(document.getElementById('cardCpf')?.value) || '00000000000'
-            }
-        };
-        
-        // Adicionar dados específicos do cartão se for crédito
-        if (method === 'credit') {
-            paymentData.cardInfo = {
-                number: document.getElementById('cardNumber')?.value.replace(/\s/g, ''),
-                expiry: document.getElementById('cardExpiry')?.value,
-                cvv: document.getElementById('cardCvv')?.value,
-                name: document.getElementById('cardName')?.value,
-                installments: document.getElementById('installments')?.value
-            };
-        }
-        
-        const response = await fetch(`${API}/plans/user/${currentUser.id}/update`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(paymentData)
-        });
-        
-        const data = await response.json();
-        console.log('📥 Resposta do servidor:', data);
-        
-        if (data.success) {
-            // Se for PIX, mostrar QR Code e começar a monitorar
-            if (method === 'pix') {
-                showPixPayment(data.data);
-                
-                // Começar a monitorar o status do pagamento
-                startPaymentStatusCheck(data.data.id);
-                
-            } else if (method === 'boleto') {
-                showBoletoPayment(data.data);
-                // Começar a monitorar o status do pagamento
-                startPaymentStatusCheck(data.data.id);
-                
-            } else {
-                // Para cartão, pode ser aprovado imediatamente
-                showSuccessModal();
-            }
-        } else {
-            showError(data.error || 'Erro ao processar pagamento');
-            button.disabled = false;
-            button.innerHTML = originalText;
-        }
-        
-    } catch (error) {
-        console.error('❌ Erro no pagamento:', error);
-        showError('Erro de conexão com o servidor');
-        button.disabled = false;
-        button.innerHTML = originalText;
-    }
-}
 // ============================================
 // FUNÇÃO GENÉRICA DE PROCESSAMENTO (VERSÃO COM MONITORAMENTO)
 // ============================================
@@ -624,7 +533,6 @@ async function refreshUserDataAfterPayment() {
         console.error('❌ Erro ao atualizar dados:', error);
     }
 }
-
 // ============================================
 // VALIDAR DADOS DO CARTÃO
 // ============================================
@@ -671,9 +579,6 @@ function extractCPF(cpf) {
     return cpf.replace(/\D/g, '');
 }
 
-// ============================================
-// MOSTRAR PAGAMENTO PIX
-// ============================================
 // ============================================
 // MOSTRAR PAGAMENTO PIX (VERSÃO ATUALIZADA)
 // ============================================
@@ -890,6 +795,7 @@ function normalizeUserPlans() {
 // ============================================
 // REDIRECIONAR PARA AGENDA
 // ============================================
+
 function redirectToAgenda() {
     // Forçar recarga da página para atualizar todos os dados
     window.location.href = '/';
