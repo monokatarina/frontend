@@ -1,6 +1,6 @@
 // ============================================
 // plans.js - Página de Planos da FitLife
-// Versão com Treino Normal e Dança
+// VERSÃO ATUALIZADA - SUPORTE A MÚLTIPLOS PLANOS
 // ============================================
 
 const API = 'https://jokesteronline.org/api';
@@ -45,7 +45,7 @@ const PLANS = {
             'Acesso ao app mobile',
             'Avaliação mensal'
         ],
-        popular: true // Mais popular dos treinos normais
+        popular: true
     },
     normal_5x: {
         id: 'normal_5x',
@@ -85,7 +85,7 @@ const PLANS = {
             'Professores especializados',
             'Turmas reduzidas'
         ],
-        popular: true // Mais popular da dança
+        popular: true
     },
     danca_3x: {
         id: 'danca_3x',
@@ -117,17 +117,20 @@ const PLANOS_POR_CATEGORIA = {
 // ============================================
 // ESTADO GLOBAL
 // ============================================
-let selectedPlan = null;
+let selectedPlans = []; // Array de planos selecionados (agora é array)
 let currentUser = null;
 
 // ============================================
 // INICIALIZAÇÃO
 // ============================================
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('🚀 Página de Planos iniciada');
+    console.log('🚀 Página de Planos iniciada - Modo Multiplanos');
     
     // Verificar usuário logado
     checkUserLogin();
+    
+    // Carregar seleções anteriores da sessionStorage
+    loadSelectedPlansFromStorage();
     
     // Renderizar planos
     renderPlans();
@@ -137,6 +140,9 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Adicionar estilos dinâmicos
     addDynamicStyles();
+    
+    // Criar botão flutuante de continuar
+    createFloatingContinueButton();
 });
 
 // ============================================
@@ -152,6 +158,24 @@ function checkUserLogin() {
             console.error('Erro ao carregar usuário:', error);
             localStorage.removeItem('user');
         }
+    }
+}
+
+// ============================================
+// CARREGAR PLANOS SELECIONADOS DA SESSIONSTORAGE
+// ============================================
+function loadSelectedPlansFromStorage() {
+    const saved = sessionStorage.getItem('selectedPlans');
+    if (saved) {
+        try {
+            selectedPlans = JSON.parse(saved);
+            console.log('📋 Planos previamente selecionados:', selectedPlans);
+        } catch (e) {
+            console.error('Erro ao carregar seleções:', e);
+            selectedPlans = [];
+        }
+    } else {
+        selectedPlans = [];
     }
 }
 
@@ -204,10 +228,13 @@ function renderPlans() {
             card.style.transform = 'translateY(0)';
         });
     }, 100);
+    
+    // Atualizar botão flutuante
+    updateFloatingButton();
 }
 
 // ============================================
-// CRIAÇÃO DO CARD DO PLANO
+// CRIAÇÃO DO CARD DO PLANO (VERSÃO MULTISELECT)
 // ============================================
 function createPlanCard(id, plan) {
     const card = document.createElement('div');
@@ -216,6 +243,13 @@ function createPlanCard(id, plan) {
     card.setAttribute('role', 'button');
     card.setAttribute('tabindex', '0');
     card.setAttribute('aria-label', `Selecionar plano ${plan.name}`);
+    
+    // Verificar se já está selecionado
+    const isSelected = selectedPlans.includes(id);
+    if (isSelected) {
+        card.classList.add('selected');
+        card.setAttribute('aria-selected', 'true');
+    }
     
     // Estilo inicial para animação
     card.style.opacity = '0';
@@ -253,17 +287,17 @@ function createPlanCard(id, plan) {
             `).join('')}
         </div>
         <button class="btn-select" style="background: ${plan.color}; color: white;">
-            <i class="fas fa-crown"></i>
-            Escolher plano
+            <i class="fas fa-${isSelected ? 'check-circle' : 'plus-circle'}"></i>
+            ${isSelected ? 'Selecionado' : 'Adicionar plano'}
         </button>
     `;
 
     // Event listeners
-    card.addEventListener('click', () => selectPlan(id, card));
+    card.addEventListener('click', () => togglePlan(id, card));
     card.addEventListener('keypress', (e) => {
         if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault();
-            selectPlan(id, card);
+            togglePlan(id, card);
         }
     });
 
@@ -271,23 +305,9 @@ function createPlanCard(id, plan) {
 }
 
 // ============================================
-// SELEÇÃO DO PLANO
+// FUNÇÃO PARA ALTERNAR SELEÇÃO DO PLANO (MULTISELECT)
 // ============================================
-function selectPlan(planId, card) {
-    // Remover seleção anterior
-    document.querySelectorAll('.plan-card').forEach(c => {
-        c.classList.remove('selected');
-        c.setAttribute('aria-selected', 'false');
-    });
-    
-    // Marcar novo plano
-    card.classList.add('selected');
-    card.setAttribute('aria-selected', 'true');
-    selectedPlan = planId;
-    
-    // Feedback visual
-    showNotification(`Plano ${PLANS[planId].name} selecionado!`, 'success');
-    
+function togglePlan(planId, card) {
     // Verificar se usuário está logado
     if (!currentUser) {
         showNotification('Faça login para continuar', 'warning');
@@ -297,34 +317,120 @@ function selectPlan(planId, card) {
         return;
     }
     
-    // Salvar plano selecionado e redirecionar
-    saveSelectedPlanAndRedirect(planId);
+    const index = selectedPlans.indexOf(planId);
+    
+    if (index === -1) {
+        // ADICIONAR PLANO
+        selectedPlans.push(planId);
+        card.classList.add('selected');
+        card.setAttribute('aria-selected', 'true');
+        
+        // Atualizar texto do botão
+        const btn = card.querySelector('.btn-select');
+        btn.innerHTML = `<i class="fas fa-check-circle"></i> Selecionado`;
+        
+        showNotification(`✅ ${PLANS[planId].name} adicionado!`, 'success');
+    } else {
+        // REMOVER PLANO
+        selectedPlans.splice(index, 1);
+        card.classList.remove('selected');
+        card.setAttribute('aria-selected', 'false');
+        
+        // Atualizar texto do botão
+        const btn = card.querySelector('.btn-select');
+        btn.innerHTML = `<i class="fas fa-plus-circle"></i> Adicionar plano`;
+        
+        showNotification(`❌ ${PLANS[planId].name} removido`, 'info');
+    }
+    
+    // Salvar no sessionStorage
+    sessionStorage.setItem('selectedPlans', JSON.stringify(selectedPlans));
+    
+    // Atualizar botão flutuante
+    updateFloatingButton();
 }
 
 // ============================================
-// SALVAR PLANO E REDIRECIONAR
+// CRIAR BOTÃO FLUTUANTE DE CONTINUAR
 // ============================================
-function saveSelectedPlanAndRedirect(planId) {
-    const selectedPlanData = {
-        id: planId,
-        name: PLANS[planId].name,
-        categoria: PLANS[planId].categoria,
-        aulasPorSemana: PLANS[planId].aulasPorSemana,
-        price: PLANS[planId].price,
-        horarios: PLANS[planId].horarios,
-        features: PLANS[planId].features
-    };
+function createFloatingContinueButton() {
+    // Remover botão existente se houver
+    const existingBtn = document.getElementById('floatingContinueBtn');
+    if (existingBtn) existingBtn.remove();
     
-    // Salvar na sessionStorage (temporário)
-    sessionStorage.setItem('selectedPlan', JSON.stringify(selectedPlanData));
+    // Criar novo botão
+    const floatingBtn = document.createElement('div');
+    floatingBtn.id = 'floatingContinueBtn';
+    floatingBtn.className = 'floating-continue-btn';
+    floatingBtn.style.cssText = `
+        position: fixed;
+        bottom: 30px;
+        right: 30px;
+        z-index: 1000;
+        display: ${selectedPlans.length > 0 ? 'block' : 'none'};
+        animation: slideIn 0.3s ease;
+    `;
+    
+    floatingBtn.innerHTML = `
+        <button class="btn-continue" onclick="goToCheckout()">
+            <i class="fas fa-shopping-cart"></i>
+            <span class="btn-text">Continuar</span>
+            <span class="btn-badge" id="selectedCountBadge">${selectedPlans.length}</span>
+        </button>
+    `;
+    
+    document.body.appendChild(floatingBtn);
+    
+    // Adicionar estilos para o botão
+    addButtonStyles();
+}
+
+// ============================================
+// ATUALIZAR BOTÃO FLUTUANTE
+// ============================================
+function updateFloatingButton() {
+    const floatingBtn = document.getElementById('floatingContinueBtn');
+    if (!floatingBtn) return;
+    
+    if (selectedPlans.length > 0) {
+        floatingBtn.style.display = 'block';
+        
+        // Atualizar badge
+        const badge = document.getElementById('selectedCountBadge');
+        if (badge) badge.textContent = selectedPlans.length;
+        
+        // Calcular preço total
+        const totalPrice = selectedPlans.reduce((sum, id) => sum + PLANS[id].price, 0);
+        
+        // Atualizar texto do botão
+        const btnText = floatingBtn.querySelector('.btn-text');
+        if (btnText) {
+            btnText.innerHTML = `Continuar (R$ ${totalPrice.toFixed(2)})`;
+        }
+    } else {
+        floatingBtn.style.display = 'none';
+    }
+}
+
+// ============================================
+// IR PARA CHECKOUT
+// ============================================
+function goToCheckout() {
+    if (selectedPlans.length === 0) {
+        showNotification('Selecione pelo menos um plano', 'warning');
+        return;
+    }
+    
+    // Salvar no sessionStorage
+    sessionStorage.setItem('selectedPlans', JSON.stringify(selectedPlans));
     
     // Feedback visual
     showNotification('Redirecionando para checkout...', 'info');
     
-    // Redirecionar para checkout
+    // Redirecionar
     setTimeout(() => {
         window.location.href = '/checkout';
-    }, 1000);
+    }, 500);
 }
 
 // ============================================
@@ -339,11 +445,160 @@ function setupEventListeners() {
         });
     }
     
+    // Botão de limpar seleção (opcional)
+    const clearBtn = document.getElementById('clearSelection');
+    if (!clearBtn) {
+        // Criar botão de limpar seleção
+        const header = document.querySelector('.plans-header');
+        if (header) {
+            const clearButton = document.createElement('button');
+            clearButton.id = 'clearSelection';
+            clearButton.className = 'btn-clear';
+            clearButton.innerHTML = '<i class="fas fa-times"></i> Limpar seleção';
+            clearButton.onclick = clearAllSelections;
+            clearButton.style.cssText = `
+                background: none;
+                border: 1px solid rgba(255,255,255,0.3);
+                color: white;
+                padding: 8px 16px;
+                border-radius: 30px;
+                margin-top: 10px;
+                cursor: pointer;
+                transition: all 0.3s;
+            `;
+            clearButton.onmouseover = () => {
+                clearButton.style.background = 'rgba(255,255,255,0.1)';
+            };
+            clearButton.onmouseout = () => {
+                clearButton.style.background = 'none';
+            };
+            header.appendChild(clearButton);
+        }
+    }
+    
     // Remover formulário antigo se existir
     const oldPaymentForm = document.getElementById('paymentForm');
     if (oldPaymentForm) {
         oldPaymentForm.remove();
     }
+}
+
+// ============================================
+// LIMPAR TODAS AS SELEÇÕES
+// ============================================
+function clearAllSelections() {
+    selectedPlans = [];
+    sessionStorage.removeItem('selectedPlans');
+    
+    // Atualizar UI
+    document.querySelectorAll('.plan-card').forEach(card => {
+        card.classList.remove('selected');
+        card.setAttribute('aria-selected', 'false');
+        
+        const btn = card.querySelector('.btn-select');
+        if (btn) {
+            const planId = card.dataset.plan;
+            btn.innerHTML = `<i class="fas fa-plus-circle"></i> Adicionar plano`;
+        }
+    });
+    
+    updateFloatingButton();
+    showNotification('Seleção limpa', 'info');
+}
+
+// ============================================
+// ADICIONAR ESTILOS DO BOTÃO
+// ============================================
+function addButtonStyles() {
+    const style = document.createElement('style');
+    style.textContent = `
+        .floating-continue-btn {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            z-index: 1000;
+        }
+        
+        .btn-continue {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 16px 32px;
+            border-radius: 50px;
+            font-weight: 700;
+            font-size: 18px;
+            cursor: pointer;
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        
+        .btn-continue:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(102, 126, 234, 0.6);
+        }
+        
+        .btn-badge {
+            background: #f59e0b;
+            color: white;
+            border-radius: 50%;
+            width: 28px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: 700;
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            border: 2px solid white;
+        }
+        
+        .btn-clear {
+            background: none;
+            border: 1px solid rgba(255,255,255,0.3);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 30px;
+            margin-top: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .btn-clear:hover {
+            background: rgba(255,255,255,0.1);
+            border-color: white;
+        }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(100px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .btn-continue {
+                padding: 12px 24px;
+                font-size: 16px;
+            }
+            
+            .floating-continue-btn {
+                bottom: 20px;
+                right: 20px;
+            }
+        }
+    `;
+    
+    document.head.appendChild(style);
 }
 
 // ============================================
@@ -473,6 +728,7 @@ function addDynamicStyles() {
             border-color: #10b981;
             transform: scale(1.02);
             box-shadow: 0 25px 50px rgba(16,185,129,0.2);
+            background: linear-gradient(to bottom, white, #f0fdf4);
         }
         
         .popular-badge {
@@ -596,6 +852,8 @@ function addDynamicStyles() {
 // EXPOR FUNÇÕES GLOBAIS
 // ============================================
 window.PLANS = PLANS;
-window.selectPlan = selectPlan;
+window.togglePlan = togglePlan;
+window.goToCheckout = goToCheckout;
+window.clearAllSelections = clearAllSelections;
 
-console.log('✅ plans.js carregado com sucesso!');
+console.log('✅ plans.js carregado com sucesso! (Modo Multiplanos)');

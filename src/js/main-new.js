@@ -1,47 +1,41 @@
 // ============================================
-// FUN��O PARA NORMALIZAR O PLANO DO USU�RIO
+// FUN��O PARA NORMALIZAR O PLANO DO USU�RIO
 // ============================================
-function normalizeUserPlan() {
+function normalizeUserPlans() {  // <-- ADICIONAR esta nova função
     if (!currentUser) return;
     if (currentUser.isAdmin) return;
 
-    const planId =
-        (typeof currentUser.plan === 'string' ? currentUser.plan : null) ||
-        currentUser.plan?.id ||
-        currentUser.plan?.type ||
-        currentUser.subscription?.planType ||
-        null;
-
-    if (!planId) {
-        currentUser.plan = {
-            id: null,
-            categoria: null,
-            aulasPorSemana: 0,
-            horariosPermitidos: [],
-            diasPermitidos: [1, 2, 3, 4, 5],
-            active: false,
-            status: 'inactive'
-        };
+    // Se já tem a estrutura nova, manter
+    if (currentUser.plans && Array.isArray(currentUser.plans)) {
         return;
     }
 
-    const planData = PLANS[planId] || {};
-    const existing = typeof currentUser.plan === 'object' && currentUser.plan ? currentUser.plan : {};
-
-    currentUser.plan = {
-        id: planId,
-        type: existing.type || planData.id || planId,
-        name: existing.name || planData.name || planId,
-        categoria: existing.categoria || planData.categoria || null,
-        aulasPorSemana: Number(existing.aulasPorSemana || currentUser.subscription?.aulasPorSemana || planData.aulasPorSemana || 0),
-        horariosPermitidos: (existing.horariosPermitidos || planData.horariosPermitidos || []).map(Number),
-        diasPermitidos: (existing.diasPermitidos || planData.diasPermitidos || [1, 2, 3, 4, 5]).map(Number),
-        color: existing.color || planData.color || '#6366f1',
-        icon: existing.icon || planData.icon || 'fa-crown',
-        price: Number(existing.price ?? planData.price ?? 0),
-        active: existing.active ?? (existing.status ? existing.status === 'active' : true),
-        status: existing.status || 'active'
-    };
+    // Migrar da estrutura antiga para a nova
+    const planAntigo = currentUser.plan || currentUser.subscription;
+    
+    if (planAntigo && planAntigo.active) {
+        const planId = planAntigo.id || planAntigo.planType || 'normal_2x';
+        const planData = PLANS[planId] || {};
+        
+        currentUser.plans = [{
+            id: planId,
+            name: planData.name || planAntigo.name || planId,
+            categoria: planData.categoria || planAntigo.categoria || 'normal',
+            aulasPorSemana: planData.aulasPorSemana || planAntigo.aulasPorSemana || 2,
+            horariosPermitidos: planData.horariosPermitidos || 
+                (planData.categoria === 'danca' ? [14,15] : [6,7,8,9,10,11,12,16,17,18,19]),
+            color: planData.color || '#6366f1',
+            icon: planData.icon || 'fa-crown',
+            price: planData.price || 0,
+            active: true,
+            status: 'active'
+        }];
+        
+        // Limpar estrutura antiga para não conflitar
+        delete currentUser.plan;
+    } else {
+        currentUser.plans = [];
+    }
 }
 // ============================================
 // FRONTEND - SISTEMA DE AGENDAMENTO
@@ -257,39 +251,14 @@ const isBooked = (dateStr, hour) => {
 // ============================================
 
 // Verifica se usuário tem plano ativo
-function userHasActivePlan() {
+function userHasActivePlan() {  // <-- SUBSTITUIR função antiga
     if (!currentUser) return false;
     if (currentUser.isAdmin) return true;
     
-    console.log('🔍 Verificando plano do usuário:', currentUser);
-    
-    // Verificar plano direto
-    if (currentUser.plan) {
-        if (!currentUser.plan.status || currentUser.plan.status === 'active') {
-            console.log('✅ Plano ativo encontrado:', currentUser.plan);
-            return true;
-        }
-    }
-    
-    // Verificar assinatura
-    if (currentUser.subscription && currentUser.subscription.status === 'active') {
-        console.log('✅ Assinatura ativa encontrada:', currentUser.subscription);
-        
-        if (!currentUser.plan) {
-            const planType = currentUser.subscription.planType || 'basic';
-            currentUser.plan = {
-                id: planType,
-                name: getPlanName(planType),
-                aulasPorSemana: currentUser.subscription.aulasPorSemana || getPlanAulas(planType),
-                status: 'active',
-                color: PLANS[planType]?.color || '#6366f1'
-            };
-        }
-        return true;
-    }
-    
-    console.log('❌ Nenhum plano ativo encontrado');
-    return false;
+    // NOVA VERSÃO: verificar múltiplos planos
+    return currentUser.plans && 
+           Array.isArray(currentUser.plans) && 
+           currentUser.plans.length > 0;
 }
 
 // Verifica status da assinatura no backend e sincroniza dados de plano no frontend
@@ -342,47 +311,53 @@ async function checkSubscriptionStatus() {
     }
 }
 // Verifica se o horário é permitido para o plano do usuário
-function getCurrentPlanDefinition() {
+function getCurrentPlanDefinition() {  // <-- SUBSTITUIR
     if (!currentUser || currentUser.isAdmin) return null;
-
-    const planId = currentUser.plan?.id || currentUser.plan?.type || currentUser.subscription?.planType || null;
-    if (!planId) return null;
-
-    return PLANS[planId] || null;
+    
+    // Retorna o primeiro plano ativo (para compatibilidade)
+    if (currentUser.plans && currentUser.plans.length > 0) {
+        const primeiroPlano = currentUser.plans[0];
+        return PLANS[primeiroPlano.id] || primeiroPlano;
+    }
+    
+    return null;
 }
 
 function verificarHorarioPermitido(weekday, hour) {
     return isHorarioPermitido(weekday, hour);
 }
 
-function isHorarioPermitido(weekday, hour) {
-    if (!currentUser) return true;
-    if (currentUser.isAdmin) return true;
-    if (!currentUser.plan || !userHasActivePlan()) return false;
-
-    const planDef = getCurrentPlanDefinition();
-    const plan = currentUser.plan;
-
-    const allowedDays = planDef?.diasPermitidos || plan.diasPermitidos || [1, 2, 3, 4, 5];
-    const allowedHours = (planDef?.horariosPermitidos || plan.horariosPermitidos || []).map(Number);
-
-    if (!allowedDays.includes(Number(weekday))) {
-        return false;
+function getUserActivePlans() {  // <-- ADICIONAR esta função
+    if (!currentUser) return [];
+    if (currentUser.isAdmin) {
+        return [{
+            id: 'admin',
+            categoria: 'admin',
+            aulasPorSemana: Infinity,
+            horariosPermitidos: 'all'
+        }];
     }
-
-    if (allowedHours.length > 0) {
-        return allowedHours.includes(Number(hour));
-    }
-
-    // Fallback seguro: sem lista explicita => restringe por categoria
-    const categoria = planDef?.categoria || plan.categoria;
-    if (categoria === 'danca') {
-        return [14, 15].includes(Number(hour));
-    }
-
-    return [6, 7, 8, 9, 10, 11, 12, 16, 17, 18, 19].includes(Number(hour));
+    
+    return currentUser.plans || [];
 }
 
+function isHorarioPermitido(weekday, hour) {  // <-- SUBSTITUIR
+    if (!currentUser) return true;
+    if (currentUser.isAdmin) return true;
+    
+    const activePlans = getUserActivePlans();
+    if (activePlans.length === 0) return false;
+    
+    // Verificar se algum plano permite este horário
+    return activePlans.some(plan => {
+        const planData = PLANS[plan.id] || plan;
+        const allowedHours = planData.horariosPermitidos || [];
+        const allowedDays = planData.diasPermitidos || [1,2,3,4,5];
+        
+        return allowedDays.includes(Number(weekday)) && 
+               allowedHours.includes(Number(hour));
+    });
+}
 // ============================================
 // ADICIONE ESTA FUNÇÃO
 // ============================================
@@ -586,22 +561,38 @@ function groupBookingsByWeek(bookings) {
 // ============================================
 // FUNÇÃO PARA CONTAR RESERVAS EM UMA SEMANA ESPECÍFICA
 // ============================================
-function countBookingsInWeek(date, userId) {
+function countBookingsInWeek(date, userId) {  // <-- SUBSTITUIR
     const { monday, sunday } = getWeekRange(date);
     
-    const count = bookings.filter(b => {
+    const bookingsInWeek = bookings.filter(b => {
         if (b.userId !== userId) return false;
         const bookDate = new Date(b.date + 'T00:00:00');
         return bookDate >= monday && bookDate <= sunday;
-    }).length;
+    });
     
-    console.log(`📊 Semana de ${formatWeekRange(date)}: ${count} reservas`);
-    return count;
+    // Agrupar por categoria
+    const byCategory = {};
+    bookingsInWeek.forEach(b => {
+        const cat = b.categoria || 'normal';
+        if (!byCategory[cat]) byCategory[cat] = 0;
+        byCategory[cat]++;
+    });
+    
+    console.log('📊 Reservas na semana por categoria:', byCategory);
+    
+    return {
+        total: bookingsInWeek.length,
+        byCategory
+    };
 }
 
+// ============================================
+// FUNÇÃO ATUALIZADA - SUPORTE A MÚLTIPLOS PLANOS
+// ============================================
 async function updateWeeklyWarning() {
     if (!weeklyWarning) return;
     
+    // ADMIN
     if (currentUser?.isAdmin) {
         weeklyWarning.innerHTML = `
             <div class="warning-content">
@@ -613,32 +604,37 @@ async function updateWeeklyWarning() {
         return;
     }
     
-    if (!currentUser?.plan || !userHasActivePlan()) {
-        updateWeeklyWarningNoPlan();
+    // Verificar se tem planos ativos
+    const activePlans = getUserActivePlans();
+    if (activePlans.length === 0) {
+        weeklyWarning.innerHTML = `
+            <div class="warning-content warning">
+                <i class="fas fa-exclamation-triangle"></i>
+                <span>Você não possui planos ativos</span>
+                <button class="btn-small" onclick="window.location.href='/plans'">
+                    <i class="fas fa-crown"></i>
+                    Escolher plano
+                </button>
+            </div>
+        `;
+        weeklyWarning.className = 'weekly-warning warning';
         return;
     }
 
     // Verificar status de pagamento
     const statusPagamento = await verificarStatusPagamentoUsuario();
     
-    const plan = currentUser.plan;
-    const planName = plan.name || plan.id;
-    const planLimit = plan.aulasPorSemana || 0;
-    const planColor = plan.color || '#6366f1';
-    
     const today = new Date();
-    const nextWeekDate = new Date();
+    const nextWeekDate = new Date(today);
     nextWeekDate.setDate(today.getDate() + 7);
 
     const nextWeekRange = formatWeekRange(nextWeekDate);
-    const nextWeekCount = countBookingsInWeek(nextWeekDate, currentUser.id);
-    const nextRemaining = planLimit - nextWeekCount;
-    const hasNextWeekBookings = nextWeekCount > 0;
-
     const currentWeekRange = formatWeekRange(today);
-    const currentWeekCount = countBookingsInWeek(today, currentUser.id);
-    const hasCurrentWeekBookings = currentWeekCount > 0;
-
+    
+    // Contar reservas por categoria para ambas as semanas
+    const currentWeekCounts = countBookingsInWeek(today, currentUser.id);
+    const nextWeekCounts = countBookingsInWeek(nextWeekDate, currentUser.id);
+    
     // MENSAGEM DE PAGAMENTO
     let pagamentoHtml = '';
     if (statusPagamento.status === 'em_atraso') {
@@ -659,66 +655,116 @@ async function updateWeeklyWarning() {
         `;
     }
 
-    // MENSAGEM SOBRE CATEGORIA
-    let categoriaMsg = '';
-    let infoExtra = '';
+    // Construir HTML para cada plano
+    let plansCurrentHtml = '';
+    let plansNextHtml = '';
+    let hasAnyCurrentBookings = false;
+    let hasAnyNextBookings = false;
+    let totalCurrentLimit = 0;
+    let totalNextLimit = 0;
     
-    if (plan.categoria === 'danca') {
-        categoriaMsg = 'Aulas de dança disponíveis apenas às 14:00 e 15:00';
-        infoExtra = `
-            <div class="info-danca">
-                <i class="fas fa-music"></i>
-                <span>${categoriaMsg}</span>
+    activePlans.forEach(plan => {
+        const planData = PLANS[plan.id] || plan;
+        const categoria = planData.categoria;
+        const limit = planData.aulasPorSemana || 0;
+        const color = planData.color || '#6366f1';
+        const icon = planData.icon || 'fa-crown';
+        
+        // Usos por categoria
+        const currentUsed = currentWeekCounts.byCategory[categoria] || 0;
+        const nextUsed = nextWeekCounts.byCategory[categoria] || 0;
+        
+        if (currentUsed > 0) hasAnyCurrentBookings = true;
+        if (nextUsed > 0) hasAnyNextBookings = true;
+        
+        totalCurrentLimit += limit;
+        totalNextLimit += limit;
+        
+        // HTML para semana atual
+        plansCurrentHtml += `
+            <div class="plan-week-item" style="border-left-color: ${color}">
+                <div class="plan-week-header">
+                    <i class="fas ${icon}" style="color: ${color}"></i>
+                    <span class="plan-week-name">${planData.name}</span>
+                </div>
+                <div class="plan-week-progress">
+                    <div class="progress-container small">
+                        <div class="progress-bar" style="width: ${(currentUsed/limit)*100}%; background: ${color}"></div>
+                    </div>
+                    <span class="plan-week-count">${currentUsed}/${limit}</span>
+                </div>
             </div>
         `;
-    } else {
-        categoriaMsg = 'Treinos normais em todos os horários';
-        infoExtra = `
-            <div class="info-badge">
-                <i class="fas fa-info-circle"></i>
-                <span>${categoriaMsg}</span>
+        
+        // HTML para próxima semana
+        plansNextHtml += `
+            <div class="plan-week-item" style="border-left-color: ${color}">
+                <div class="plan-week-header">
+                    <i class="fas ${icon}" style="color: ${color}"></i>
+                    <span class="plan-week-name">${planData.name}</span>
+                </div>
+                <div class="plan-week-progress">
+                    <div class="progress-container small">
+                        <div class="progress-bar" style="width: ${(nextUsed/limit)*100}%; background: ${color}"></div>
+                    </div>
+                    <span class="plan-week-count">${nextUsed}/${limit}</span>
+                </div>
             </div>
         `;
-    }
+    });
 
-    const planPrice = Number(plan.price || 0);
+    // Calcular totais
+    const totalCurrentUsed = currentWeekCounts.total;
+    const totalNextUsed = nextWeekCounts.total;
+    const totalNextRemaining = totalNextLimit - totalNextUsed;
 
     weeklyWarning.innerHTML = `
         <div class="warning-content">
-            <div class="warning-header">
-                <span class="plan-indicator" style="background: ${planColor}">
-                    <i class="fas ${plan.icon || 'fa-crown'}"></i>
-                    ${planName} - R$ ${planPrice.toFixed(2)}/mês
-                </span>
-                ${infoExtra}
+            <!-- HEADER COM MÚLTIPLOS PLANOS -->
+            <div class="warning-header multi-plan-header">
+                <div class="plans-summary">
+                    <i class="fas fa-crown"></i>
+                    <span>Seus planos ativos (${activePlans.length})</span>
+                </div>
+                ${activePlans.map(p => {
+                    const planData = PLANS[p.id] || p;
+                    return `
+                        <span class="plan-tag" style="background: ${planData.color}20; color: ${planData.color}">
+                            <i class="fas ${planData.icon}"></i>
+                            ${planData.name}
+                        </span>
+                    `;
+                }).join('')}
             </div>
 
             ${pagamentoHtml}
             
             <div class="weeks-container">
-                <!-- Semana em andamento -->
-                <div class="week-card current ${!hasCurrentWeekBookings ? 'empty' : ''}">
+                <!-- SEMANA EM ANDAMENTO -->
+                <div class="week-card current ${!hasAnyCurrentBookings ? 'empty' : ''}">
                     <div class="week-title">
                         <i class="fas fa-calendar-alt"></i>
                         <span>Semana em andamento</span>
                         <span class="week-dates">${currentWeekRange}</span>
-                        ${hasCurrentWeekBookings ? '<span class="bookings-badge">Aulas marcadas</span>' : '<span class="no-bookings-badge">Sem aulas</span>'}
+                        ${hasAnyCurrentBookings ? 
+                            '<span class="bookings-badge">Com aulas</span>' : 
+                            '<span class="no-bookings-badge">Sem aulas</span>'
+                        }
                     </div>
                     
                     <div class="week-stats">
-                        ${hasCurrentWeekBookings ? `
-                            <div class="progress-container">
-                                <div class="progress-bar" style="width: ${(currentWeekCount/planLimit)*100}%; background: ${planColor}"></div>
+                        ${hasAnyCurrentBookings ? `
+                            <div class="multi-plans-progress">
+                                ${plansCurrentHtml}
                             </div>
                             
-                            <div class="count-info">
+                            <div class="count-info total">
                                 <span class="used">
-                                    <strong>${currentWeekCount}</strong>/${planLimit} aulas
-                                    <i class="fas fa-check-circle" style="color: #10b981; margin-left: 5px;"></i>
+                                    <strong>${totalCurrentUsed}</strong>/${totalCurrentLimit} aulas no total
                                 </span>
                                 <span class="current-bookings">
                                     <i class="fas fa-calendar-check"></i>
-                                    ${currentWeekCount} aula${currentWeekCount !== 1 ? 's' : ''} marcada${currentWeekCount !== 1 ? 's' : ''}
+                                    ${totalCurrentUsed} aula${totalCurrentUsed !== 1 ? 's' : ''} marcada${totalCurrentUsed !== 1 ? 's' : ''}
                                 </span>
                             </div>
                         ` : `
@@ -729,56 +775,60 @@ async function updateWeeklyWarning() {
                         `}
                     </div>
                     
-                    <div class="week-footer ${!hasCurrentWeekBookings ? 'info' : ''}">
+                    <div class="week-footer ${!hasAnyCurrentBookings ? 'info' : ''}">
                         <i class="fas fa-exclamation-circle"></i>
                         <span>Agendamentos para esta semana já estão encerrados.</span>
                     </div>
                 </div>
                 
-                <!-- Semana disponível para agendamento -->
-                <div class="week-card next ${hasNextWeekBookings ? 'has-bookings' : 'available'}">
+                <!-- SEMANA DISPONÍVEL -->
+                <div class="week-card next ${hasAnyNextBookings ? 'has-bookings' : 'available'}">
                     <div class="week-title">
                         <i class="fas fa-calendar-plus"></i>
-                        <span>Semana disponível para agendamento</span>
+                        <span>Próxima semana</span>
                         <span class="week-dates">${nextWeekRange}</span>
-                        ${hasNextWeekBookings ? '<span class="bookings-badge">Aulas agendadas</span>' : '<span class="available-badge">Disponível</span>'}
+                        ${hasAnyNextBookings ? 
+                            '<span class="bookings-badge">Aulas agendadas</span>' : 
+                            '<span class="available-badge">Disponível</span>'
+                        }
                     </div>
                     
                     <div class="week-stats">
-                        <div class="progress-container">
-                            <div class="progress-bar" style="width: ${(nextWeekCount/planLimit)*100}%; background: ${planColor}"></div>
+                        <div class="multi-plans-progress">
+                            ${plansNextHtml}
                         </div>
                         
-                        <div class="count-info">
+                        <div class="count-info total">
                             <span class="used">
-                                <strong>${nextWeekCount}</strong>/${planLimit} aulas
-                                ${nextWeekCount > 0 ? '<i class="fas fa-check-circle" style="color: #10b981; margin-left: 5px;"></i>' : ''}
+                                <strong>${totalNextUsed}</strong>/${totalNextLimit} aulas
+                                ${totalNextUsed > 0 ? 
+                                    '<i class="fas fa-check-circle" style="color: #10b981; margin-left: 5px;"></i>' : 
+                                    ''
+                                }
                             </span>
                             
-                            ${nextWeekCount > 0 ? 
+                            ${totalNextUsed > 0 ? 
                                 `<span class="next-bookings">
                                     <i class="fas fa-calendar-check"></i>
-                                    ${nextWeekCount} aula${nextWeekCount !== 1 ? 's' : ''} agendada${nextWeekCount !== 1 ? 's' : ''}
+                                    ${totalNextUsed} aula${totalNextUsed !== 1 ? 's' : ''} agendada${totalNextUsed !== 1 ? 's' : ''}
                                 </span>` : 
                                 `<span class="remaining positive">
                                     <i class="fas fa-arrow-up"></i>
-                                    ${nextRemaining} vaga${nextRemaining !== 1 ? 's' : ''} disponível(eis)
+                                    ${totalNextRemaining} vaga${totalNextRemaining !== 1 ? 's' : ''} disponível(eis)
                                 </span>`
                             }
                         </div>
                     </div>
                     
-                    ${hasNextWeekBookings ? `
-                        <div class="next-week-details">
-                            <i class="fas fa-info-circle"></i>
-                            Você já tem aula${nextWeekCount !== 1 ? 's' : ''} marcada${nextWeekCount !== 1 ? 's' : ''} para a próxima semana
-                        </div>
-                    ` : `
-                        <div class="next-week-details available">
-                            <i class="fas fa-calendar-plus"></i>
-                            <span>Vagas disponíveis para a semana de ${nextWeekRange}</span>
-                        </div>
-                    `}
+                    <div class="next-week-details ${!hasAnyNextBookings ? 'available' : ''}">
+                        <i class="fas fa-${hasAnyNextBookings ? 'info-circle' : 'calendar-plus'}"></i>
+                        <span>
+                            ${hasAnyNextBookings ? 
+                                `Você já tem aulas marcadas para a próxima semana` : 
+                                `Vagas disponíveis em ${activePlans.length} plano${activePlans.length > 1 ? 's' : ''}`
+                            }
+                        </span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -786,10 +836,208 @@ async function updateWeeklyWarning() {
     
     weeklyWarning.className = 'weekly-warning info';
     
-    if (nextWeekCount >= planLimit && !sessionStorage.getItem('limitModalShown')) {
+    // Verificar se algum plano atingiu o limite na próxima semana
+    const plansAtLimit = activePlans.filter(plan => {
+        const planData = PLANS[plan.id] || plan;
+        const categoria = planData.categoria;
+        const limit = planData.aulasPorSemana || 0;
+        const used = nextWeekCounts.byCategory[categoria] || 0;
+        return used >= limit;
+    });
+    
+    if (plansAtLimit.length > 0 && !sessionStorage.getItem('limitModalShown')) {
         sessionStorage.setItem('limitModalShown', 'true');
-        showLimitReachedModal(planLimit, nextWeekCount, planName);
+        
+        const planNames = plansAtLimit.map(p => {
+            const planData = PLANS[p.id] || p;
+            return planData.name;
+        }).join(', ');
+        
+        showLimitReachedModalMulti(planNames, plansAtLimit.length);
     }
+}
+
+// ============================================
+// NOVA FUNÇÃO AUXILIAR - MODAL DE LIMITE MÚLTIPLO
+// ============================================
+function showLimitReachedModalMulti(planNames, count) {
+    const modal = document.createElement('div');
+    modal.id = 'limitReachedModal';
+    modal.className = 'modal';
+    
+    modal.innerHTML = `
+        <div class="modal-content limit-modal">
+            <div class="modal-header">
+                <h3>
+                    <i class="fas fa-exclamation-circle" style="color: #f59e0b;"></i>
+                    Limite semanal atingido
+                </h3>
+                <button class="modal-close" onclick="closeLimitModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="limit-icon">
+                    <i class="fas fa-chart-line"></i>
+                </div>
+                
+                <p class="limit-message-main">
+                    ${count > 1 ? 
+                        `Os planos <strong>${planNames}</strong> atingiram o limite semanal` :
+                        `O plano <strong>${planNames}</strong> atingiu o limite semanal`
+                    }
+                </p>
+                
+                <div class="limit-info">
+                    <i class="fas fa-info-circle"></i>
+                    <p>
+                        Para agendar mais aulas nesta semana, você pode:
+                    </p>
+                    <ul style="margin-top: 10px; padding-left: 20px;">
+                        <li>Adicionar outro plano da mesma categoria</li>
+                        <li>Fazer upgrade para um plano com mais aulas</li>
+                        <li>Aguardar a próxima semana</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-primary" onclick="redirectToUpgrade()">
+                    <i class="fas fa-crown"></i>
+                    Gerenciar planos
+                </button>
+                <button class="btn-secondary" onclick="closeLimitModal()">
+                    <i class="fas fa-clock"></i>
+                    Entendi
+                </button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    setTimeout(() => {
+        modal.style.display = 'flex';
+        setTimeout(() => modal.classList.add('show'), 10);
+    }, 10);
+    
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            closeLimitModal();
+        }
+    });
+}
+
+// ============================================
+// CSS ADICIONAL PARA SUPORTE A MÚLTIPLOS PLANOS
+// ============================================
+const multiPlanStyles = `
+    .multi-plan-header {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-bottom: 15px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #e5e7eb;
+    }
+    
+    .plans-summary {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-weight: 600;
+        color: #374151;
+        margin-right: 15px;
+    }
+    
+    .plan-tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+    
+    .multi-plans-progress {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        margin: 15px 0;
+    }
+    
+    .plan-week-item {
+        background: #f9fafb;
+        border-left: 3px solid;
+        padding: 10px;
+        border-radius: 6px;
+    }
+    
+    .plan-week-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 8px;
+    }
+    
+    .plan-week-name {
+        font-weight: 600;
+        font-size: 13px;
+        color: #374151;
+    }
+    
+    .plan-week-progress {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    .progress-container.small {
+        flex: 1;
+        height: 6px;
+        background: #e5e7eb;
+        border-radius: 3px;
+        overflow: hidden;
+    }
+    
+    .plan-week-count {
+        font-size: 12px;
+        font-weight: 600;
+        color: #6b7280;
+        min-width: 45px;
+    }
+    
+    .count-info.total {
+        background: #f3f4f6;
+        padding: 10px;
+        border-radius: 6px;
+        margin-top: 10px;
+    }
+    
+    @media (max-width: 768px) {
+        .multi-plan-header {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        
+        .plan-tag {
+            width: 100%;
+            justify-content: center;
+        }
+        
+        .plan-week-item {
+            padding: 8px;
+        }
+    }
+`;
+
+// Adicionar estilos se não existirem
+if (!document.getElementById('multiPlanStyles')) {
+    const style = document.createElement('style');
+    style.id = 'multiPlanStyles';
+    style.textContent = multiPlanStyles;
+    document.head.appendChild(style);
 }
 // 4. FUNÇÕES DE CONTAGEM E VALIDAÇÃO
 // ============================================
@@ -1014,14 +1262,11 @@ function createHourLabel(hour) {
     return div;
 }
 
-
-
-function createSlot(wd, h) {
+function createSlot(wd, h) {  // <-- SUBSTITUIR
     const slot = document.createElement('button');
     slot.className = 'slot-btn';
 
     const dateStr = nextDates[wd];
-
     if (!dateStr) {
         slot.classList.add('disabled');
         slot.innerHTML = '<i class="fas fa-ban"></i>';
@@ -1034,6 +1279,8 @@ function createSlot(wd, h) {
     const isFull = bookCount >= 4;
     const userHasBooking = bookedList.some(b => b.userId === currentUser?.id);
     const hasActivePlan = userHasActivePlan() || currentUser?.isAdmin;
+    
+    // NOVO: verificar permissão baseada em múltiplos planos
     const horarioPermitido = isHorarioPermitido(wd, h);
 
     if (!isAvailable) {
@@ -1042,8 +1289,8 @@ function createSlot(wd, h) {
     } else if (!horarioPermitido && !currentUser?.isAdmin) {
         slot.classList.add('disabled', 'plano-nao-permite');
         slot.disabled = true;
-        slot.title = 'Seu plano nao permite este horario';
-        slot.innerHTML = `<span class="count">${bookCount}/4</span><span class="label"> Nao permitido</span>`;
+        slot.title = 'Nenhum dos seus planos permite este horário';
+        slot.innerHTML = `<span class="count">${bookCount}/4</span><span class="label"> Não permitido</span>`;
     } else if (isFull) {
         slot.classList.add('full');
         slot.innerHTML = `<span class="count">${bookCount}/4</span><span class="label"> Lotado</span>`;
@@ -1054,15 +1301,13 @@ function createSlot(wd, h) {
         if (!hasActivePlan) {
             slot.disabled = true;
             slot.classList.add('requires-plan');
-            slot.title = 'Voce precisa de um plano para agendar';
         }
     } else {
         slot.classList.add('available');
-        slot.innerHTML = `<span class="count">0/4</span><span class="label"> Disponivel</span>`;
+        slot.innerHTML = `<span class="count">0/4</span><span class="label"> Disponível</span>`;
         if (!hasActivePlan) {
             slot.disabled = true;
             slot.classList.add('requires-plan');
-            slot.title = 'Voce precisa de um plano para agendar';
         }
     }
 
@@ -1073,53 +1318,9 @@ function createSlot(wd, h) {
     slot.dataset.weekday = wd;
     slot.dataset.hour = h;
     slot.dataset.date = dateStr;
-    slot.dataset.available = isAvailable;
-    slot.dataset.bookCount = bookCount;
-
     slot.addEventListener('click', onSlotClick);
 
     return slot;
-}
-function renderSchedule() {
-    const grid = document.createElement('div');
-    grid.className = 'grid';
-
-    grid.appendChild(createHeaderCell('hour-header', '<i class="fas fa-clock"></i> Horário'));
-    
-    for (let i = 0; i < 5; i++) {
-        grid.appendChild(createHeaderCell('weekday-header', weekdays[i]));
-    }
-
-    // Verificar se é usuário de dança
-    const planDef = getCurrentPlanDefinition();
-    const isDanca = (planDef?.categoria === 'danca') || ['danca_2x', 'danca_3x'].includes(currentUser?.plan?.id || currentUser?.plan?.type || '');
-    
-    // Filtrar horários baseado no plano
-    let horariosParaMostrar = HOURS;
-    
-    if (isDanca) {
-        // Para dança, mostrar apenas 14 e 15
-        horariosParaMostrar = [14, 15];
-    }
-
-    for (const h of horariosParaMostrar) {
-        grid.appendChild(createHourLabel(h));
-        
-        for (let wd = 1; wd <= 5; wd++) {
-            // AQUI NÃO TEM VERIFICAÇÃO - O SLOT É CRIADO DIRETAMENTE
-            const slot = createSlot(wd, h);
-            grid.appendChild(slot);
-        }
-    }
-
-    scheduleEl.style.opacity = '0';
-    setTimeout(() => {
-        scheduleEl.innerHTML = '';
-        scheduleEl.appendChild(grid);
-        scheduleEl.style.opacity = '1';
-    }, 200);
-
-    updateWeeklyWarning();
 }
 // ============================================
 // 7. RENDERIZAÇÃO DE RESERVAS POR SEMANA
@@ -3442,6 +3643,65 @@ const additionalStyles = `
             flex-direction: column;
             align-items: flex-start;
         }
+    }
+    /* Estilos para múltiplos planos */
+    .multi-plans-container {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        margin: 15px 0;
+    }
+    
+    .plan-week-info {
+        background: white;
+        border-left: 4px solid;
+        padding: 12px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .plan-name {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-weight: 600;
+        margin-bottom: 8px;
+    }
+    
+    .plan-progress {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+    
+    .plan-progress .progress-bar {
+        height: 8px;
+        background: #e5e7eb;
+        border-radius: 4px;
+        overflow: hidden;
+        flex: 1;
+    }
+    
+    .plan-progress .progress-bar div {
+        height: 100%;
+        transition: width 0.3s;
+    }
+    
+    .plan-progress span {
+        font-size: 14px;
+        font-weight: 600;
+        min-width: 60px;
+    }
+    
+    .warning-footer {
+        margin-top: 15px;
+        padding-top: 15px;
+        border-top: 1px solid #e5e7eb;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: #6b7280;
+        font-size: 13px;
     }
     `;
 

@@ -1,472 +1,310 @@
-// src/js/checkout.js
+// ============================================
+// checkout.js - Página de Checkout da FitLife
+// VERSÃO ATUALIZADA - SUPORTE A MÚLTIPLOS PLANOS
+// ============================================
+
 const API = 'https://jokesteronline.org/api';
 
-// Estado global
-let currentUser = null;
-let selectedPlan = null;
-let paymentMethods = [];
-let currentMethod = 'pix';
-let qrCodeInterval = null;
-
-// Planos disponíveis
+// ============================================
+// CONFIGURAÇÃO DOS PLANOS (mesma do plans.js)
+// ============================================
 const PLANS = {
-    basic: {
-        id: 'basic',
-        name: 'Básico',
+    // ===== TREINO NORMAL =====
+    normal_2x: {
+        id: 'normal_2x',
+        name: 'Treino Normal 2x',
+        categoria: 'normal',
         aulasPorSemana: 2,
-        price: 1,
-        description: 'Plano Básico - 2 aulas por semana',
+        price: 400.00,
+        color: '#10b981',
+        icon: 'fa-dumbbell',
+        description: 'Treino normal 2 vezes por semana',
+        horarios: 'Todos os horários (6h-12h e 16h-19h)',
         features: [
             '2 aulas por semana',
             'Acesso a todos horários',
-            'Suporte por email',
-            'Cancelamento a qualquer momento'
+            'Suporte básico',
+            'Acesso ao app mobile'
         ]
     },
-    intermediate: {
-        id: 'intermediate',
-        name: 'Intermediário',
+    normal_3x: {
+        id: 'normal_3x',
+        name: 'Treino Normal 3x',
+        categoria: 'normal',
         aulasPorSemana: 3,
-        price: 1,
-        description: 'Plano Intermediário - 3 aulas por semana',
+        price: 510.00,
+        color: '#3b82f6',
+        icon: 'fa-dumbbell',
+        description: 'Treino normal 3 vezes por semana',
+        horarios: 'Todos os horários (6h-12h e 16h-19h)',
         features: [
             '3 aulas por semana',
             'Acesso a todos horários',
             'Suporte prioritário',
-            'Cancelamento a qualquer momento'
+            'Acesso ao app mobile',
+            'Avaliação mensal'
         ]
     },
-    advanced: {
-        id: 'advanced',
-        name: 'Avançado',
-        aulasPorSemana: 4,
-        price: 1,
-        description: 'Plano Avançado - 4 aulas por semana',
-        features: [
-            '4 aulas por semana',
-            'Acesso a todos horários',
-            'Suporte VIP',
-            'Cancelamento a qualquer momento'
-        ]
-    },
-    premium: {
-        id: 'premium',
-        name: 'Premium',
+    normal_5x: {
+        id: 'normal_5x',
+        name: 'Treino Normal 5x',
+        categoria: 'normal',
         aulasPorSemana: 5,
-        price: 1,
-        description: 'Plano Premium - 5 aulas por semana',
+        price: 800.00,
+        color: '#8b5cf6',
+        icon: 'fa-crown',
+        description: 'Treino normal 5 vezes por semana',
+        horarios: 'Todos os horários (6h-12h e 16h-19h)',
         features: [
             '5 aulas por semana',
             'Acesso a todos horários',
-            'Suporte 24/7',
-            'Cancelamento a qualquer momento'
+            'Suporte VIP',
+            'Acesso ao app mobile',
+            'Avaliação semanal',
+            'Acompanhamento personalizado'
+        ]
+    },
+    
+    // ===== DANÇA =====
+    danca_2x: {
+        id: 'danca_2x',
+        name: 'Dança 2x',
+        categoria: 'danca',
+        aulasPorSemana: 2,
+        price: 79.00,
+        color: '#ec4899',
+        icon: 'fa-music',
+        description: 'Aulas de dança 2 vezes por semana',
+        horarios: '14:00 e 15:00',
+        features: [
+            '2 aulas de dança por semana',
+            'Horários: 14:00 e 15:00',
+            'Professores especializados',
+            'Turmas reduzidas'
+        ]
+    },
+    danca_3x: {
+        id: 'danca_3x',
+        name: 'Dança 3x',
+        categoria: 'danca',
+        aulasPorSemana: 3,
+        price: 89.00,
+        color: '#ec4899',
+        icon: 'fa-music',
+        description: 'Aulas de dança 3 vezes por semana',
+        horarios: '14:00 e 15:00',
+        features: [
+            '3 aulas de dança por semana',
+            'Horários: 14:00 e 15:00',
+            'Professores especializados',
+            'Turmas reduzidas',
+            'Coreografias exclusivas'
         ]
     }
 };
 
 // ============================================
+// ESTADO GLOBAL
+// ============================================
+let currentUser = null;
+let selectedPlans = [];
+let paymentData = {};
+
+// ============================================
 // INICIALIZAÇÃO
 // ============================================
 document.addEventListener('DOMContentLoaded', async () => {
-    console.log('🚀 ===== CHECKOUT INICIADO =====');
-    console.log('🌐 API URL:', API);
+    console.log('🚀 Checkout Multiplanos iniciado');
     
-    // Verificar login
+    // Verificar usuário logado
     const savedUser = localStorage.getItem('user');
-    console.log('👤 Usuário no localStorage:', savedUser ? 'Encontrado' : 'Não encontrado');
-    
     if (!savedUser) {
-        console.log('❌ Nenhum usuário logado, redirecionando para home');
+        console.log('❌ Usuário não logado, redirecionando...');
         window.location.href = '/';
         return;
     }
     
     try {
         currentUser = JSON.parse(savedUser);
-        console.log('✅ Usuário carregado:', currentUser.email);
-    } catch (e) {
-        console.error('❌ Erro ao parsear usuário:', e);
+        console.log('👤 Usuário:', currentUser.name);
+    } catch (error) {
+        console.error('Erro ao carregar usuário:', error);
         window.location.href = '/';
         return;
     }
     
-    // Recuperar plano selecionado
-    const planData = sessionStorage.getItem('selectedPlan');
-    console.log('📦 Plano no sessionStorage:', planData ? 'Encontrado' : 'Não encontrado');
+    // Carregar planos selecionados
+    loadSelectedPlans();
     
-    if (!planData) {
-        console.log('❌ Nenhum plano selecionado, redirecionando para plans');
-        window.location.href = '/plans';
-        return;
-    }
+    // Renderizar resumo do pedido
+    renderOrderSummary();
     
-    try {
-        selectedPlan = JSON.parse(planData);
-        console.log('✅ Plano carregado:', selectedPlan);
-    } catch (e) {
-        console.error('❌ Erro ao parsear plano:', e);
-        window.location.href = '/plans';
-        return;
-    }
+    // Configurar tabs de pagamento
+    setupPaymentTabs();
     
-    // Atualizar resumo
-    updateOrderSummary();
-    
-    // Carregar métodos de pagamento
-    await loadPaymentMethods();
-    
-    // Renderizar tabs
-    renderPaymentTabs();
-    
-    console.log('✅ Checkout inicializado com sucesso');
+    // Adicionar estilos adicionais
+    addCheckoutStyles();
 });
 
 // ============================================
-// RESUMO DO PEDIDO
+// CARREGAR PLANOS SELECIONADOS
 // ============================================
-function updateOrderSummary() {
-    const plan = PLANS[selectedPlan.id] || selectedPlan;
-    console.log('📊 Atualizando resumo do pedido:', plan);
+function loadSelectedPlans() {
+    const plansStr = sessionStorage.getItem('selectedPlans');
     
-    document.getElementById('planSummary').innerHTML = `
-        <div class="plan-detail">
-            <span class="plan-name">${plan.name}</span>
-            <span class="plan-price">R$ ${plan.price},00</span>
-        </div>
-    `;
-    
-    document.getElementById('planFeatures').innerHTML = `
-        ${plan.features.map(f => `
-            <div class="feature-item">
-                <i class="fas fa-check"></i>
-                <span>${f}</span>
-            </div>
-        `).join('')}
-    `;
-    
-    document.getElementById('totalPrice').textContent = `R$ ${plan.price},00`;
-}
-
-// ============================================
-// MÉTODOS DE PAGAMENTO
-// ============================================
-async function loadPaymentMethods() {
-    console.log('🔄 Carregando métodos de pagamento...');
+    if (!plansStr) {
+        console.log('❌ Nenhum plano selecionado');
+        showError('Nenhum plano foi selecionado', true);
+        return;
+    }
     
     try {
-        const response = await fetch(`${API}/payments/methods`);
-        console.log('📥 Resposta de métodos:', response.status);
+        selectedPlans = JSON.parse(plansStr);
+        console.log('📋 Planos selecionados:', selectedPlans);
         
-        const data = await response.json();
-        console.log('📦 Dados de métodos:', data);
-        
-        if (data.success) {
-            paymentMethods = data.data.filter(m => 
-                ['pix', 'master', 'visa', 'elo', 'bolbradesco'].includes(m.id)
-            );
-            console.log('✅ Métodos filtrados:', paymentMethods);
+        if (selectedPlans.length === 0) {
+            showError('Selecione pelo menos um plano', true);
         }
     } catch (error) {
-        console.error('❌ Erro ao carregar métodos:', error);
+        console.error('Erro ao carregar planos:', error);
+        showError('Erro ao carregar planos selecionados', true);
     }
 }
 
-function renderPaymentTabs() {
+// ============================================
+// RENDERIZAR RESUMO DO PEDIDO
+// ============================================
+function renderOrderSummary() {
+    const planSummary = document.getElementById('planSummary');
+    const planFeatures = document.getElementById('planFeatures');
+    const totalPrice = document.getElementById('totalPrice');
+    
+    if (!planSummary || !planFeatures || !totalPrice) {
+        console.error('Elementos do resumo não encontrados');
+        return;
+    }
+    
+    let total = 0;
+    let allFeatures = [];
+    let uniqueCategories = new Set();
+    
+    planSummary.innerHTML = '';
+    
+    selectedPlans.forEach(planId => {
+        const plan = PLANS[planId];
+        if (!plan) return;
+        
+        total += plan.price;
+        uniqueCategories.add(plan.categoria);
+        allFeatures = [...allFeatures, ...plan.features];
+        
+        // Criar elemento do plano
+        const planElement = document.createElement('div');
+        planElement.className = 'plan-detail';
+        planElement.style.borderLeft = `4px solid ${plan.color}`;
+        planElement.style.paddingLeft = '15px';
+        planElement.style.marginBottom = '10px';
+        planElement.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <i class="fas ${plan.icon}" style="color: ${plan.color}; font-size: 20px;"></i>
+                <span class="plan-name">${plan.name}</span>
+            </div>
+            <span class="plan-price" style="color: ${plan.color}">R$ ${plan.price.toFixed(2)}</span>
+        `;
+        
+        planSummary.appendChild(planElement);
+    });
+    
+    // Features únicas (sem duplicatas)
+    const uniqueFeatures = [...new Set(allFeatures)];
+    
+    // Mostrar resumo das categorias
+    if (uniqueCategories.size > 1) {
+        const categoriesElement = document.createElement('div');
+        categoriesElement.className = 'categories-summary';
+        categoriesElement.style.cssText = `
+            background: #f0f9ff;
+            padding: 10px;
+            border-radius: 8px;
+            margin: 10px 0;
+            font-size: 13px;
+        `;
+        categoriesElement.innerHTML = `
+            <i class="fas fa-info-circle" style="color: #3b82f6;"></i>
+            <span>Planos combinados: ${Array.from(uniqueCategories).map(c => 
+                c === 'normal' ? 'Treino Normal' : 'Dança'
+            ).join(' + ')}</span>
+        `;
+        planSummary.appendChild(categoriesElement);
+    }
+    
+    // Features
+    planFeatures.innerHTML = uniqueFeatures.map(f => `
+        <div class="feature-item">
+            <i class="fas fa-check-circle" style="color: #10b981;"></i>
+            <span>${f}</span>
+        </div>
+    `).join('');
+    
+    // Total
+    totalPrice.innerHTML = `R$ ${total.toFixed(2)}`;
+    totalPrice.style.color = '#6366f1';
+    totalPrice.style.fontSize = '28px';
+}
+
+// ============================================
+// CONFIGURAR TABS DE PAGAMENTO
+// ============================================
+function setupPaymentTabs() {
     const tabsContainer = document.getElementById('paymentTabs');
+    if (!tabsContainer) return;
     
     tabsContainer.innerHTML = `
-        <button class="payment-tab pix active" onclick="switchPaymentMethod('pix')">
+        <button class="payment-tab pix active" onclick="switchTab('pix')">
             <i class="fas fa-qrcode"></i>
-            PIX
+            <span>PIX</span>
         </button>
-        <button class="payment-tab credit" onclick="switchPaymentMethod('card')">
+        <button class="payment-tab credit" onclick="switchTab('credit')">
             <i class="fas fa-credit-card"></i>
-            Cartão
+            <span>Cartão</span>
         </button>
-        <button class="payment-tab boleto" onclick="switchPaymentMethod('boleto')">
+        <button class="payment-tab boleto" onclick="switchTab('boleto')">
             <i class="fas fa-barcode"></i>
-            Boleto
+            <span>Boleto</span>
         </button>
     `;
     
-    // Mostrar conteúdo PIX por padrão
-    showPaymentContent('pix');
+    // Garantir que a primeira tab (PIX) esteja ativa
+    switchTab('pix');
 }
 
-function switchPaymentMethod(method) {
-    console.log('🔄 Mudando método para:', method);
-    currentMethod = method;
-    
+// ============================================
+// ALTERNAR TABS DE PAGAMENTO
+// ============================================
+function switchTab(tab) {
     // Atualizar tabs
-    document.querySelectorAll('.payment-tab').forEach(tab => {
-        tab.classList.remove('active');
+    document.querySelectorAll('.payment-tab').forEach(t => {
+        t.classList.remove('active');
     });
-    
-    document.querySelector(`.payment-tab.${method === 'card' ? 'credit' : method}`).classList.add('active');
+    const selectedTab = document.querySelector(`.payment-tab.${tab}`);
+    if (selectedTab) selectedTab.classList.add('active');
     
     // Mostrar conteúdo correspondente
-    showPaymentContent(method);
-}
-
-function showPaymentContent(method) {
-    document.querySelectorAll('.payment-content').forEach(content => {
-        content.classList.remove('active');
+    document.querySelectorAll('.payment-content').forEach(c => {
+        c.classList.remove('active');
     });
-    
-    document.getElementById(`${method}Content`).classList.add('active');
+    const content = document.getElementById(`${tab}Content`);
+    if (content) content.classList.add('active');
 }
-
-// ============================================
-// SISTEMA DE NOTIFICAÇÃO CORRIGIDO
-// ============================================
-function showNotification(message, type = 'info') {
-    console.log(`🔔 [${type}] ${message}`);
-    
-    // Criar notificação visual diretamente
-    createNotification(message, type);
-}
-
-function createNotification(message, type = 'info') {
-    // Cores baseadas no tipo
-    const colors = {
-        success: '#10b981',
-        error: '#ef4444',
-        warning: '#f59e0b',
-        info: '#3b82f6'
-    };
-    
-    const icons = {
-        success: 'fa-check-circle',
-        error: 'fa-exclamation-circle',
-        warning: 'fa-exclamation-triangle',
-        info: 'fa-info-circle'
-    };
-    
-    // Remover notificações anteriores do mesmo tipo se houver muitas
-    const existingNotifications = document.querySelectorAll('.custom-notification');
-    if (existingNotifications.length > 3) {
-        existingNotifications[0].remove();
-    }
-    
-    // Criar elemento de notificação
-    const notification = document.createElement('div');
-    notification.className = 'custom-notification';
-    notification.style.cssText = `
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        background: white;
-        color: #1f2937;
-        padding: 16px 20px;
-        border-radius: 12px;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.15);
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        z-index: 10000;
-        animation: slideIn 0.3s ease;
-        border-left: 4px solid ${colors[type]};
-        max-width: 350px;
-        font-family: 'Inter', sans-serif;
-    `;
-    
-    notification.innerHTML = `
-        <i class="fas ${icons[type]}" style="color: ${colors[type]}; font-size: 20px;"></i>
-        <span style="flex: 1; font-size: 14px;">${message}</span>
-        <button onclick="this.parentElement.remove()" style="background: none; border: none; cursor: pointer; color: #9ca3af; font-size: 16px;">
-            <i class="fas fa-times"></i>
-        </button>
-    `;
-    
-    document.body.appendChild(notification);
-    
-    // Remover após 4 segundos
-    setTimeout(() => {
-        if (notification.parentNode) {
-            notification.style.animation = 'slideOut 0.3s ease';
-            setTimeout(() => {
-                if (notification.parentNode) {
-                    notification.remove();
-                }
-            }, 300);
-        }
-    }, 4000);
-}
-
-// Adicionar estilos para as notificações
-const notificationStyles = document.createElement('style');
-notificationStyles.textContent = `
-    @keyframes slideIn {
-        from {
-            transform: translateX(100%);
-            opacity: 0;
-        }
-        to {
-            transform: translateX(0);
-            opacity: 1;
-        }
-    }
-    
-    @keyframes slideOut {
-        from {
-            transform: translateX(0);
-            opacity: 1;
-        }
-        to {
-            transform: translateX(100%);
-            opacity: 0;
-        }
-    }
-`;
-document.head.appendChild(notificationStyles);
 
 // ============================================
 // PROCESSAR PAGAMENTO PIX
 // ============================================
 async function processPixPayment() {
-    console.log('🚀 ===== INICIANDO PROCESSO PIX =====');
-    
     const button = document.getElementById('pixButton');
-    const originalText = button.innerHTML;
+    if (!button) return;
     
-    button.disabled = true;
-    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Gerando PIX...';
-    
-    // Limpar QR Code anterior
-    document.getElementById('qrCodeContainer').innerHTML = `
-        <i class="fas fa-spinner fa-spin fa-2x"></i>
-        <p>Conectando ao Mercado Pago...</p>
-    `;
-    
-    try {
-        console.log('1️⃣ Solicitando CPF...');
-        const cpf = await askCPF();
-        if (!cpf) {
-            console.log('❌ CPF não fornecido, cancelando');
-            resetPixButton();
-            return;
-        }
-        console.log('✅ CPF fornecido:', cpf);
-        
-        // Validar CPF
-        if (cpf.length !== 11) {
-            console.error('❌ CPF inválido - comprimento:', cpf.length);
-            showNotification('CPF deve ter 11 dígitos', 'error');
-            resetPixButton();
-            return;
-        }
-        
-        console.log('2️⃣ Preparando payload...');
-        const payload = {
-            userId: currentUser.id,
-            planType: selectedPlan.id,
-            payerInfo: {
-                documentNumber: cpf,
-                name: currentUser.name,
-                email: currentUser.email
-            }
-        };
-        console.log('📦 Payload:', JSON.stringify(payload, null, 2));
-        
-        console.log('3️⃣ Enviando requisição para:', `${API}/payments/pix`);
-        
-        const response = await fetch(`${API}/payments/pix`, {
-            method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json',
-                'Accept': 'application/json'
-            },
-            body: JSON.stringify(payload)
-        });
-        
-        console.log('4️⃣ Status da resposta:', response.status);
-        console.log('📋 Headers:', response.headers);
-        
-        // Tentar ler a resposta como texto primeiro para debug
-        const responseText = await response.text();
-        console.log('5️⃣ Resposta bruta:', responseText);
-        
-        // Tentar parsear como JSON
-        let data;
-        try {
-            data = JSON.parse(responseText);
-            console.log('6️⃣ Resposta parseada:', data);
-        } catch (e) {
-            console.error('❌ Erro ao parsear JSON:', e);
-            console.error('❌ Resposta não é JSON válido:', responseText);
-            throw new Error('Resposta inválida do servidor');
-        }
-        
-        if (data.success && data.data) {
-            console.log('✅ Pagamento criado com sucesso!');
-            console.log('📊 Dados completos:', data.data);
-            
-            // Verificar cada campo
-            console.log('   🔹 ID:', data.data.id);
-            console.log('   🔹 Status:', data.data.status);
-            console.log('   🔹 QR Code Base64:', data.data.qr_code_base64 ? 'Recebido' : 'Não recebido');
-            console.log('   🔹 Código PIX:', data.data.copy_paste ? 'Recebido' : 'Não recebido');
-            
-            // Mostrar QR Code
-            const qrContainer = document.getElementById('qrCodeContainer');
-            
-            if (data.data.qr_code_base64) {
-                console.log('✅ Exibindo QR Code');
-                qrContainer.innerHTML = `
-                    <img src="data:image/png;base64,${data.data.qr_code_base64}" 
-                         alt="QR Code PIX" 
-                         style="max-width: 200px; margin: 0 auto; border: 1px solid #ddd; border-radius: 10px;">
-                `;
-            } else {
-                console.warn('⚠️ QR Code não recebido');
-                qrContainer.innerHTML = `
-                    <i class="fas fa-exclamation-triangle" style="color: #f59e0b; font-size: 48px;"></i>
-                    <p>QR Code não disponível. Use o código abaixo:</p>
-                `;
-            }
-            
-            // Mostrar código PIX
-            if (data.data.copy_paste) {
-                console.log('✅ Exibindo código PIX');
-                document.getElementById('pixCode').value = data.data.copy_paste;
-            } else {
-                console.warn('⚠️ Código PIX não recebido');
-                document.getElementById('pixCode').value = 'Código não disponível';
-            }
-            
-            // Iniciar verificação de status
-            if (data.data.id) {
-                console.log('🔄 Iniciando verificação de status para ID:', data.data.id);
-                startPaymentCheck(data.data.id);
-            }
-            
-            showNotification('PIX gerado com sucesso!', 'success');
-        } else {
-            console.error('❌ Erro na resposta:', data.error || 'Erro desconhecido');
-            showNotification(data.error || 'Erro ao gerar PIX', 'error');
-            
-            document.getElementById('qrCodeContainer').innerHTML = `
-                <i class="fas fa-exclamation-circle" style="color: #ef4444; font-size: 48px;"></i>
-                <p>Erro: ${data.error || 'Tente novamente'}</p>
-            `;
-            
-            resetPixButton();
-        }
-    } catch (error) {
-        console.error('❌ ERRO CRÍTICO:', error);
-        console.error('Stack:', error.stack);
-        
-        showNotification('Erro ao processar pagamento: ' + error.message, 'error');
-        
-        document.getElementById('qrCodeContainer').innerHTML = `
-            <i class="fas fa-exclamation-circle" style="color: #ef4444; font-size: 48px;"></i>
-            <p>Erro de conexão. Verifique o console.</p>
-        `;
-        
-        resetPixButton();
-    }
-    
-    console.log('🏁 ===== FIM DO PROCESSO PIX =====');
+    await processPayment('pix', button);
 }
 
 // ============================================
@@ -474,28 +312,14 @@ async function processPixPayment() {
 // ============================================
 async function processCardPayment() {
     const button = document.getElementById('cardButton');
+    if (!button) return;
     
-    // Validar campos
-    if (!validateCardFields()) {
+    // Validar dados do cartão
+    if (!validateCardData()) {
         return;
     }
     
-    button.disabled = true;
-    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processando...';
-    
-    try {
-        // Simular processamento
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        
-        // Aqui você integraria com o Mercado Pago
-        showSuccessModal();
-        
-    } catch (error) {
-        console.error('Erro:', error);
-        showNotification('Erro ao processar pagamento', 'error');
-        button.disabled = false;
-        button.innerHTML = '<i class="fas fa-lock"></i> Pagar com Cartão';
-    }
+    await processPayment('credit', button);
 }
 
 // ============================================
@@ -503,159 +327,205 @@ async function processCardPayment() {
 // ============================================
 async function processBoletoPayment() {
     const button = document.getElementById('boletoButton');
+    if (!button) return;
     
+    await processPayment('boleto', button);
+}
+
+// ============================================
+// FUNÇÃO GENÉRICA DE PROCESSAMENTO
+// ============================================
+async function processPayment(method, button) {
+    if (!currentUser) {
+        showError('Usuário não autenticado');
+        return;
+    }
+    
+    if (selectedPlans.length === 0) {
+        showError('Nenhum plano selecionado');
+        return;
+    }
+    
+    // Desabilitar botão
+    const originalText = button.innerHTML;
     button.disabled = true;
-    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Gerando Boleto...';
+    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processando...';
     
     try {
-        const cpf = await askCPF();
-        if (!cpf) return;
+        console.log(`📤 Processando pagamento via ${method} para planos:`, selectedPlans);
         
-        const response = await fetch(`${API}/payments/boleto`, {
+        // Coletar dados do pagamento
+        const paymentData = {
+            userId: currentUser.id,
+            planIds: selectedPlans,
+            paymentMethod: method,
+            payerInfo: {
+                name: currentUser.name,
+                email: currentUser.email,
+                phone: currentUser.phone || '',
+                documentType: 'CPF',
+                documentNumber: extractCPF(document.getElementById('cardCpf')?.value) || '00000000000'
+            }
+        };
+        
+        // Adicionar dados específicos do cartão se for crédito
+        if (method === 'credit') {
+            paymentData.cardInfo = {
+                number: document.getElementById('cardNumber')?.value.replace(/\s/g, ''),
+                expiry: document.getElementById('cardExpiry')?.value,
+                cvv: document.getElementById('cardCvv')?.value,
+                name: document.getElementById('cardName')?.value,
+                installments: document.getElementById('installments')?.value
+            };
+        }
+        
+        const response = await fetch(`${API}/plans/user/${currentUser.id}/update`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                userId: currentUser.id,
-                planType: selectedPlan.id,
-                payerInfo: {
-                    documentNumber: cpf,
-                    name: currentUser.name,
-                    email: currentUser.email,
-                    address: {
-                        zipCode: '00000000',
-                        street: 'Rua Exemplo',
-                        number: '123',
-                        city: 'Cidade',
-                        state: 'SP'
-                    }
-                }
-            })
+            body: JSON.stringify(paymentData)
         });
         
         const data = await response.json();
+        console.log('📥 Resposta do servidor:', data);
         
         if (data.success) {
-            // Abrir boleto em nova aba
-            window.open(data.data.boleto_url, '_blank');
-            
-            showNotification('Boleto gerado com sucesso!', 'success');
-            
-            // Iniciar verificação de status
-            startPaymentCheck(data.data.id);
+            // Processar baseado no método
+            if (method === 'pix') {
+                showPixPayment(data.data);
+            } else if (method === 'boleto') {
+                showBoletoPayment(data.data);
+            } else {
+                showSuccessModal();
+            }
         } else {
-            showNotification(data.error || 'Erro ao gerar boleto', 'error');
-            resetBoletoButton();
+            showError(data.error || 'Erro ao processar pagamento');
+            button.disabled = false;
+            button.innerHTML = originalText;
         }
+        
     } catch (error) {
-        console.error('Erro:', error);
-        showNotification('Erro ao processar pagamento', 'error');
-        resetBoletoButton();
+        console.error('❌ Erro no pagamento:', error);
+        showError('Erro de conexão com o servidor');
+        button.disabled = false;
+        button.innerHTML = originalText;
     }
 }
 
 // ============================================
-// FUNÇÕES AUXILIARES
+// VALIDAR DADOS DO CARTÃO
 // ============================================
-function askCPF() {
-    return new Promise((resolve) => {
-        const cpf = prompt('Digite seu CPF (somente números):');
-        
-        if (!cpf) {
-            resolve(null);
-            return;
-        }
-        
-        const cleanCPF = cpf.replace(/\D/g, '');
-        
-        if (cleanCPF.length !== 11) {
-            alert('CPF deve ter 11 dígitos');
-            resolve(null);
-            return;
-        }
-        
-        resolve(cleanCPF);
-    });
-}
-
-function validateCardFields() {
-    const fields = {
-        number: document.getElementById('cardNumber').value,
-        expiry: document.getElementById('cardExpiry').value,
-        cvv: document.getElementById('cardCvv').value,
-        name: document.getElementById('cardName').value,
-        cpf: document.getElementById('cardCpf').value
-    };
+function validateCardData() {
+    const number = document.getElementById('cardNumber')?.value.replace(/\s/g, '') || '';
+    const expiry = document.getElementById('cardExpiry')?.value || '';
+    const cvv = document.getElementById('cardCvv')?.value || '';
+    const name = document.getElementById('cardName')?.value || '';
+    const cpf = document.getElementById('cardCpf')?.value || '';
     
-    for (let [key, value] of Object.entries(fields)) {
-        if (!value || value.trim() === '') {
-            showNotification(`Campo ${key} é obrigatório`, 'error');
-            return false;
-        }
+    if (number.length < 16) {
+        showError('Número do cartão inválido');
+        return false;
+    }
+    
+    if (!expiry.match(/^\d{2}\/\d{2}$/)) {
+        showError('Data de validade inválida (use MM/AA)');
+        return false;
+    }
+    
+    if (cvv.length < 3) {
+        showError('CVV inválido');
+        return false;
+    }
+    
+    if (name.length < 5) {
+        showError('Nome no cartão inválido');
+        return false;
+    }
+    
+    if (cpf.length < 11) {
+        showError('CPF inválido');
+        return false;
     }
     
     return true;
 }
 
-function startPaymentCheck(paymentId) {
-    console.log('🔄 Iniciando verificação de pagamento:', paymentId);
-    
-    let attempts = 0;
-    const maxAttempts = 30; // 2.5 minutos
-    
-    if (qrCodeInterval) {
-        clearInterval(qrCodeInterval);
-    }
-    
-    qrCodeInterval = setInterval(async () => {
-        attempts++;
-        console.log(`⏱️ Verificação ${attempts}/${maxAttempts}`);
-        
-        try {
-            const response = await fetch(`${API}/payments/payment/${paymentId}/status`);
-            const data = await response.json();
-            
-            console.log('📊 Status do pagamento:', data);
-            
-            if (data.status === 'approved') {
-                console.log('✅ Pagamento aprovado!');
-                clearInterval(qrCodeInterval);
-                showSuccessModal();
-            } else if (attempts >= maxAttempts) {
-                console.log('⏰ Tempo esgotado');
-                clearInterval(qrCodeInterval);
-                showNotification('Tempo esgotado. Gere um novo pagamento.', 'warning');
-            }
-        } catch (error) {
-            console.error('❌ Erro ao verificar status:', error);
-        }
-    }, 5000);
+// ============================================
+// EXTRAIR CPF (remover máscara)
+// ============================================
+function extractCPF(cpf) {
+    if (!cpf) return '';
+    return cpf.replace(/\D/g, '');
 }
 
-function showSuccessModal() {
-    console.log('🎉 Mostrando modal de sucesso');
+// ============================================
+// MOSTRAR PAGAMENTO PIX
+// ============================================
+function showPixPayment(data) {
+    const qrContainer = document.getElementById('qrCodeContainer');
+    const pixCode = document.getElementById('pixCode');
     
-    const modal = document.getElementById('successModal');
-    modal.style.display = 'flex';
-    
-    // Atualizar usuário no localStorage (plano ativo)
-    if (currentUser) {
-        currentUser.plan = {
-            id: selectedPlan.id,
-            name: selectedPlan.name,
-            aulasPorSemana: selectedPlan.aulasPorSemana,
-            active: true
-        };
-        localStorage.setItem('user', JSON.stringify(currentUser));
-        console.log('✅ Usuário atualizado com plano:', currentUser.plan);
+    if (qrContainer && data.qr_code_base64) {
+        qrContainer.innerHTML = `<img src="data:image/png;base64,${data.qr_code_base64}" alt="QR Code PIX">`;
     }
     
-    // Countdown
+    if (pixCode && data.qr_code) {
+        pixCode.value = data.qr_code;
+    }
+    
+    // Mostrar notificação
+    showNotification('Pagamento PIX gerado! Escaneie o código ou copie a chave.', 'success');
+}
+
+// ============================================
+// MOSTRAR PAGAMENTO BOLETO
+// ============================================
+function showBoletoPayment(data) {
+    if (data.boleto_url) {
+        window.open(data.boleto_url, '_blank');
+    }
+    
+    showNotification('Boleto gerado! Verifique sua caixa de email.', 'success');
+    
+    // Mostrar modal de sucesso
+    setTimeout(() => {
+        showSuccessModal();
+    }, 2000);
+}
+
+// ============================================
+// COPIAR CÓDIGO PIX
+// ============================================
+function copyPixCode() {
+    const input = document.getElementById('pixCode');
+    if (!input) return;
+    
+    input.select();
+    document.execCommand('copy');
+    
+    showNotification('Código PIX copiado!', 'success');
+}
+
+// ============================================
+// MOSTRAR MODAL DE SUCESSO
+// ============================================
+function showSuccessModal() {
+    const modal = document.getElementById('successModal');
+    if (!modal) return;
+    
+    modal.style.display = 'flex';
+    
+    // Limpar seleção da sessionStorage
+    sessionStorage.removeItem('selectedPlans');
+    
+    // Contador regressivo
     let seconds = 5;
-    const countdownEl = document.getElementById('countdown');
+    const countdown = document.getElementById('countdown');
     
     const interval = setInterval(() => {
         seconds--;
-        countdownEl.textContent = `Redirecionando em ${seconds} segundos...`;
+        if (countdown) {
+            countdown.textContent = `Redirecionando em ${seconds} segundos...`;
+        }
         
         if (seconds === 0) {
             clearInterval(interval);
@@ -664,37 +534,222 @@ function showSuccessModal() {
     }, 1000);
 }
 
+// ============================================
+// REDIRECIONAR PARA AGENDA
+// ============================================
 function redirectToAgenda() {
-    console.log('🔄 Redirecionando para agenda');
     window.location.href = '/';
 }
 
-function copyPixCode() {
-    const pixCode = document.getElementById('pixCode');
-    pixCode.select();
-    document.execCommand('copy');
-    showNotification('Código PIX copiado!', 'success');
-    console.log('✅ Código PIX copiado');
+// ============================================
+// MOSTRAR NOTIFICAÇÃO
+// ============================================
+function showNotification(message, type = 'info') {
+    // Verificar se já existe container
+    let container = document.getElementById('notificationContainer');
+    
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'notificationContainer';
+        container.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        `;
+        document.body.appendChild(container);
+    }
+    
+    // Criar notificação
+    const notification = document.createElement('div');
+    notification.style.cssText = `
+        min-width: 300px;
+        padding: 16px 20px;
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        animation: slideIn 0.3s ease;
+        border-left: 4px solid ${getNotificationColor(type)};
+    `;
+    
+    // Ícone baseado no tipo
+    const icon = getNotificationIcon(type);
+    const color = getNotificationColor(type);
+    
+    notification.innerHTML = `
+        <i class="fas ${icon}" style="color: ${color}; font-size: 20px;"></i>
+        <span style="flex: 1; color: #1f2937;">${message}</span>
+        <button onclick="this.parentElement.remove()" style="background: none; border: none; cursor: pointer; color: #9ca3af;">
+            <i class="fas fa-times"></i>
+        </button>
+    `;
+    
+    container.appendChild(notification);
+    
+    // Remover após 5 segundos
+    setTimeout(() => {
+        notification.style.animation = 'slideOut 0.3s ease';
+        setTimeout(() => notification.remove(), 300);
+    }, 5000);
 }
 
-function resetPixButton() {
-    const button = document.getElementById('pixButton');
-    button.disabled = false;
-    button.innerHTML = '<i class="fas fa-qrcode"></i> Gerar Código PIX';
+// ============================================
+// MOSTRAR ERRO
+// ============================================
+function showError(message, redirect = false) {
+    showNotification(message, 'error');
+    
+    if (redirect) {
+        setTimeout(() => {
+            window.location.href = '/plans';
+        }, 2000);
+    }
 }
 
-function resetBoletoButton() {
-    const button = document.getElementById('boletoButton');
-    button.disabled = false;
-    button.innerHTML = '<i class="fas fa-file-invoice"></i> Gerar Boleto';
+// ============================================
+// CORES DE NOTIFICAÇÃO
+// ============================================
+function getNotificationColor(type) {
+    const colors = {
+        success: '#10b981',
+        error: '#ef4444',
+        warning: '#f59e0b',
+        info: '#3b82f6'
+    };
+    return colors[type] || colors.info;
 }
 
-// Expor funções para o HTML
+// ============================================
+// ÍCONES DE NOTIFICAÇÃO
+// ============================================
+function getNotificationIcon(type) {
+    const icons = {
+        success: 'fa-check-circle',
+        error: 'fa-exclamation-circle',
+        warning: 'fa-exclamation-triangle',
+        info: 'fa-info-circle'
+    };
+    return icons[type] || icons.info;
+}
+
+// ============================================
+// ADICIONAR ESTILOS ADICIONAIS
+// ============================================
+function addCheckoutStyles() {
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        @keyframes slideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+        }
+        
+        .plan-detail {
+            transition: all 0.3s ease;
+            border-radius: 8px;
+            margin-bottom: 15px !important;
+        }
+        
+        .plan-detail:hover {
+            transform: translateX(5px);
+            background: #f8fafc;
+        }
+        
+        .categories-summary {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            animation: fadeIn 0.5s ease;
+            border: 1px solid #bfdbfe;
+        }
+        
+        .payment-tab {
+            transition: all 0.3s ease;
+        }
+        
+        .payment-tab:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .btn-pay {
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .btn-pay::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.3);
+            transform: translate(-50%, -50%);
+            transition: width 0.3s, height 0.3s;
+        }
+        
+        .btn-pay:hover::after {
+            width: 300px;
+            height: 300px;
+        }
+        
+        .btn-pay:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+        
+        .btn-pay:disabled::after {
+            display: none;
+        }
+        
+        @media (max-width: 768px) {
+            .plan-detail {
+                flex-direction: column;
+                align-items: flex-start !important;
+                gap: 10px;
+            }
+            
+            .plan-price {
+                align-self: flex-end;
+            }
+        }
+    `;
+    
+    document.head.appendChild(style);
+}
+
+// ============================================
+// EXPOR FUNÇÕES GLOBAIS
+// ============================================
+window.switchTab = switchTab;
 window.processPixPayment = processPixPayment;
 window.processCardPayment = processCardPayment;
 window.processBoletoPayment = processBoletoPayment;
-window.switchPaymentMethod = switchPaymentMethod;
 window.copyPixCode = copyPixCode;
 window.redirectToAgenda = redirectToAgenda;
 
-console.log('✅ checkout.js carregado com correções');
+console.log('✅ checkout.js carregado com sucesso! (Modo Multiplanos)');
