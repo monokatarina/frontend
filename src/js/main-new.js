@@ -1,4 +1,49 @@
 // ============================================
+// FUN��O PARA NORMALIZAR O PLANO DO USU�RIO
+// ============================================
+function normalizeUserPlan() {
+    if (!currentUser) return;
+    if (currentUser.isAdmin) return;
+
+    const planId =
+        (typeof currentUser.plan === 'string' ? currentUser.plan : null) ||
+        currentUser.plan?.id ||
+        currentUser.plan?.type ||
+        currentUser.subscription?.planType ||
+        null;
+
+    if (!planId) {
+        currentUser.plan = {
+            id: null,
+            categoria: null,
+            aulasPorSemana: 0,
+            horariosPermitidos: [],
+            diasPermitidos: [1, 2, 3, 4, 5],
+            active: false,
+            status: 'inactive'
+        };
+        return;
+    }
+
+    const planData = PLANS[planId] || {};
+    const existing = typeof currentUser.plan === 'object' && currentUser.plan ? currentUser.plan : {};
+
+    currentUser.plan = {
+        id: planId,
+        type: existing.type || planData.id || planId,
+        name: existing.name || planData.name || planId,
+        categoria: existing.categoria || planData.categoria || null,
+        aulasPorSemana: Number(existing.aulasPorSemana || currentUser.subscription?.aulasPorSemana || planData.aulasPorSemana || 0),
+        horariosPermitidos: (existing.horariosPermitidos || planData.horariosPermitidos || []).map(Number),
+        diasPermitidos: (existing.diasPermitidos || planData.diasPermitidos || [1, 2, 3, 4, 5]).map(Number),
+        color: existing.color || planData.color || '#6366f1',
+        icon: existing.icon || planData.icon || 'fa-crown',
+        price: Number(existing.price ?? planData.price ?? 0),
+        active: existing.active ?? (existing.status ? existing.status === 'active' : true),
+        status: existing.status || 'active'
+    };
+}
+// ============================================
 // FRONTEND - SISTEMA DE AGENDAMENTO
 // VERSÃO COM VISUALIZAÇÃO SEMANAL MELHORADA
 // ============================================
@@ -247,144 +292,47 @@ function userHasActivePlan() {
     return false;
 }
 // Verifica se o horário é permitido para o plano do usuário
+function getCurrentPlanDefinition() {
+    if (!currentUser || currentUser.isAdmin) return null;
+
+    const planId = currentUser.plan?.id || currentUser.plan?.type || currentUser.subscription?.planType || null;
+    if (!planId) return null;
+
+    return PLANS[planId] || null;
+}
+
 function verificarHorarioPermitido(weekday, hour) {
-    if (!currentUser?.plan) return true;
-    
-    const plano = PLANS[currentUser.plan.id];
-    if (!plano) return true;
-    
-    // Verificar se o dia é permitido (weekday 1-5)
-    if (!plano.diasPermitidos.includes(weekday)) {
-        return false;
-    }
-    
-    // Verificar se o horário é permitido
-    if (!plano.horariosPermitidos.includes(hour)) {
-        return false;
-    }
-    
-    return true;
+    return isHorarioPermitido(weekday, hour);
 }
 
-// Verifica status da assinatura no backend
-async function checkSubscriptionStatus() {
-    if (!currentUser) return;
-
-    try {
-        console.log('🔍 Verificando status da assinatura para usuário:', currentUser.id);
-        
-        const response = await fetch(`${API}/payments/subscription/status/${currentUser.id}`);
-        const data = await response.json();
-
-        console.log('📊 Resposta do status:', data);
-
-        if (data.success && data.data) {
-            if (data.data.hasSubscription && data.data.plan) {
-                currentUser.plan = data.data.plan;
-                console.log('✅ Plan atualizado:', currentUser.plan);
-            }
-            
-            if (data.data.subscription && data.data.subscription.status === 'active') {
-                const sub = data.data.subscription;
-                currentUser.subscription = sub;
-                
-                if (!currentUser.plan) {
-                    currentUser.plan = {
-                        id: sub.planType,
-                        name: getPlanName(sub.planType),
-                        aulasPorSemana: sub.aulasPorSemana || getPlanAulas(sub.planType),
-                        status: 'active',
-                        color: PLANS[sub.planType]?.color || '#6366f1'
-                    };
-                }
-            }
-            
-            // Atualizar UI com informações do plano
-            updatePlanInfo();
-        }
-    } catch (error) {
-        console.error('Erro ao verificar assinatura:', error);
-    }
-}
-// ============================================
-// FUNÇÃO PARA NORMALIZAR O PLANO DO USUÁRIO
-// ============================================
-function normalizeUserPlan() {
-    if (!currentUser) return;
-    
-    // Se o plano for uma string (como está no JSON), converter para objeto
-    if (typeof currentUser.plan === 'string') {
-        const planId = currentUser.plan;
-        const planData = PLANS[planId];
-        
-        if (planData) {
-            currentUser.plan = {
-                id: planId,
-                name: planData.name,
-                categoria: planData.categoria,
-                aulasPorSemana: planData.aulasPorSemana,
-                horariosPermitidos: planData.horariosPermitidos,
-                diasPermitidos: planData.diasPermitidos,
-                color: planData.color,
-                icon: planData.icon,
-                active: true
-            };
-            console.log('✅ Plano normalizado:', currentUser.plan);
-        }
-    }
-    
-    // Se for admin, não precisa normalizar
-    if (currentUser.isAdmin) return;
-    
-    // Se ainda não tem plano, criar objeto padrão
-    if (!currentUser.plan) {
-        currentUser.plan = {
-            id: null,
-            categoria: null,
-            aulasPorSemana: 0,
-            horariosPermitidos: [],
-            diasPermitidos: [1,2,3,4,5]
-        };
-    }
-}
-
-// ============================================
-// FUNÇÃO PARA VERIFICAR SE HORÁRIO É PERMITIDO PELO PLANO
-// ============================================
-// ============================================
-// FUNÇÃO PARA VERIFICAR SE HORÁRIO É PERMITIDO PELO PLANO
-// ============================================
 function isHorarioPermitido(weekday, hour) {
-    // Se não tem usuário logado, permite (vai pedir login depois)
     if (!currentUser) return true;
-    
-    // Admin pode tudo
     if (currentUser.isAdmin) return true;
-    
-    // Se não tem plano ativo, não permite
-    if (!currentUser.plan || !currentUser.plan.active) return false;
-    
+    if (!currentUser.plan || !userHasActivePlan()) return false;
+
+    const planDef = getCurrentPlanDefinition();
     const plan = currentUser.plan;
-    
-    // Para planos de dança, permitir apenas 14 e 15
-    if (plan.categoria === 'danca') {
-        const horariosPermitidos = [14, 15];
-        if (!horariosPermitidos.includes(hour)) {
-            console.log(`🚫 Horário ${hour} não permitido para dança`);
-            return false;
-        }
-        return true;
-    }
-    
-    // Para treinos normais, permitir todos os horários (6-12 e 16-19)
-    const horariosNormais = [6,7,8,9,10,11,12,16,17,18,19];
-    if (!horariosNormais.includes(hour)) {
-        console.log(`🚫 Horário ${hour} não disponível para treinos`);
+
+    const allowedDays = planDef?.diasPermitidos || plan.diasPermitidos || [1, 2, 3, 4, 5];
+    const allowedHours = (planDef?.horariosPermitidos || plan.horariosPermitidos || []).map(Number);
+
+    if (!allowedDays.includes(Number(weekday))) {
         return false;
     }
-    
-    return true;
+
+    if (allowedHours.length > 0) {
+        return allowedHours.includes(Number(hour));
+    }
+
+    // Fallback seguro: sem lista explicita => restringe por categoria
+    const categoria = planDef?.categoria || plan.categoria;
+    if (categoria === 'danca') {
+        return [14, 15].includes(Number(hour));
+    }
+
+    return [6, 7, 8, 9, 10, 11, 12, 16, 17, 18, 19].includes(Number(hour));
 }
+
 // ============================================
 // ADICIONE ESTA FUNÇÃO
 // ============================================
@@ -1021,25 +969,31 @@ function createHourLabel(hour) {
 function createSlot(wd, h) {
     const slot = document.createElement('button');
     slot.className = 'slot-btn';
-    
+
     const dateStr = nextDates[wd];
-    
+
     if (!dateStr) {
         slot.classList.add('disabled');
         slot.innerHTML = '<i class="fas fa-ban"></i>';
         return slot;
     }
-    
+
     const bookedList = isBooked(dateStr, h);
     const bookCount = bookedList.length;
     const isAvailable = availability[wd]?.[h] || false;
     const isFull = bookCount >= 4;
     const userHasBooking = bookedList.some(b => b.userId === currentUser?.id);
     const hasActivePlan = userHasActivePlan() || currentUser?.isAdmin;
-    
+    const horarioPermitido = isHorarioPermitido(wd, h);
+
     if (!isAvailable) {
         slot.classList.add('disabled');
         slot.innerHTML = '<i class="fas fa-ban"></i>';
+    } else if (!horarioPermitido && !currentUser?.isAdmin) {
+        slot.classList.add('disabled', 'plano-nao-permite');
+        slot.disabled = true;
+        slot.title = 'Seu plano nao permite este horario';
+        slot.innerHTML = `<span class="count">${bookCount}/4</span><span class="label"> Nao permitido</span>`;
     } else if (isFull) {
         slot.classList.add('full');
         slot.innerHTML = `<span class="count">${bookCount}/4</span><span class="label"> Lotado</span>`;
@@ -1050,18 +1004,18 @@ function createSlot(wd, h) {
         if (!hasActivePlan) {
             slot.disabled = true;
             slot.classList.add('requires-plan');
-            slot.title = 'Você precisa de um plano para agendar';
+            slot.title = 'Voce precisa de um plano para agendar';
         }
     } else {
         slot.classList.add('available');
-        slot.innerHTML = `<span class="count">0/4</span><span class="label"> Disponível</span>`;
+        slot.innerHTML = `<span class="count">0/4</span><span class="label"> Disponivel</span>`;
         if (!hasActivePlan) {
             slot.disabled = true;
             slot.classList.add('requires-plan');
-            slot.title = 'Você precisa de um plano para agendar';
+            slot.title = 'Voce precisa de um plano para agendar';
         }
     }
-    
+
     if (userHasBooking) {
         slot.classList.add('my-booking');
     }
@@ -1073,10 +1027,9 @@ function createSlot(wd, h) {
     slot.dataset.bookCount = bookCount;
 
     slot.addEventListener('click', onSlotClick);
-    
+
     return slot;
 }
-
 function renderSchedule() {
     const grid = document.createElement('div');
     grid.className = 'grid';
@@ -1088,7 +1041,8 @@ function renderSchedule() {
     }
 
     // Verificar se é usuário de dança
-    const isDanca = currentUser?.plan?.categoria === 'danca';
+    const planDef = getCurrentPlanDefinition();
+    const isDanca = (planDef?.categoria === 'danca') || ['danca_2x', 'danca_3x'].includes(currentUser?.plan?.id || currentUser?.plan?.type || '');
     
     // Filtrar horários baseado no plano
     let horariosParaMostrar = HOURS;
@@ -1366,10 +1320,16 @@ function onSlotClick(e) {
         return;
     }
 
-    // VERIFICAÇÃO PRINCIPAL: Usuário tem plano ativo?
+    // VERIFICA��O PRINCIPAL: Usu�rio tem plano ativo?
     if (!currentUser.isAdmin && !userHasActivePlan()) {
         showNotification('Você precisa escolher um plano primeiro', 'warning');
         showPlanRequiredModal();
+        return;
+    }
+
+    // Verificar se o horario eh permitido pelo plano
+    if (!currentUser.isAdmin && !isHorarioPermitido(wd, h)) {
+        showNotification('Seu plano nao permite este horario. Para danca: 14:00 e 15:00.', 'warning');
         return;
     }
 
@@ -3216,227 +3176,228 @@ const additionalStyles = `
             font-size: 11px;
         }
     }
-/* ============================= */
-/* BOTÃO DE PLANOS */
-/* ============================= */
-
-.btn-plans {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    width: auto;
-    min-width: 40px;
-    height: 40px;
-    padding: 0 16px;
-    background: white;
-    color: #8b5cf6;
-    border: 1px solid #e2e8f0;
-    border-radius: 30px;
-    font-weight: 600;
-    font-size: 14px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-}
-
-.btn-plans:hover {
-    background: #f8fafc;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-    border-color: #8b5cf6;
-    color: #7c3aed;
-}
-
-.btn-plans i {
-    font-size: 16px;
-    color: inherit;
-    transition: color 0.2s;
-}
-
-.btn-plans span {
-    display: inline;
-}
-
-/* Botão quando já possui plano (Upgrade) */
-.btn-plans.has-plan {
-    color: #f59e0b;
-    border-color: #f59e0b;
-}
-
-.btn-plans.has-plan:hover {
-    background: #fff7ed;
-    border-color: #d97706;
-    color: #d97706;
-}
-
-
-/* ============================= */
-/* AVISOS DE PAGAMENTO */
-/* ============================= */
-
-.pagamento-aviso {
-    margin: 15px 0;
-    padding: 12px 16px;
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    font-size: 14px;
-}
-
-.pagamento-aviso.atraso {
-    background: #fff3cd;
-    border-left: 4px solid #f59e0b;
-    color: #856404;
-}
-
-.pagamento-aviso.bloqueado {
-    background: #fee2e2;
-    border-left: 4px solid #dc2626;
-    color: #991b1b;
-}
-
-.pagamento-aviso .btn-small {
-    background: white;
-    border: 1px solid currentColor;
-    padding: 4px 12px;
-    border-radius: 20px;
-    font-size: 12px;
-    font-weight: 600;
-    cursor: pointer;
-    margin-left: auto;
-    transition: all 0.2s ease;
-}
-
-.pagamento-aviso.atraso .btn-small:hover {
-    background: #f59e0b;
-    color: white;
-}
-
-.pagamento-aviso.bloqueado .btn-small:hover {
-    background: #dc2626;
-    color: white;
-}
-
-
-/* ============================= */
-/* INFORMAÇÕES DE DANÇA */
-/* ============================= */
-
-.info-danca {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    background: #fce7f3;
-    color: #9d174d;
-    padding: 8px 16px;
-    border-radius: 30px;
-    font-size: 13px;
-    font-weight: 500;
-    margin-left: auto;
-}
-
-.info-danca i {
-    color: #ec4899;
-    font-size: 16px;
-}
-
-
-/* ============================= */
-/* SLOTS BLOQUEADOS PELO PLANO */
-/* ============================= */
-
-.slot-btn.plano-nao-permite {
-    opacity: 0.6;
-    background: #f3f4f6;
-    cursor: not-allowed;
-    position: relative;
-    border: 1px dashed #d1d5db;
-}
-
-.slot-btn.plano-nao-permite .label {
-    font-size: 10px;
-    display: block;
-    margin-top: 2px;
-    color: #6b7280;
-}
-
-.slot-btn.plano-nao-permite i {
-    color: #9ca3af;
-    font-size: 14px;
-}
-
-.slot-btn.plano-nao-permite:hover::after {
-    content: attr(title);
-    position: absolute;
-    bottom: 100%;
-    left: 50%;
-    transform: translateX(-50%);
-    background: #333;
-    color: white;
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-size: 10px;
-    white-space: nowrap;
-    z-index: 10;
-    margin-bottom: 5px;
-}
-
-
-/* ============================= */
-/* RESPONSIVIDADE */
-/* ============================= */
-
-@media (max-width: 768px) {
+    /* ============================= */
+    /* BOTÃO DE PLANOS */
+    /* ============================= */
 
     .btn-plans {
-        width: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        width: auto;
+        min-width: 40px;
         height: 40px;
-        padding: 0;
-        border-radius: 50%;
+        padding: 0 16px;
+        background: white;
+        color: #8b5cf6;
+        border: 1px solid #e2e8f0;
+        border-radius: 30px;
+        font-weight: 600;
+        font-size: 14px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
     }
 
-    .btn-plans span {
-        display: none;
+    .btn-plans:hover {
+        background: #f8fafc;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        border-color: #8b5cf6;
+        color: #7c3aed;
     }
 
     .btn-plans i {
-        font-size: 18px;
+        font-size: 16px;
+        color: inherit;
+        transition: color 0.2s;
     }
 
-    .limit-modal {
-        width: 95%;
-        padding: 20px;
+    .btn-plans span {
+        display: inline;
     }
 
-    .plan-option {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 5px;
+    /* Botão quando já possui plano (Upgrade) */
+    .btn-plans.has-plan {
+        color: #f59e0b;
+        border-color: #f59e0b;
     }
 
-    .limit-info {
-        flex-direction: column;
+    .btn-plans.has-plan:hover {
+        background: #fff7ed;
+        border-color: #d97706;
+        color: #d97706;
+    }
+
+
+    /* ============================= */
+    /* AVISOS DE PAGAMENTO */
+    /* ============================= */
+
+    .pagamento-aviso {
+        margin: 15px 0;
+        padding: 12px 16px;
+        border-radius: 8px;
+        display: flex;
         align-items: center;
-        text-align: center;
+        gap: 12px;
+        font-size: 14px;
     }
+
+    .pagamento-aviso.atraso {
+        background: #fff3cd;
+        border-left: 4px solid #f59e0b;
+        color: #856404;
+    }
+
+    .pagamento-aviso.bloqueado {
+        background: #fee2e2;
+        border-left: 4px solid #dc2626;
+        color: #991b1b;
+    }
+
+    .pagamento-aviso .btn-small {
+        background: white;
+        border: 1px solid currentColor;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        margin-left: auto;
+        transition: all 0.2s ease;
+    }
+
+    .pagamento-aviso.atraso .btn-small:hover {
+        background: #f59e0b;
+        color: white;
+    }
+
+    .pagamento-aviso.bloqueado .btn-small:hover {
+        background: #dc2626;
+        color: white;
+    }
+
+
+    /* ============================= */
+    /* INFORMAÇÕES DE DANÇA */
+    /* ============================= */
 
     .info-danca {
-        width: 100%;
-        margin: 10px 0 0 0;
-        justify-content: center;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        background: #fce7f3;
+        color: #9d174d;
+        padding: 8px 16px;
+        border-radius: 30px;
+        font-size: 13px;
+        font-weight: 500;
+        margin-left: auto;
     }
 
-    .warning-header {
-        flex-direction: column;
-        align-items: flex-start;
+    .info-danca i {
+        color: #ec4899;
+        font-size: 16px;
     }
-}
-`;
+
+
+    /* ============================= */
+    /* SLOTS BLOQUEADOS PELO PLANO */
+    /* ============================= */
+
+    .slot-btn.plano-nao-permite {
+        opacity: 0.6;
+        background: #f3f4f6;
+        cursor: not-allowed;
+        position: relative;
+        border: 1px dashed #d1d5db;
+    }
+
+    .slot-btn.plano-nao-permite .label {
+        font-size: 10px;
+        display: block;
+        margin-top: 2px;
+        color: #6b7280;
+    }
+
+    .slot-btn.plano-nao-permite i {
+        color: #9ca3af;
+        font-size: 14px;
+    }
+
+    .slot-btn.plano-nao-permite:hover::after {
+        content: attr(title);
+        position: absolute;
+        bottom: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #333;
+        color: white;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 10px;
+        white-space: nowrap;
+        z-index: 10;
+        margin-bottom: 5px;
+    }
+
+
+    /* ============================= */
+    /* RESPONSIVIDADE */
+    /* ============================= */
+
+    @media (max-width: 768px) {
+
+        .btn-plans {
+            width: 40px;
+            height: 40px;
+            padding: 0;
+            border-radius: 50%;
+        }
+
+        .btn-plans span {
+            display: none;
+        }
+
+        .btn-plans i {
+            font-size: 18px;
+        }
+
+        .limit-modal {
+            width: 95%;
+            padding: 20px;
+        }
+
+        .plan-option {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 5px;
+        }
+
+        .limit-info {
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+
+        .info-danca {
+            width: 100%;
+            margin: 10px 0 0 0;
+            justify-content: center;
+        }
+
+        .warning-header {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+    }
+    `;
 
 const styleSheet = document.createElement('style');
 styleSheet.textContent = additionalStyles;
 document.head.appendChild(styleSheet);
 
 console.log('✅ Código carregado completamente!');
+
