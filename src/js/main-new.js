@@ -400,7 +400,7 @@ function updateWeeklyWarning() {
         weeklyWarning.innerHTML = `
             <div class="warning-content">
                 <i class="fas fa-crown"></i>
-                <span>Modo Administrador - VocÃª tem acesso total</span>
+                <span>Modo Administrador - Você tem acesso total</span>
             </div>
         `;
         weeklyWarning.className = 'weekly-warning admin';
@@ -416,168 +416,91 @@ function updateWeeklyWarning() {
     const planLimit = currentUser.plan.aulasPorSemana;
     const planColor = currentUser.plan.color || '#6366f1';
     
-    // Dados da semana atual
-    const currentWeekRange = formatWeekRange(new Date());
-    const currentWeekCount = countBookingsInWeek(new Date(), currentUser.id);
-    const currentRemaining = planLimit - currentWeekCount;
+    // DATA ATUAL PARA REFERÊNCIA
+    const today = new Date();
+    const dayOfWeek = today.getDay(); // 0=Dom, 1=Seg, ..., 6=Sáb
     
-    // Dados da prÃ³xima semana
+    // PRÓXIMA SEMANA (sempre disponível para agendamento)
     const nextWeekDate = new Date();
-    nextWeekDate.setDate(nextWeekDate.getDate() + 7);
-    const nextWeekRange = formatWeekRange(nextWeekDate);
-    const nextWeekCount = countBookingsInWeek(nextWeekDate, currentUser.id);
-    const nextRemaining = planLimit - nextWeekCount;
-    
-    weeklyWarning.innerHTML = `
-        <div class="warning-content">
-            <div class="warning-header">
-                <span class="plan-indicator" style="background: ${planColor}">
-                    <i class="fas ${PLANS[currentUser.plan.id]?.icon || 'fa-crown'}"></i>
-                    Plano ${planName}
-                </span>
-            </div>
-            
-            <div class="weeks-container">
-                <!-- SEMANA ATUAL -->
-                <div class="week-card current">
-                    <div class="week-title">
-                        <i class="fas fa-calendar-check"></i>
-                        <span>Semana Atual</span>
-                        <span class="week-dates">${currentWeekRange}</span>
-                    </div>
-                    
-                    <div class="week-stats">
-                        <div class="progress-container">
-                            <div class="progress-bar" style="width: ${(currentWeekCount/planLimit)*100}%; background: ${planColor}"></div>
-                        </div>
-                        
-                        <div class="count-info">
-                            <span class="used"><strong>${currentWeekCount}</strong>/${planLimit} aulas</span>
-                            <span class="remaining ${currentRemaining > 0 ? 'positive' : 'zero'}">
-                                <i class="fas fa-${currentRemaining > 0 ? 'arrow-up' : 'exclamation-circle'}"></i>
-                                ${currentRemaining} vaga${currentRemaining !== 1 ? 's' : ''} restante${currentRemaining !== 1 ? 's' : ''}
-                            </span>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- PRÃ“XIMA SEMANA -->
-                <div class="week-card next">
-                    <div class="week-title">
-                        <i class="fas fa-calendar-plus"></i>
-                        <span>PrÃ³xima Semana</span>
-                        <span class="week-dates">${nextWeekRange}</span>
-                    </div>
-                    
-                    <div class="week-stats">
-                        <div class="progress-container">
-                            <div class="progress-bar" style="width: ${(nextWeekCount/planLimit)*100}%; background: ${planColor}"></div>
-                        </div>
-                        
-                        <div class="count-info">
-                            <span class="used"><strong>${nextWeekCount}</strong>/${planLimit} aulas</span>
-                            <span class="remaining ${nextRemaining > 0 ? 'positive' : 'zero'}">
-                                <i class="fas fa-${nextRemaining > 0 ? 'arrow-up' : 'exclamation-circle'}"></i>
-                                ${nextRemaining} vaga${nextRemaining !== 1 ? 's' : ''} restante${nextRemaining !== 1 ? 's' : ''}
-                            </span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    weeklyWarning.className = 'weekly-warning info';
-}
-// VersÃ£o simplificada para usuÃ¡rios sem plano
-function updateWeeklyWarning() {
-    if (!weeklyWarning) return;
-    
-    if (currentUser?.isAdmin) {
-        weeklyWarning.innerHTML = `
-            <div class="warning-content">
-                <i class="fas fa-crown"></i>
-                <span>Modo Administrador - VocÃª tem acesso total</span>
-            </div>
-        `;
-        weeklyWarning.className = 'weekly-warning admin';
-        return;
-    }
-    
-    if (!currentUser?.plan || !userHasActivePlan()) {
-        updateWeeklyWarningNoPlan();
-        return;
-    }
-    
-    const planName = currentUser.plan.name || currentUser.plan.id;
-    const planLimit = currentUser.plan.aulasPorSemana;
-    const planColor = currentUser.plan.color || '#6366f1';
-    
-    // Dados da semana atual
-    const currentWeekRange = formatWeekRange(new Date());
-    const currentWeekCount = countBookingsInWeek(new Date(), currentUser.id);
-    const currentRemaining = planLimit - currentWeekCount;
-    const isCurrentWeekFull = currentWeekCount >= planLimit;
-    
-    // Dados da prÃ³xima semana
-    const nextWeekDate = new Date();
-    nextWeekDate.setDate(nextWeekDate.getDate() + 7);
+    nextWeekDate.setDate(today.getDate() + 7);
     const nextWeekRange = formatWeekRange(nextWeekDate);
     const nextWeekCount = countBookingsInWeek(nextWeekDate, currentUser.id);
     const nextRemaining = planLimit - nextWeekCount;
     const hasNextWeekBookings = nextWeekCount > 0;
     
+    // SEMANA ATUAL (apenas para visualização de aulas já marcadas)
+    const currentWeekRange = formatWeekRange(today);
+    const currentWeekCount = countBookingsInWeek(today, currentUser.id);
+    const hasCurrentWeekBookings = currentWeekCount > 0;
+    
+    // MENSAGEM INFORMATIVA SOBRE AGENDAMENTOS
+    let infoMessage = '';
+    if (dayOfWeek === 6 || dayOfWeek === 0) {
+        infoMessage = 'Aos finais de semana, os agendamentos já são para a próxima semana.';
+    } else {
+        infoMessage = 'Os agendamentos disponíveis são sempre para a próxima semana.';
+    }
+    
     weeklyWarning.innerHTML = `
         <div class="warning-content">
             <div class="warning-header">
                 <span class="plan-indicator" style="background: ${planColor}">
                     <i class="fas ${PLANS[currentUser.plan.id]?.icon || 'fa-crown'}"></i>
-                    Plano ${planName} â€¢ ${planLimit} aulas/semana
+                    Plano ${planName} • ${planLimit} aulas/semana
+                </span>
+                <span class="info-badge">
+                    <i class="fas fa-info-circle"></i>
+                    ${infoMessage}
                 </span>
             </div>
             
             <div class="weeks-container">
-                <!-- SEMANA ATUAL -->
-                <div class="week-card ${isCurrentWeekFull ? 'full' : 'current'}">
+                <!-- SEMANA ATUAL (Apenas consulta) -->
+                <div class="week-card current ${!hasCurrentWeekBookings ? 'empty' : ''}">
                     <div class="week-title">
-                        <i class="fas fa-calendar-check"></i>
-                        <span>Semana Atual</span>
+                        <i class="fas fa-calendar-alt"></i>
+                        <span>Semana em andamento</span>
                         <span class="week-dates">${currentWeekRange}</span>
-                        ${isCurrentWeekFull ? '<span class="limit-badge">Limite atingido</span>' : ''}
+                        ${hasCurrentWeekBookings ? '<span class="bookings-badge">Aulas marcadas</span>' : '<span class="no-bookings-badge">Sem aulas</span>'}
                     </div>
                     
                     <div class="week-stats">
-                        <div class="progress-container">
-                            <div class="progress-bar" style="width: ${(currentWeekCount/planLimit)*100}%; background: ${planColor}"></div>
-                        </div>
-                        
-                        <div class="count-info">
-                            <span class="used">
-                                <strong>${currentWeekCount}</strong>/${planLimit} aulas
-                                ${currentWeekCount > 0 ? '<i class="fas fa-check-circle" style="color: #10b981; margin-left: 5px;"></i>' : ''}
-                            </span>
+                        ${hasCurrentWeekBookings ? `
+                            <div class="progress-container">
+                                <div class="progress-bar" style="width: ${(currentWeekCount/planLimit)*100}%; background: ${planColor}"></div>
+                            </div>
                             
-                            ${isCurrentWeekFull ? 
-                                `<span class="limit-message">
-                                    <i class="fas fa-exclamation-triangle"></i>
-                                    Limite semanal atingido
-                                </span>` : 
-                                `<span class="remaining positive">
-                                    <i class="fas fa-arrow-up"></i>
-                                    ${currentRemaining} vaga${currentRemaining !== 1 ? 's' : ''} restante${currentRemaining !== 1 ? 's' : ''}
-                                </span>`
-                            }
-                        </div>
+                            <div class="count-info">
+                                <span class="used">
+                                    <strong>${currentWeekCount}</strong>/${planLimit} aulas
+                                    <i class="fas fa-check-circle" style="color: #10b981; margin-left: 5px;"></i>
+                                </span>
+                                <span class="current-bookings">
+                                    <i class="fas fa-calendar-check"></i>
+                                    ${currentWeekCount} aula${currentWeekCount !== 1 ? 's' : ''} marcada${currentWeekCount !== 1 ? 's' : ''}
+                                </span>
+                            </div>
+                        ` : `
+                            <div class="empty-week-message">
+                                <i class="fas fa-clock"></i>
+                                <span>Nenhuma aula marcada para esta semana</span>
+                            </div>
+                        `}
+                    </div>
+                    
+                    <div class="week-footer ${!hasCurrentWeekBookings ? 'info' : ''}">
+                        <i class="fas fa-exclamation-circle"></i>
+                        <span>Agendamentos para esta semana já estão encerrados.</span>
                     </div>
                 </div>
                 
-                <!-- PRÃ“XIMA SEMANA -->
-                <div class="week-card next ${hasNextWeekBookings ? 'has-bookings' : ''}">
+                <!-- PRÓXIMA SEMANA (Disponível para agendamento) -->
+                <div class="week-card next ${hasNextWeekBookings ? 'has-bookings' : 'available'}">
                     <div class="week-title">
                         <i class="fas fa-calendar-plus"></i>
-                        <span>PrÃ³xima Semana</span>
+                        <span>Semana disponível para agendamento</span>
                         <span class="week-dates">${nextWeekRange}</span>
-                        ${hasNextWeekBookings ? '<span class="bookings-badge">Aulas agendadas</span>' : ''}
+                        ${hasNextWeekBookings ? '<span class="bookings-badge">Aulas agendadas</span>' : '<span class="available-badge">Disponível</span>'}
                     </div>
                     
                     <div class="week-stats">
@@ -594,22 +517,27 @@ function updateWeeklyWarning() {
                             ${nextWeekCount > 0 ? 
                                 `<span class="next-bookings">
                                     <i class="fas fa-calendar-check"></i>
-                                    ${nextWeekCount} aula${nextWeekCount !== 1 ? 's' : ''} marcada${nextWeekCount !== 1 ? 's' : ''}
+                                    ${nextWeekCount} aula${nextWeekCount !== 1 ? 's' : ''} agendada${nextWeekCount !== 1 ? 's' : ''}
                                 </span>` : 
-                                `<span class="remaining neutral">
-                                    <i class="fas fa-clock"></i>
-                                    Nenhuma aula agendada
+                                `<span class="remaining positive">
+                                    <i class="fas fa-arrow-up"></i>
+                                    ${nextRemaining} vaga${nextRemaining !== 1 ? 's' : ''} disponíve${nextRemaining !== 1 ? 'is' : 'l'}
                                 </span>`
                             }
                         </div>
                     </div>
                     
-                    ${nextWeekCount > 0 ? `
+                    ${hasNextWeekBookings ? `
                         <div class="next-week-details">
                             <i class="fas fa-info-circle"></i>
-                            VocÃª jÃ¡ tem aula${nextWeekCount !== 1 ? 's' : ''} marcada${nextWeekCount !== 1 ? 's' : ''} para a prÃ³xima semana
+                            Você já tem aula${nextWeekCount !== 1 ? 's' : ''} marcada${nextWeekCount !== 1 ? 's' : ''} para a próxima semana
                         </div>
-                    ` : ''}
+                    ` : `
+                        <div class="next-week-details available">
+                            <i class="fas fa-calendar-plus"></i>
+                            <span>Vagas disponíveis para a semana de ${nextWeekRange}</span>
+                        </div>
+                    `}
                 </div>
             </div>
         </div>
@@ -617,13 +545,12 @@ function updateWeeklyWarning() {
     
     weeklyWarning.className = 'weekly-warning info';
     
-    // Se atingiu o limite, mostrar modal informativo (uma vez por sessÃ£o)
-    if (isCurrentWeekFull && !sessionStorage.getItem('limitModalShown')) {
+    // Se atingiu o limite na próxima semana, mostrar modal informativo
+    if (nextWeekCount >= planLimit && !sessionStorage.getItem('limitModalShown')) {
         sessionStorage.setItem('limitModalShown', 'true');
-        showLimitReachedModal(planLimit, currentWeekCount, planName);
+        showLimitReachedModal(planLimit, nextWeekCount, planName);
     }
 }
-// ============================================
 // 4. FUNÃ‡Ã•ES DE CONTAGEM E VALIDAÃ‡ÃƒO
 // ============================================
 
@@ -2852,6 +2779,145 @@ const additionalStyles = `
         color: #3b82f6;
     }
 
+    /* Estilos para a nova interface de semanas */
+    .warning-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-bottom: 16px;
+        padding-bottom: 12px;
+        border-bottom: 1px solid #e2e8f0;
+    }
+
+    .info-badge {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        background: #e2e8f0;
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        color: #475569;
+    }
+
+    .info-badge i {
+        color: #3b82f6;
+    }
+
+    .week-card.current.empty {
+        background: #f8fafc;
+        opacity: 0.8;
+    }
+
+    .week-card.next.available {
+        border-left: 4px solid #10b981;
+    }
+
+    .available-badge {
+        background: #10b981;
+        color: white;
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-size: 10px;
+        font-weight: 600;
+        margin-left: auto;
+    }
+
+    .no-bookings-badge {
+        background: #94a3b8;
+        color: white;
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-size: 10px;
+        font-weight: 600;
+        margin-left: auto;
+    }
+
+    .empty-week-message {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 15px;
+        background: #f1f5f9;
+        border-radius: 8px;
+        color: #475569;
+        font-size: 13px;
+        width: 100%;
+    }
+
+    .empty-week-message i {
+        color: #94a3b8;
+        font-size: 16px;
+    }
+
+    .current-bookings {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        background: #dbeafe;
+        color: #1e40af;
+        padding: 4px 8px;
+        border-radius: 20px;
+        font-size: 11px;
+        font-weight: 600;
+    }
+
+    .week-footer {
+        margin-top: 12px;
+        padding: 8px 12px;
+        background: #fee2e2;
+        border-radius: 6px;
+        font-size: 12px;
+        color: #991b1b;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .week-footer.info {
+        background: #e6f7e6;
+        color: #2e7d32;
+    }
+
+    .week-footer i {
+        font-size: 14px;
+    }
+
+    .next-week-details.available {
+        background: #e6f7e6;
+        color: #2e7d32;
+    }
+
+    .next-week-details.available i {
+        color: #2e7d32;
+    }
+
+    /* Responsividade para os novos elementos */
+    @media (max-width: 768px) {
+        .warning-header {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        
+        .info-badge {
+            width: 100%;
+            justify-content: center;
+        }
+        
+        .empty-week-message {
+            padding: 12px;
+            font-size: 12px;
+        }
+        
+        .week-footer {
+            padding: 6px 10px;
+            font-size: 11px;
+        }
+    }
+
     /* Responsividade */
     @media (max-width: 768px) {
         .limit-modal {
@@ -2878,3 +2944,5 @@ styleSheet.textContent = additionalStyles;
 document.head.appendChild(styleSheet);
 
 console.log('âœ… CÃ³digo carregado completamente!');
+
+
