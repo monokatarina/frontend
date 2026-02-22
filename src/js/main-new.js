@@ -351,6 +351,9 @@ function normalizeUserPlan() {
 // ============================================
 // FUNÇÃO PARA VERIFICAR SE HORÁRIO É PERMITIDO PELO PLANO
 // ============================================
+// ============================================
+// FUNÇÃO PARA VERIFICAR SE HORÁRIO É PERMITIDO PELO PLANO
+// ============================================
 function isHorarioPermitido(weekday, hour) {
     // Se não tem usuário logado, permite (vai pedir login depois)
     if (!currentUser) return true;
@@ -363,15 +366,20 @@ function isHorarioPermitido(weekday, hour) {
     
     const plan = currentUser.plan;
     
-    // Verificar se o dia é permitido
-    if (plan.diasPermitidos && !plan.diasPermitidos.includes(weekday)) {
-        console.log(`🚫 Dia ${weekday} não permitido para plano ${plan.id}`);
-        return false;
+    // Para planos de dança, permitir apenas 14 e 15
+    if (plan.categoria === 'danca') {
+        const horariosPermitidos = [14, 15];
+        if (!horariosPermitidos.includes(hour)) {
+            console.log(`🚫 Horário ${hour} não permitido para dança`);
+            return false;
+        }
+        return true;
     }
     
-    // Verificar se o horário é permitido
-    if (plan.horariosPermitidos && !plan.horariosPermitidos.includes(hour)) {
-        console.log(`🚫 Horário ${hour} não permitido para plano ${plan.id}`);
+    // Para treinos normais, permitir todos os horários (6-12 e 16-19)
+    const horariosNormais = [6,7,8,9,10,11,12,16,17,18,19];
+    if (!horariosNormais.includes(hour)) {
+        console.log(`🚫 Horário ${hour} não disponível para treinos`);
         return false;
     }
     
@@ -1094,6 +1102,7 @@ function renderSchedule() {
         grid.appendChild(createHourLabel(h));
         
         for (let wd = 1; wd <= 5; wd++) {
+            // AQUI NÃO TEM VERIFICAÇÃO - O SLOT É CRIADO DIRETAMENTE
             const slot = createSlot(wd, h);
             grid.appendChild(slot);
         }
@@ -1108,7 +1117,6 @@ function renderSchedule() {
 
     updateWeeklyWarning();
 }
-
 // ============================================
 // 7. RENDERIZAÇÃO DE RESERVAS POR SEMANA
 // ============================================
