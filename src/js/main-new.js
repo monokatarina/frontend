@@ -523,6 +523,7 @@ function updatePlansButton() {
     }
 }
 // Atualiza informações do plano na interface
+// Atualiza informações do plano na interface (VERSÃO CORRIGIDA)
 function updatePlanInfo() {
     if (!currentUser) return;
     
@@ -538,23 +539,35 @@ function updatePlanInfo() {
                 Administrador
             </span>
         `;
-    } else if (userHasActivePlan() && currentUser.plan) {
-        const planColor = currentUser.plan.color || '#6366f1';
-        planHtml = `
-            <span class="plan-badge" style="background: ${planColor}">
-                <i class="fas ${PLANS[currentUser.plan.id]?.icon || 'fa-crown'}"></i>
-                ${currentUser.plan.name || currentUser.plan.id}
-                <span class="plan-aulas">${currentUser.plan.aulasPorSemana}/semana</span>
-            </span>
-        `;
     } else {
-        planHtml = `
-            <span class="plan-badge no-plan" onclick="window.location.href='/plans'">
-                <i class="fas fa-exclamation-circle"></i>
-                Sem plano ativo
-                <button class="btn-plan-small">Escolher plano</button>
-            </span>
-        `;
+        // Verificar se tem planos ativos (nova estrutura)
+        const activePlans = getUserActivePlans();
+        
+        if (activePlans.length > 0) {
+            // Mostrar múltiplos planos
+            planHtml = '<div class="plans-container-mini">';
+            activePlans.forEach(plan => {
+                const planData = PLANS[plan.id] || plan;
+                const planColor = planData.color || '#6366f1';
+                planHtml += `
+                    <span class="plan-badge" style="background: ${planColor}; margin-right: 5px;">
+                        <i class="fas ${planData.icon || 'fa-crown'}"></i>
+                        ${planData.name || plan.id}
+                        <span class="plan-aulas">${planData.aulasPorSemana || 0}/semana</span>
+                    </span>
+                `;
+            });
+            planHtml += '</div>';
+        } else {
+            // Sem planos ativos
+            planHtml = `
+                <span class="plan-badge no-plan" onclick="window.location.href='/plans'">
+                    <i class="fas fa-exclamation-circle"></i>
+                    Sem plano ativo
+                    <button class="btn-plan-small">Escolher plano</button>
+                </span>
+            `;
+        }
     }
     
     // Adicionar badge do usuário
@@ -584,8 +597,8 @@ function updatePlanInfo() {
         if (adminPanel) adminPanel.hidden = true;
     }
     
-    // Atualizar aviso semanal com base no plano
-    if (currentUser.plan) {
+    // Atualizar aviso semanal
+    if (userHasActivePlan()) {
         updateWeeklyWarning();
     } else {
         updateWeeklyWarningNoPlan();
@@ -3867,6 +3880,56 @@ const additionalStyles = `
         gap: 8px;
         color: #6b7280;
         font-size: 13px;
+    }
+
+    /* Container para múltiplos planos */
+    .plans-container-mini {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 5px;
+        margin: 5px 0;
+    }
+
+    .plan-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+        color: white;
+        white-space: nowrap;
+    }
+
+    .plan-badge .plan-aulas {
+        background: rgba(255,255,255,0.2);
+        padding: 2px 6px;
+        border-radius: 12px;
+        font-size: 10px;
+        margin-left: 4px;
+    }
+
+    .plan-badge.no-plan {
+        background: #f59e0b;
+        cursor: pointer;
+    }
+
+    .plan-badge.no-plan:hover {
+        background: #d97706;
+    }
+
+    /* Responsividade */
+    @media (max-width: 768px) {
+        .plans-container-mini {
+            flex-direction: column;
+            width: 100%;
+        }
+        
+        .plan-badge {
+            width: 100%;
+            justify-content: center;
+        }
     }
     `;
 
