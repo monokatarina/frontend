@@ -291,6 +291,56 @@ function userHasActivePlan() {
     console.log('❌ Nenhum plano ativo encontrado');
     return false;
 }
+
+// Verifica status da assinatura no backend e sincroniza dados de plano no frontend
+async function checkSubscriptionStatus() {
+    if (!currentUser || currentUser.isAdmin) return;
+
+    try {
+        const response = await fetch(`${API}/payments/subscription/status/${currentUser.id}`, {
+            credentials: 'include'
+        });
+
+        if (!response.ok) return;
+
+        const payload = await response.json();
+        const data = payload?.data || payload || {};
+
+        if (data.plan) {
+            currentUser.plan = {
+                ...(currentUser.plan || {}),
+                ...data.plan
+            };
+        }
+
+        if (data.subscription) {
+            currentUser.subscription = data.subscription;
+        }
+
+        if (!currentUser.plan && currentUser.subscription?.planType) {
+            const planId = currentUser.subscription.planType;
+            const planDef = PLANS[planId];
+            if (planDef) {
+                currentUser.plan = {
+                    id: planId,
+                    type: planId,
+                    name: planDef.name,
+                    categoria: planDef.categoria,
+                    aulasPorSemana: currentUser.subscription.aulasPorSemana || planDef.aulasPorSemana,
+                    horariosPermitidos: planDef.horariosPermitidos,
+                    diasPermitidos: planDef.diasPermitidos,
+                    color: planDef.color,
+                    icon: planDef.icon,
+                    price: planDef.price,
+                    status: 'active',
+                    active: true
+                };
+            }
+        }
+    } catch (error) {
+        console.error('Erro ao verificar assinatura:', error);
+    }
+}
 // Verifica se o horário é permitido para o plano do usuário
 function getCurrentPlanDefinition() {
     if (!currentUser || currentUser.isAdmin) return null;
