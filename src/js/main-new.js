@@ -1,7 +1,10 @@
 // ============================================
 // FUN��O PARA NORMALIZAR O PLANO DO USU�RIO
 // ============================================
-function normalizeUserPlans() {  // <-- ADICIONAR esta nova função
+// ============================================
+// FUNÇÃO PARA NORMALIZAR MÚLTIPLOS PLANOS DO USUÁRIO
+// ============================================
+function normalizeUserPlans() {
     if (!currentUser) return;
     if (currentUser.isAdmin) return;
 
@@ -37,6 +40,7 @@ function normalizeUserPlans() {  // <-- ADICIONAR esta nova função
         currentUser.plans = [];
     }
 }
+
 // ============================================
 // FRONTEND - SISTEMA DE AGENDAMENTO
 // VERSÃO COM VISUALIZAÇÃO SEMANAL MELHORADA
@@ -327,7 +331,7 @@ function verificarHorarioPermitido(weekday, hour) {
     return isHorarioPermitido(weekday, hour);
 }
 
-function getUserActivePlans() {  // <-- ADICIONAR esta função
+function getUserActivePlans() {
     if (!currentUser) return [];
     if (currentUser.isAdmin) {
         return [{
@@ -340,15 +344,13 @@ function getUserActivePlans() {  // <-- ADICIONAR esta função
     
     return currentUser.plans || [];
 }
-
-function isHorarioPermitido(weekday, hour) {  // <-- SUBSTITUIR
-    if (!currentUser) return true;
+function isHorarioPermitido(weekday, hour) {
+    if (!currentUser) return true; // Visitante pode ver todos horários
     if (currentUser.isAdmin) return true;
     
     const activePlans = getUserActivePlans();
-    if (activePlans.length === 0) return false;
+    if (activePlans.length === 0) return false; // Sem planos, não pode agendar
     
-    // Verificar se algum plano permite este horário
     return activePlans.some(plan => {
         const planData = PLANS[plan.id] || plan;
         const allowedHours = planData.horariosPermitidos || [];
@@ -2102,7 +2104,7 @@ async function loadData() {
         await checkSubscriptionStatus();
         
         // ===== NOVO: NORMALIZAR PLANO DO USUÁRIO =====
-        normalizeUserPlan();
+        normalizeUserPlans();
         
         // Renderizar interface
         renderSchedule();
