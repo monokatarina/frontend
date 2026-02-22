@@ -359,7 +359,33 @@ function showNotification(message, type = 'info', duration = 3000) {
         setTimeout(() => toast.remove(), 300);
     }, duration);
 }
-
+// ============================================
+// FUNÇÃO PARA TESTAR CONEXÃO COM ENDPOINTS
+// ============================================
+async function testAPIEndpoints() {
+    console.log('🔍 Testando conectividade com a API...');
+    const endpoints = [
+        '/auth/me',
+        '/bookings',
+        '/admin/availability',
+        '/admin/dates',
+        '/dates'
+    ];
+    
+    for (const endpoint of endpoints) {
+        try {
+            const start = Date.now();
+            const response = await fetch(`${API}${endpoint}`, {
+                method: 'HEAD', // Apenas cabeçalhos, mais rápido
+                credentials: 'include'
+            });
+            const time = Date.now() - start;
+            console.log(`📡 ${endpoint}: ${response.status} (${time}ms)`);
+        } catch (error) {
+            console.log(`📡 ${endpoint}: FALHA - ${error.message}`);
+        }
+    }
+}
 // ============================================
 // FUNÇÃO PARA CARREGAR DATAS - VERSÃO CORRIGIDA
 // ============================================
