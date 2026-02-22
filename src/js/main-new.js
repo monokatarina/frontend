@@ -360,38 +360,90 @@ function showNotification(message, type = 'info', duration = 3000) {
     }, duration);
 }
 
-// Carrega datas do backend
-// Carrega datas do backend (VERSÃO CORRIGIDA - SEM ERRO)
-// Carrega datas do backend (VERSÃO SUPER SEGURA)
+// ============================================
+// FUNÇÃO PARA CARREGAR DATAS - VERSÃO CORRIGIDA
+// ============================================
 async function loadDates() {
     try {
-        const response = await fetch(`${API}/admin/dates`);
+        console.log('📅 Tentando carregar datas do servidor...');
         
-        if (!response.ok) {
-            console.warn('⚠️ Resposta não ok, gerando datas locais');
-            return generateLocalDates();
+        // PRIMEIRA TENTATIVA: Endpoint principal
+        try {
+            const response = await fetch(`${API}/admin/dates`, {
+                method: 'GET',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include'
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                console.log('📅 Datas carregadas com sucesso:', data);
+                
+                if (data.success && data.data) {
+                    nextDates = data.data;
+                    return nextDates;
+                } else if (data.data) {
+                    nextDates = data.data;
+                    return nextDates;
+                } else if (typeof data === 'object') {
+                    nextDates = data;
+                    return nextDates;
+                }
+            } else {
+                console.warn(`⚠️ Endpoint /admin/dates respondeu com status ${response.status}`);
+            }
+        } catch (error) {
+            console.warn('⚠️ Erro ao acessar /admin/dates:', error.message);
         }
         
-        // Verificar se a resposta é JSON
-        const contentType = response.headers.get('content-type');
-        if (!contentType || !contentType.includes('application/json')) {
-            console.warn('⚠️ Resposta não é JSON, gerando datas locais');
-            return generateLocalDates();
+        // SEGUNDA TENTATIVA: Tentar obter do /auth/me (alguns backends retornam lá)
+        try {
+            console.log('📅 Tentando obter datas via /auth/me...');
+            const meResponse = await fetch(`${API}/auth/me?userId=${currentUser?.id || ''}`, {
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' }
+            });
+            
+            if (meResponse.ok) {
+                const meData = await meResponse.json();
+                const userData = meData.user || meData.data || meData;
+                
+                if (userData && userData.nextDates) {
+                    console.log('📅 Datas encontradas no /auth/me:', userData.nextDates);
+                    nextDates = userData.nextDates;
+                    return nextDates;
+                }
+            }
+        } catch (error) {
+            console.warn('⚠️ Erro ao buscar datas via /auth/me:', error.message);
         }
         
-        const data = await response.json();
-        
-        if (data.success && data.data) {
-            nextDates = data.data;
-            console.log('📅 Datas carregadas:', nextDates);
-            return nextDates;
-        } else {
-            console.warn('⚠️ Formato de resposta inválido, gerando datas locais');
-            return generateLocalDates();
+        // TERCEIRA TENTATIVA: Tentar endpoint alternativo
+        try {
+            console.log('📅 Tentando /api/dates...');
+            const altResponse = await fetch(`${API}/dates`, {
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' }
+            });
+            
+            if (altResponse.ok) {
+                const altData = await altResponse.json();
+                if (altData.data || altData.dates) {
+                    nextDates = altData.data || altData.dates;
+                    console.log('📅 Datas carregadas via /api/dates:', nextDates);
+                    return nextDates;
+                }
+            }
+        } catch (error) {
+            console.warn('⚠️ Erro no endpoint alternativo:', error.message);
         }
+        
+        // FALLBACK: Gerar datas localmente
+        console.log('📅 Nenhum endpoint funcionou, gerando datas localmente');
+        return generateLocalDates();
         
     } catch (error) {
-        console.warn('⚠️ Erro ao carregar datas, gerando localmente:', error.message);
+        console.error('❌ Erro crítico em loadDates:', error);
         return generateLocalDates();
     }
 }
