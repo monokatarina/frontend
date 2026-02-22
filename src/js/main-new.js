@@ -1250,6 +1250,36 @@ function updateAllTimers() {
 // 6. FUNÇÕES DE RENDERIZAÇÃO
 // ============================================
 
+function renderSchedule() {
+    if (!scheduleEl) return;
+    
+    const grid = document.createElement('div');
+    grid.className = 'grid';
+
+    // Cabeçalho
+    grid.appendChild(createHeaderCell('hour-header', '<i class="fas fa-clock"></i> Horário'));
+    for (let i = 0; i < 5; i++) {
+        grid.appendChild(createHeaderCell('weekday-header', weekdays[i]));
+    }
+
+    // Renderizar linhas de horário
+    for (const h of HOURS) {
+        grid.appendChild(createHourLabel(h));
+        
+        for (let wd = 1; wd <= 5; wd++) {
+            const slot = createSlot(wd, h);
+            grid.appendChild(slot);
+        }
+    }
+
+    scheduleEl.style.opacity = '0';
+    setTimeout(() => {
+        scheduleEl.innerHTML = '';
+        scheduleEl.appendChild(grid);
+        scheduleEl.style.opacity = '1';
+    }, 200);
+}
+
 function createHeaderCell(className, content) {
     const div = document.createElement('div');
     div.className = className;
