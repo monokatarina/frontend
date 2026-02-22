@@ -80,6 +80,8 @@ const modalClose = document.getElementById('modalClose');
 const toastContainer = document.getElementById('toastContainer');
 const adminMenuBtn = document.getElementById('adminMenuBtn');
 const adminDropdown = document.getElementById('adminDropdown');
+const plansMenuBtn = document.getElementById('plansMenuBtn');
+const adminMenuContainer = document.getElementById('adminMenuContainer');
 
 // ============================================
 // 1. FUN√á√ïES UTILIT√ÅRIAS B√ÅSICAS
@@ -252,6 +254,25 @@ async function checkSubscriptionStatus() {
     }
 }
 
+// FunÁ„o para atualizar o bot„o de planos
+function updatePlansButton() {
+    const plansBtn = document.getElementById('plansMenuBtn');
+    if (!plansBtn) return;
+    
+    if (currentUser?.plan && userHasActivePlan()) {
+        plansBtn.innerHTML = `
+            <i class="fas fa-crown"></i>
+            <span>Upgrade</span>
+        `;
+        plansBtn.classList.add('has-plan');
+    } else {
+        plansBtn.innerHTML = `
+            <i class="fas fa-crown"></i>
+            <span>Planos</span>
+        `;
+        plansBtn.classList.remove('has-plan');
+    }
+}
 // Atualiza informa√ß√µes do plano na interface
 function updatePlanInfo() {
     if (!currentUser) return;
@@ -296,6 +317,12 @@ function updatePlanInfo() {
     `;
     
     userInfo.innerHTML = userBadge + planHtml;
+
+    updatePlansButton();
+
+    if (adminMenuContainer) {
+        adminMenuContainer.style.display = currentUser?.isAdmin ? '' : 'none';
+    }
     
     // Atualizar aviso semanal com base no plano
     if (currentUser.plan) {
@@ -1568,16 +1595,44 @@ async function selectPlan(planId) {
 // 11. CONTROLE DE TELAS
 // ============================================
 
+// ============================================
+// CRIAR BOT√O FLUTUANTE PARA MOBILE
+// ============================================
+function createFloatingPlansButton() {
+    if (document.getElementById('floatingPlansBtn')) return;
+
+    const floatingBtn = document.createElement('button');
+    floatingBtn.id = 'floatingPlansBtn';
+    floatingBtn.className = 'floating-plans-btn';
+    floatingBtn.innerHTML = `
+        <i class="fas fa-crown"></i>
+        <span>Planos</span>
+    `;
+
+    floatingBtn.addEventListener('click', () => {
+        if (!currentUser) {
+            showNotification('FaÁa login para ver os planos', 'warning');
+            showAuthScreen();
+            return;
+        }
+        window.location.href = '/plans';
+    });
+
+    document.body.appendChild(floatingBtn);
+}
 function showAuthScreen() {
     authScreen.style.display = 'flex';
     appScreen.classList.remove('active');
     if (modal) modal.hidden = true;
+    const floatingBtn = document.getElementById('floatingPlansBtn');
+    if (floatingBtn) floatingBtn.remove();
 }
 
 function showAppScreen() {
     authScreen.style.display = 'none';
     appScreen.classList.add('active');
     if (modal) modal.hidden = true;
+    createFloatingPlansButton();
     loadData();
 }
 
@@ -1787,6 +1842,17 @@ document.addEventListener('DOMContentLoaded', function() {
         showNotification(adminMode ? 'Modo admin ativado' : 'Modo admin desativado', 'info');
     });
     
+    // ===== BOT√O DE PLANOS (sempre visÌvel) =====
+    if (plansMenuBtn) {
+        plansMenuBtn.addEventListener('click', () => {
+            if (!currentUser) {
+                showNotification('FaÁa login para ver os planos', 'warning');
+                showAuthScreen();
+                return;
+            }
+            window.location.href = '/plans';
+        });
+    }
     // ===== BOT√ÉO ATUALIZAR =====
     refreshBtn.addEventListener('click', () => {
         loadData();
@@ -2918,6 +2984,115 @@ const additionalStyles = `
         }
     }
 
+    /* Bot„o de planos no header */
+    .btn-plans {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 16px;
+        background: linear-gradient(135deg, #8b5cf6, #6366f1);
+        color: white;
+        border: none;
+        border-radius: 30px;
+        font-weight: 600;
+        font-size: 14px;
+        cursor: pointer;
+        transition: all 0.3s;
+        box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+    }
+
+    .btn-plans:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(139, 92, 246, 0.4);
+        background: linear-gradient(135deg, #7c3aed, #4f46e5);
+    }
+
+    .btn-plans i {
+        font-size: 16px;
+    }
+
+    .btn-plans.has-plan {
+        background: linear-gradient(135deg, #f59e0b, #d97706);
+        box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+    }
+
+    .btn-plans.has-plan:hover {
+        background: linear-gradient(135deg, #d97706, #b45309);
+        box-shadow: 0 6px 16px rgba(245, 158, 11, 0.4);
+    }
+
+    /* Bot„o flutuante para mobile */
+    .floating-plans-btn {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 12px 24px;
+        background: linear-gradient(135deg, #8b5cf6, #6366f1);
+        color: white;
+        border: none;
+        border-radius: 50px;
+        font-weight: 700;
+        font-size: 16px;
+        cursor: pointer;
+        transition: all 0.3s;
+        box-shadow: 0 8px 20px rgba(139, 92, 246, 0.4);
+        z-index: 1000;
+        animation: float 3s ease-in-out infinite;
+    }
+
+    .floating-plans-btn:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 12px 28px rgba(139, 92, 246, 0.5);
+        background: linear-gradient(135deg, #7c3aed, #4f46e5);
+    }
+
+    .floating-plans-btn i {
+        font-size: 20px;
+    }
+
+    @keyframes float {
+        0%, 100% {
+            transform: translateY(0);
+        }
+        50% {
+            transform: translateY(-5px);
+        }
+    }
+
+    .plans-badge {
+        position: absolute;
+        top: -5px;
+        right: -5px;
+        background: #ef4444;
+        color: white;
+        font-size: 10px;
+        padding: 2px 6px;
+        border-radius: 10px;
+        font-weight: 700;
+    }
+
+    @media (min-width: 769px) {
+        .floating-plans-btn {
+            display: none;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .btn-plans span {
+            display: none;
+        }
+
+        .btn-plans {
+            padding: 8px 12px;
+        }
+
+        .floating-plans-btn {
+            display: flex;
+        }
+    }
     /* Responsividade */
     @media (max-width: 768px) {
         .limit-modal {
@@ -2944,6 +3119,8 @@ styleSheet.textContent = additionalStyles;
 document.head.appendChild(styleSheet);
 
 console.log('‚úÖ C√≥digo carregado completamente!');
+
+
 
 
 

@@ -128,15 +128,20 @@
                 </div>
                 <div id="userInfo" class="user-info"></div>
             </div>
-            
             <div class="header-right">
                 <div class="controls">
                     <button id="refreshBtn" class="btn-icon" title="Atualizar">
                         <i class="fas fa-sync-alt"></i>
                     </button>
                     
-                    <!-- Menu Admin -->
-                    <div class="admin-menu">
+                    <!-- BOTÃO DE PLANOS PARA ALUNOS (SEMPRE VISÍVEL) -->
+                    <button id="plansMenuBtn" class="btn-plans" title="Ver planos">
+                        <i class="fas fa-crown"></i>
+                        <span>Planos</span>
+                    </button>
+                    
+                    <!-- Menu Admin (visível apenas para admins) -->
+                    <div class="admin-menu" id="adminMenuContainer" style="display: none;">
                         <button id="adminMenuBtn" class="btn-icon" title="Menu Admin">
                             <i class="fas fa-cog"></i>
                         </button>
@@ -144,10 +149,6 @@
                             <a href="/professor-dashboard" class="dropdown-item">
                                 <i class="fas fa-chalkboard-teacher"></i>
                                 Painel do Professor
-                            </a>
-                            <a href="/plans" class="dropdown-item">
-                                <i class="fas fa-crown"></i>
-                                Planos
                             </a>
                             <a href="/admin" class="dropdown-item">
                                 <i class="fas fa-users-cog"></i>
@@ -281,3 +282,5 @@
     <script src="../src/js/main-new.js"></script>
 </body>
 </html>
+
+
