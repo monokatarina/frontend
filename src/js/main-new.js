@@ -46,68 +46,82 @@ function normalizeUserPlans() {
 // ============================================
 // FUNÇÃO PARA ATUALIZAR DADOS DO USUÁRIO DO BACKEND
 // ============================================
+// ============================================
+// FUNÇÃO PARA ATUALIZAR DADOS DO USUÁRIO DO BACKEND (VERSÃO RESILIENTE)
+// ============================================
 async function refreshUserData() {
-    if (!currentUser) return;
+    if (!currentUser) return false;
     
     try {
         console.log('🔄 Atualizando dados do usuário...');
         
-        // Buscar dados atualizados do usuário
-        const response = await fetch(`${API}/auth/me`, {
-            credentials: 'include',
-            headers: {
-                'X-User-ID': currentUser.id // Enviar ID no header como fallback
-            }
-        });
-        
-        if (response.ok) {
-            const data = await response.json();
-            const updatedUser = data.user || data.data || data;
-            
-            if (updatedUser) {
-                // Manter o token/credenciais se houver
-                const oldUser = { ...currentUser };
-                currentUser = { ...oldUser, ...updatedUser };
-                
-                // Normalizar planos
-                if (typeof normalizeUserPlans === 'function') {
-                    normalizeUserPlans();
+        // Tentar buscar da rota /me primeiro
+        try {
+            const response = await fetch(`${API}/auth/me`, {
+                credentials: 'include',
+                headers: {
+                    'X-User-ID': currentUser.id,
+                    'Content-Type': 'application/json'
                 }
-                
-                // Salvar no localStorage
-                localStorage.setItem('user', JSON.stringify(currentUser));
-                
-                console.log('✅ Dados do usuário atualizados:', currentUser);
-                
-                // Atualizar interface
-                updatePlanInfo();
-                
-                return true;
-            }
-        } else {
-            console.log('⚠️ Não foi possível atualizar do backend, usando dados locais');
+            });
             
-            // Tentar buscar status da assinatura
+            if (response.ok) {
+                const data = await response.json();
+                const updatedUser = data.user || data.data || data;
+                
+                if (updatedUser) {
+                    // Mesclar dados mantendo estrutura existente
+                    currentUser = { ...currentUser, ...updatedUser };
+                    
+                    // Garantir que plans existe
+                    if (!currentUser.plans && currentUser.plan) {
+                        normalizeUserPlans();
+                    }
+                    
+                    localStorage.setItem('user', JSON.stringify(currentUser));
+                    console.log('✅ Dados atualizados via /auth/me');
+                    updatePlanInfo();
+                    return true;
+                }
+            }
+        } catch (meError) {
+            console.log('⚠️ Rota /auth/me não disponível, tentando subscription/status...');
+        }
+        
+        // Fallback: buscar status da assinatura
+        try {
             await checkSubscriptionStatus();
             
-            if (typeof normalizeUserPlans === 'function') {
+            // Se checkSubscriptionStatus populou currentUser.plan, normalizar
+            if (currentUser.plan && !currentUser.plans) {
                 normalizeUserPlans();
             }
             
             localStorage.setItem('user', JSON.stringify(currentUser));
+            console.log('✅ Dados atualizados via subscription/status');
             updatePlanInfo();
+            return true;
+            
+        } catch (subError) {
+            console.log('⚠️ subscription/status também falhou');
         }
+        
+        // Último recurso: usar dados locais
+        console.log('📦 Usando dados locais do usuário');
+        normalizeUserPlans();
+        updatePlanInfo();
+        return false;
+        
     } catch (error) {
         console.error('❌ Erro ao atualizar usuário:', error);
         
-        // Mesmo com erro, tentar normalizar os dados locais
-        if (typeof normalizeUserPlans === 'function') {
+        // Garantir que pelo menos os dados locais estão normalizados
+        if (!currentUser.plans && currentUser.plan) {
             normalizeUserPlans();
         }
         updatePlanInfo();
+        return false;
     }
-    
-    return false;
 }
 // ============================================
 // FRONTEND - SISTEMA DE AGENDAMENTO
