@@ -361,18 +361,47 @@ function showNotification(message, type = 'info', duration = 3000) {
 }
 
 // Carrega datas do backend
+// Carrega datas do backend (VERSÃO CORRIGIDA - SEM ERRO)
 async function loadDates() {
     try {
         const response = await fetch(`${API}/admin/dates`);
+        if (!response.ok) {
+            console.warn('⚠️ Resposta não ok, usando datas locais');
+            return generateLocalDates();
+        }
         const data = await response.json();
         nextDates = data.data;
         console.log('📅 Datas carregadas:', nextDates);
         return nextDates;
     } catch (error) {
-        console.error('❌ Erro ao carregar datas:', error);
-        showNotification('Erro ao carregar calendário', 'error');
-        return null;
+        console.warn('⚠️ Erro ao carregar datas, usando locais:', error.message);
+        return generateLocalDates();
     }
+}
+
+// Função para gerar datas localmente
+function generateLocalDates() {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const dates = {};
+    for (let wd = 1; wd <= 5; wd++) {
+        let date = new Date(today);
+        while (date.getDay() !== wd) {
+            date.setDate(date.getDate() + 1);
+        }
+        if (date < today) {
+            date.setDate(date.getDate() + 7);
+        }
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        dates[wd] = `${year}-${month}-${day}`;
+    }
+    
+    nextDates = dates;
+    console.log('📅 Datas geradas localmente:', dates);
+    return dates;
 }
 
 // Fetch API wrapper
