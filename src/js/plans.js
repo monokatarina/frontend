@@ -1,88 +1,117 @@
 // ============================================
 // plans.js - Página de Planos da FitLife
-// Versão Profissional com Checkot Integrado
+// Versão com Treino Normal e Dança
 // ============================================
 
 const API = 'https://jokesteronline.org/api';
 
 // ============================================
-// CONFIGURAÇÃO DOS PLANOS
+// CONFIGURAÇÃO DOS PLANOS (NOVOS)
 // ============================================
 const PLANS = {
-    basic: {
-        id: 'basic',
-        name: 'Básico',
+    // ===== TREINO NORMAL =====
+    normal_2x: {
+        id: 'normal_2x',
+        name: 'Treino Normal 2x',
+        categoria: 'normal',
         aulasPorSemana: 2,
-        price: 1.00,
+        price: 400.00,
         color: '#10b981',
-        icon: 'fa-seedling',
-        description: 'Ideal para quem está começando',
+        icon: 'fa-dumbbell',
+        description: 'Treino normal 2 vezes por semana',
+        horarios: 'Todos os horários (6h-12h e 16h-19h)',
         features: [
             '2 aulas por semana',
             'Acesso a todos horários',
-            'Suporte por email',
-            'Cancelamento a qualquer momento',
+            'Suporte básico',
             'Acesso ao app mobile'
         ],
         popular: false
     },
-    intermediate: {
-        id: 'intermediate',
-        name: 'Intermediário',
+    normal_3x: {
+        id: 'normal_3x',
+        name: 'Treino Normal 3x',
+        categoria: 'normal',
         aulasPorSemana: 3,
-        price: 1.00,
+        price: 510.00,
         color: '#3b82f6',
-        icon: 'fa-fire',
-        description: 'Para quem busca evolução constante',
+        icon: 'fa-dumbbell',
+        description: 'Treino normal 3 vezes por semana',
+        horarios: 'Todos os horários (6h-12h e 16h-19h)',
         features: [
             '3 aulas por semana',
             'Acesso a todos horários',
             'Suporte prioritário',
-            'Cancelamento a qualquer momento',
             'Acesso ao app mobile',
             'Avaliação mensal'
         ],
-        popular: true
+        popular: true // Mais popular dos treinos normais
     },
-    advanced: {
-        id: 'advanced',
-        name: 'Avançado',
-        aulasPorSemana: 4,
-        price: 1.00,
-        color: '#f59e0b',
-        icon: 'fa-rocket',
-        description: 'Máximo desempenho e resultados',
+    normal_5x: {
+        id: 'normal_5x',
+        name: 'Treino Normal 5x',
+        categoria: 'normal',
+        aulasPorSemana: 5,
+        price: 800.00,
+        color: '#8b5cf6',
+        icon: 'fa-crown',
+        description: 'Treino normal 5 vezes por semana',
+        horarios: 'Todos os horários (6h-12h e 16h-19h)',
         features: [
-            '4 aulas por semana',
+            '5 aulas por semana',
             'Acesso a todos horários',
             'Suporte VIP',
-            'Cancelamento a qualquer momento',
             'Acesso ao app mobile',
-            'Avaliação mensal',
+            'Avaliação semanal',
             'Acompanhamento personalizado'
         ],
         popular: false
     },
-    premium: {
-        id: 'premium',
-        name: 'Premium',
-        aulasPorSemana: 5,
-        price: 1.00,
-        color: '#8b5cf6',
-        icon: 'fa-crown',
-        description: 'Experiência completa e exclusiva',
+    
+    // ===== DANÇA =====
+    danca_2x: {
+        id: 'danca_2x',
+        name: 'Dança 2x',
+        categoria: 'danca',
+        aulasPorSemana: 2,
+        price: 79.00,
+        color: '#ec4899',
+        icon: 'fa-music',
+        description: 'Aulas de dança 2 vezes por semana',
+        horarios: '14:00 e 15:00',
         features: [
-            '5 aulas por semana',
-            'Acesso a todos horários',
-            'Suporte 24/7',
-            'Cancelamento a qualquer momento',
-            'Acesso ao app mobile',
-            'Avaliação semanal',
-            'Acompanhamento personalizado',
-            'Acesso a eventos exclusivos'
+            '2 aulas de dança por semana',
+            'Horários: 14:00 e 15:00',
+            'Professores especializados',
+            'Turmas reduzidas'
+        ],
+        popular: true // Mais popular da dança
+    },
+    danca_3x: {
+        id: 'danca_3x',
+        name: 'Dança 3x',
+        categoria: 'danca',
+        aulasPorSemana: 3,
+        price: 89.00,
+        color: '#ec4899',
+        icon: 'fa-music',
+        description: 'Aulas de dança 3 vezes por semana',
+        horarios: '14:00 e 15:00',
+        features: [
+            '3 aulas de dança por semana',
+            'Horários: 14:00 e 15:00',
+            'Professores especializados',
+            'Turmas reduzidas',
+            'Coreografias exclusivas'
         ],
         popular: false
     }
+};
+
+// Mapeamento das categorias
+const PLANOS_POR_CATEGORIA = {
+    normal: ['normal_2x', 'normal_3x', 'normal_5x'],
+    danca: ['danca_2x', 'danca_3x']
 };
 
 // ============================================
@@ -137,9 +166,34 @@ function renderPlans() {
     }
     
     grid.innerHTML = '';
-
-    Object.entries(PLANS).forEach(([id, plan]) => {
-        const card = createPlanCard(id, plan);
+    
+    // Cabeçalho Treino Normal
+    const normalHeader = document.createElement('div');
+    normalHeader.className = 'categoria-header';
+    normalHeader.innerHTML = `
+        <h2><i class="fas fa-dumbbell" style="color: #10b981;"></i> Treinos Normais</h2>
+        <p>Musculação e condicionamento físico • Horários: 6h-12h e 16h-19h</p>
+    `;
+    grid.appendChild(normalHeader);
+    
+    // Planos Normais
+    PLANOS_POR_CATEGORIA.normal.forEach(id => {
+        const card = createPlanCard(id, PLANS[id]);
+        grid.appendChild(card);
+    });
+    
+    // Cabeçalho Dança
+    const dancaHeader = document.createElement('div');
+    dancaHeader.className = 'categoria-header';
+    dancaHeader.innerHTML = `
+        <h2><i class="fas fa-music" style="color: #ec4899;"></i> Aulas de Dança</h2>
+        <p>Dança • Horários disponíveis: 14:00 e 15:00 (segunda a sexta)</p>
+    `;
+    grid.appendChild(dancaHeader);
+    
+    // Planos de Dança
+    PLANOS_POR_CATEGORIA.danca.forEach(id => {
+        const card = createPlanCard(id, PLANS[id]);
         grid.appendChild(card);
     });
     
@@ -172,17 +226,23 @@ function createPlanCard(id, plan) {
     const popularBadge = plan.popular ? 
         '<span class="popular-badge"><i class="fas fa-star"></i> Mais popular</span>' : '';
     
+    const categoriaNome = plan.categoria === 'normal' ? 'Treino' : 'Dança';
+    
     card.innerHTML = `
         ${popularBadge}
-        <div class="plan-icon" style="background: ${plan.color}20; color: ${plan.color}">
+        <span class="categoria-tag" style="background: ${plan.color}20; color: ${plan.color}">${categoriaNome}</span>
+        <div class="plan-icon" style="color: ${plan.color}; font-size: 32px; margin-top: 20px;">
             <i class="fas ${plan.icon}"></i>
         </div>
-        <div class="badge" style="background: ${plan.color}">${plan.name}</div>
         <h3>${plan.name}</h3>
         <div class="plan-description">${plan.description}</div>
-        <div class="price">
+        <div class="price" style="color: ${plan.color}">
             R$ ${plan.price.toFixed(2)}
             <span>/mês</span>
+        </div>
+        <div class="horarios-info">
+            <i class="fas fa-clock" style="color: ${plan.color}"></i>
+            <span>${plan.horarios}</span>
         </div>
         <div class="features">
             ${plan.features.map(f => `
@@ -248,8 +308,10 @@ function saveSelectedPlanAndRedirect(planId) {
     const selectedPlanData = {
         id: planId,
         name: PLANS[planId].name,
+        categoria: PLANS[planId].categoria,
         aulasPorSemana: PLANS[planId].aulasPorSemana,
         price: PLANS[planId].price,
+        horarios: PLANS[planId].horarios,
         features: PLANS[planId].features
     };
     
@@ -363,7 +425,7 @@ function getNotificationIcon(type) {
 }
 
 // ============================================
-// ESTILOS DINÂMICOS
+// ESTILOS DINÂMICOS (adicionais)
 // ============================================
 function addDynamicStyles() {
     const style = document.createElement('style');
@@ -413,23 +475,6 @@ function addDynamicStyles() {
             box-shadow: 0 25px 50px rgba(16,185,129,0.2);
         }
         
-        .plan-card.selected::before {
-            content: '✓';
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            width: 30px;
-            height: 30px;
-            background: #10b981;
-            color: white;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 16px;
-            font-weight: bold;
-        }
-        
         .popular-badge {
             position: absolute;
             top: 20px;
@@ -446,19 +491,15 @@ function addDynamicStyles() {
             z-index: 10;
         }
         
-        .popular-badge i {
-            font-size: 10px;
-        }
-        
-        .plan-icon {
-            width: 60px;
-            height: 60px;
-            border-radius: 15px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-bottom: 20px;
-            font-size: 24px;
+        .categoria-tag {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+            z-index: 10;
         }
         
         .plan-description {
@@ -468,27 +509,9 @@ function addDynamicStyles() {
             line-height: 1.5;
         }
         
-        .badge {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            padding: 6px 12px;
-            border-radius: 20px;
-            color: white;
-            font-size: 12px;
-            font-weight: 600;
-        }
-        
-        .plan-card h3 {
-            font-size: 28px;
-            margin-bottom: 8px;
-            color: #1f2937;
-        }
-        
         .price {
             font-size: 42px;
             font-weight: 700;
-            color: #6366f1;
             margin: 20px 0;
         }
         
@@ -496,6 +519,18 @@ function addDynamicStyles() {
             font-size: 16px;
             font-weight: normal;
             color: #6b7280;
+        }
+        
+        .horarios-info {
+            background: #f3f4f6;
+            padding: 10px;
+            border-radius: 8px;
+            margin: 15px 0;
+            font-size: 13px;
+            color: #4b5563;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
         
         .features {
@@ -535,19 +570,9 @@ function addDynamicStyles() {
             box-shadow: 0 10px 25px rgba(0,0,0,0.2);
         }
         
-        .btn-select i {
-            font-size: 14px;
-        }
-        
         @media (max-width: 768px) {
             .plan-card {
                 padding: 24px 20px;
-            }
-            
-            .plan-icon {
-                width: 50px;
-                height: 50px;
-                font-size: 20px;
             }
             
             .plan-card h3 {
@@ -568,46 +593,9 @@ function addDynamicStyles() {
 }
 
 // ============================================
-// FUNÇÕES DE UTILIDADE (opcionais)
+// EXPOR FUNÇÕES GLOBAIS
 // ============================================
-
-// Formatar preço
-function formatPrice(price) {
-    return new Intl.NumberFormat('pt-BR', {
-        style: 'currency',
-        currency: 'BRL'
-    }).format(price);
-}
-
-// Calcular economia anual
-function calculateYearlySavings(monthlyPrice) {
-    const yearlyPrice = monthlyPrice * 12;
-    const discountedPrice = yearlyPrice * 0.9; // 10% de desconto
-    const savings = yearlyPrice - discountedPrice;
-    return formatPrice(savings);
-}
-
-// Compartilhar plano
-function sharePlan(planId) {
-    const plan = PLANS[planId];
-    const text = `Conheça o plano ${plan.name} da FitLife! Apenas R$ ${plan.price}/mês.`;
-    
-    if (navigator.share) {
-        navigator.share({
-            title: `Plano ${plan.name} - FitLife`,
-            text: text,
-            url: window.location.href
-        });
-    } else {
-        navigator.clipboard.writeText(text + ' ' + window.location.href);
-        showNotification('Link copiado!', 'success');
-    }
-}
-
-// ============================================
-// EXPOR FUNÇÕES GLOBAIS (se necessário)
-// ============================================
-window.sharePlan = sharePlan;
+window.PLANS = PLANS;
 window.selectPlan = selectPlan;
 
 console.log('✅ plans.js carregado com sucesso!');
