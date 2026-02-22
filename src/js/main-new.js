@@ -40,7 +40,58 @@ function normalizeUserPlans() {
         currentUser.plans = [];
     }
 }
-
+// ============================================
+// FUNÇÃO PARA ATUALIZAR DADOS DO USUÁRIO DO BACKEND
+// ============================================
+async function refreshUserData() {
+    if (!currentUser) return;
+    
+    try {
+        console.log('🔄 Atualizando dados do usuário...');
+        
+        // Buscar dados atualizados do usuário
+        const response = await fetch(`${API}/auth/me`, {
+            credentials: 'include'
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            const updatedUser = data.user || data.data || data;
+            
+            if (updatedUser) {
+                // Manter o token/credenciais se houver
+                const oldUser = { ...currentUser };
+                currentUser = { ...oldUser, ...updatedUser };
+                
+                // Normalizar planos
+                normalizeUserPlans();
+                
+                // Salvar no localStorage
+                localStorage.setItem('user', JSON.stringify(currentUser));
+                
+                console.log('✅ Dados do usuário atualizados:', currentUser);
+                
+                // Atualizar interface
+                updatePlanInfo();
+                updateWeeklyWarning();
+                renderSchedule();
+                
+                return true;
+            }
+        } else {
+            // Tentar buscar status da assinatura
+            await checkSubscriptionStatus();
+            normalizeUserPlans();
+            localStorage.setItem('user', JSON.stringify(currentUser));
+            updatePlanInfo();
+            updateWeeklyWarning();
+        }
+    } catch (error) {
+        console.error('❌ Erro ao atualizar usuário:', error);
+    }
+    
+    return false;
+}
 // ============================================
 // FRONTEND - SISTEMA DE AGENDAMENTO
 // VERSÃO COM VISUALIZAÇÃO SEMANAL MELHORADA
@@ -1286,6 +1337,7 @@ function createHeaderCell(className, content) {
     div.innerHTML = content;
     return div;
 }
+
 function createHourLabel(hour) {
     const div = document.createElement('div');
     div.className = 'hour-label';
@@ -2035,6 +2087,16 @@ function closeModal() {
     }, 300);
 }
 
+function startPlanChecker() {
+    // Verificar a cada 30 segundos se o plano foi ativado
+    setInterval(async () => {
+        if (currentUser && !userHasActivePlan()) {
+            console.log('🔍 Verificando se plano foi ativado...');
+            await refreshUserData();
+        }
+    }, 30000); // 30 segundos
+}
+
 // ============================================
 // 10. FUNÇÕES DE PLANOS (REDIRECIONAMENTO)
 // ============================================
@@ -2117,6 +2179,9 @@ async function loadData() {
     try {
         scheduleEl.innerHTML = `<div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i> Carregando...</div>`;
         
+        // PRIMEIRO: Atualizar dados do usuário
+        await refreshUserData();
+        
         await loadDates();
         
         const [availabilityRes, bookingsRes] = await Promise.all([
@@ -2130,9 +2195,7 @@ async function loadData() {
         availability = availabilityRes.data;
         bookings = bookingsRes.data;
         
-        await checkSubscriptionStatus();
-        
-        // ===== NOVO: NORMALIZAR PLANO DO USUÁRIO =====
+        // Normalizar planos (já foi feito no refreshUserData, mas garantimos)
         normalizeUserPlans();
         
         // Renderizar interface
@@ -2154,7 +2217,6 @@ async function loadData() {
         loading = false;
     }
 }
-
 // ============================================
 // 13. INICIALIZAÇÃO
 // ============================================
