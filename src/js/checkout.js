@@ -336,6 +336,10 @@ async function processBoletoPayment() {
 // FUNÇÃO GENÉRICA DE PROCESSAMENTO
 // ============================================
 async function processPayment(method, button) {
+// ============================================
+// FUNÇÃO GENÉRICA DE PROCESSAMENTO (VERSÃO COM MONITORAMENTO)
+// ============================================
+async function processPayment(method, button) {
     if (!currentUser) {
         showError('Usuário não autenticado');
         return;
@@ -389,12 +393,20 @@ async function processPayment(method, button) {
         console.log('📥 Resposta do servidor:', data);
         
         if (data.success) {
-            // Processar baseado no método
+            // Se for PIX, mostrar QR Code e começar a monitorar
             if (method === 'pix') {
                 showPixPayment(data.data);
+                
+                // Começar a monitorar o status do pagamento
+                startPaymentStatusCheck(data.data.id);
+                
             } else if (method === 'boleto') {
                 showBoletoPayment(data.data);
+                // Começar a monitorar o status do pagamento
+                startPaymentStatusCheck(data.data.id);
+                
             } else {
+                // Para cartão, pode ser aprovado imediatamente
                 showSuccessModal();
             }
         } else {
@@ -408,6 +420,208 @@ async function processPayment(method, button) {
         showError('Erro de conexão com o servidor');
         button.disabled = false;
         button.innerHTML = originalText;
+    }
+}
+// ============================================
+// FUNÇÃO GENÉRICA DE PROCESSAMENTO (VERSÃO COM MONITORAMENTO)
+// ============================================
+async function processPayment(method, button) {
+    if (!currentUser) {
+        showError('Usuário não autenticado');
+        return;
+    }
+    
+    if (selectedPlans.length === 0) {
+        showError('Nenhum plano selecionado');
+        return;
+    }
+    
+    // Desabilitar botão
+    const originalText = button.innerHTML;
+    button.disabled = true;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processando...';
+    
+    try {
+        console.log(`📤 Processando pagamento via ${method} para planos:`, selectedPlans);
+        
+        // Coletar dados do pagamento
+        const paymentData = {
+            userId: currentUser.id,
+            planIds: selectedPlans,
+            paymentMethod: method,
+            payerInfo: {
+                name: currentUser.name,
+                email: currentUser.email,
+                phone: currentUser.phone || '',
+                documentType: 'CPF',
+                documentNumber: extractCPF(document.getElementById('cardCpf')?.value) || '00000000000'
+            }
+        };
+        
+        // Adicionar dados específicos do cartão se for crédito
+        if (method === 'credit') {
+            paymentData.cardInfo = {
+                number: document.getElementById('cardNumber')?.value.replace(/\s/g, ''),
+                expiry: document.getElementById('cardExpiry')?.value,
+                cvv: document.getElementById('cardCvv')?.value,
+                name: document.getElementById('cardName')?.value,
+                installments: document.getElementById('installments')?.value
+            };
+        }
+        
+        const response = await fetch(`${API}/plans/user/${currentUser.id}/update`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(paymentData)
+        });
+        
+        const data = await response.json();
+        console.log('📥 Resposta do servidor:', data);
+        
+        if (data.success) {
+            // Se for PIX, mostrar QR Code e começar a monitorar
+            if (method === 'pix') {
+                showPixPayment(data.data);
+                
+                // Começar a monitorar o status do pagamento
+                startPaymentStatusCheck(data.data.id);
+                
+            } else if (method === 'boleto') {
+                showBoletoPayment(data.data);
+                // Começar a monitorar o status do pagamento
+                startPaymentStatusCheck(data.data.id);
+                
+            } else {
+                // Para cartão, pode ser aprovado imediatamente
+                showSuccessModal();
+            }
+        } else {
+            showError(data.error || 'Erro ao processar pagamento');
+            button.disabled = false;
+            button.innerHTML = originalText;
+        }
+        
+    } catch (error) {
+        console.error('❌ Erro no pagamento:', error);
+        showError('Erro de conexão com o servidor');
+        button.disabled = false;
+        button.innerHTML = originalText;
+    }
+}
+
+// ============================================
+// FUNÇÃO PARA MONITORAR STATUS DO PAGAMENTO
+// ============================================
+function startPaymentStatusCheck(paymentId) {
+    console.log(`🔍 Monitorando pagamento ID: ${paymentId}`);
+    
+    let attempts = 0;
+    const maxAttempts = 30; // 30 tentativas = 1 minuto (2 segundos cada)
+    
+    const checkInterval = setInterval(async () => {
+        attempts++;
+        
+        try {
+            const response = await fetch(`${API}/payments/payment/${paymentId}/status`, {
+                credentials: 'include'
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                console.log(`📊 Status do pagamento (tentativa ${attempts}):`, data.status);
+                
+                if (data.status === 'approved') {
+                    // Pagamento aprovado!
+                    clearInterval(checkInterval);
+                    
+                    // Atualizar dados do usuário
+                    await refreshUserDataAfterPayment();
+                    
+                    // Mostrar modal de sucesso
+                    showSuccessModal();
+                    
+                } else if (data.status === 'rejected') {
+                    clearInterval(checkInterval);
+                    showError('Pagamento rejeitado. Tente novamente.');
+                    
+                    // Reativar botão PIX
+                    const pixButton = document.getElementById('pixButton');
+                    if (pixButton) {
+                        pixButton.disabled = false;
+                        pixButton.innerHTML = '<i class="fas fa-qrcode"></i> Gerar Código PIX';
+                    }
+                }
+            }
+            
+            // Se atingiu o máximo de tentativas, parar
+            if (attempts >= maxAttempts) {
+                clearInterval(checkInterval);
+                showNotification('O pagamento está sendo processado. Você será redirecionado quando confirmado.', 'info');
+                
+                // Redirecionar para agenda mesmo assim após 5 segundos
+                setTimeout(() => {
+                    redirectToAgenda();
+                }, 5000);
+            }
+            
+        } catch (error) {
+            console.error('Erro ao verificar status:', error);
+        }
+        
+    }, 2000); // Verificar a cada 2 segundos
+}
+
+// ============================================
+// FUNÇÃO PARA ATUALIZAR DADOS DO USUÁRIO APÓS PAGAMENTO
+// ============================================
+async function refreshUserDataAfterPayment() {
+    if (!currentUser) return;
+    
+    try {
+        console.log('🔄 Atualizando dados do usuário após pagamento...');
+        
+        // Tentar buscar da rota /me
+        const response = await fetch(`${API}/auth/me`, {
+            credentials: 'include'
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            const updatedUser = data.user || data.data || data;
+            
+            if (updatedUser) {
+                currentUser = { ...currentUser, ...updatedUser };
+                
+                // Normalizar planos
+                if (typeof normalizeUserPlans === 'function') {
+                    normalizeUserPlans();
+                }
+                
+                localStorage.setItem('user', JSON.stringify(currentUser));
+                console.log('✅ Dados do usuário atualizados:', currentUser);
+                return;
+            }
+        }
+        
+        // Fallback: subscription/status
+        const subResponse = await fetch(`${API}/payments/subscription/status/${currentUser.id}`, {
+            credentials: 'include'
+        });
+        
+        if (subResponse.ok) {
+            const subData = await subResponse.json();
+            const data = subData.data || subData;
+            
+            if (data.plan || data.plans) {
+                currentUser.plan = data.plan || currentUser.plan;
+                currentUser.plans = data.plans || currentUser.plans;
+                
+                localStorage.setItem('user', JSON.stringify(currentUser));
+                console.log('✅ Dados atualizados via subscription/status');
+            }
+        }
+    } catch (error) {
+        console.error('❌ Erro ao atualizar dados:', error);
     }
 }
 
