@@ -49,66 +49,128 @@ function normalizeUserPlans() {
 // ============================================
 // FUNÇÃO PARA ATUALIZAR DADOS DO USUÁRIO DO BACKEND (VERSÃO RESILIENTE)
 // ============================================
+// ============================================
+// FUNÇÃO PARA ATUALIZAR DADOS DO USUÁRIO DO BACKEND (VERSÃO CORRIGIDA)
+// ============================================
 async function refreshUserData() {
     if (!currentUser) return false;
     
     try {
-        console.log('🔄 Atualizando dados do usuário...');
+        console.log('🔄 ===== INICIANDO ATUALIZAÇÃO DE DADOS =====');
+        console.log('👤 Usuário atual (antes):', JSON.stringify(currentUser, null, 2));
+        console.log('🆔 User ID:', currentUser.id);
         
-        // Tentar buscar da rota /me primeiro
+        // Tentar buscar da rota /me com query string (mais confiável)
         try {
-            const response = await fetch(`${API}/auth/me`, {
+            console.log('📡 Tentando /auth/me?userId=' + currentUser.id);
+            const response = await fetch(`${API}/auth/me?userId=${currentUser.id}`, {
                 credentials: 'include',
                 headers: {
-                    'X-User-ID': currentUser.id,
                     'Content-Type': 'application/json'
                 }
             });
             
+            console.log('📥 Status da resposta /auth/me:', response.status);
+            
             if (response.ok) {
                 const data = await response.json();
+                console.log('📦 Dados recebidos do /auth/me:', data);
+                
                 const updatedUser = data.user || data.data || data;
                 
                 if (updatedUser) {
+                    console.log('👤 Usuário ANTES da mesclagem:', JSON.stringify(currentUser, null, 2));
+                    console.log('🔄 Mesclando com:', JSON.stringify(updatedUser, null, 2));
+                    
                     // Mesclar dados mantendo estrutura existente
                     currentUser = { ...currentUser, ...updatedUser };
                     
+                    console.log('👤 Usuário DEPOIS da mesclagem:', JSON.stringify(currentUser, null, 2));
+                    
                     // Garantir que plans existe
                     if (!currentUser.plans && currentUser.plan) {
+                        console.log('🔄 Convertendo plano antigo para novo formato...');
                         normalizeUserPlans();
                     }
                     
+                    console.log('📦 Plans após normalização:', currentUser.plans);
+                    
                     localStorage.setItem('user', JSON.stringify(currentUser));
+                    console.log('✅ Dados salvos no localStorage');
                     console.log('✅ Dados atualizados via /auth/me');
+                    
                     updatePlanInfo();
                     return true;
                 }
+            } else {
+                console.log('⚠️ /auth/me falhou com status:', response.status);
+                // Tentar ler o corpo do erro para debug
+                try {
+                    const errorText = await response.text();
+                    console.log('📄 Corpo da resposta de erro:', errorText);
+                } catch (e) {
+                    console.log('Não foi possível ler o corpo do erro');
+                }
             }
         } catch (meError) {
-            console.log('⚠️ Rota /auth/me não disponível, tentando subscription/status...');
+            console.log('⚠️ Erro na requisição /auth/me:', meError.message);
         }
         
         // Fallback: buscar status da assinatura
         try {
-            await checkSubscriptionStatus();
+            console.log('📡 Tentando subscription/status para userId:', currentUser.id);
+            const subResponse = await fetch(`${API}/payments/subscription/status/${currentUser.id}`, {
+                credentials: 'include'
+            });
             
-            // Se checkSubscriptionStatus populou currentUser.plan, normalizar
-            if (currentUser.plan && !currentUser.plans) {
-                normalizeUserPlans();
+            console.log('📥 Status da resposta subscription/status:', subResponse.status);
+            
+            if (subResponse.ok) {
+                const subData = await subResponse.json();
+                console.log('📦 Dados recebidos do subscription/status:', subData);
+                
+                const data = subData.data || subData;
+                
+                if (data.plan || data.plans) {
+                    console.log('🔄 Atualizando com dados da subscription...');
+                    
+                    if (data.plans) {
+                        currentUser.plans = data.plans;
+                    } else if (data.plan) {
+                        currentUser.plan = data.plan;
+                    }
+                    
+                    // Se checkSubscriptionStatus populou currentUser.plan, normalizar
+                    if (currentUser.plan && !currentUser.plans) {
+                        console.log('🔄 Convertendo plano após subscription/status...');
+                        normalizeUserPlans();
+                    }
+                    
+                    console.log('📦 Plans após normalização:', currentUser.plans);
+                    
+                    localStorage.setItem('user', JSON.stringify(currentUser));
+                    console.log('✅ Dados atualizados via subscription/status');
+                    
+                    updatePlanInfo();
+                    return true;
+                }
+            } else {
+                console.log('⚠️ subscription/status falhou com status:', subResponse.status);
             }
             
-            localStorage.setItem('user', JSON.stringify(currentUser));
-            console.log('✅ Dados atualizados via subscription/status');
-            updatePlanInfo();
-            return true;
-            
         } catch (subError) {
-            console.log('⚠️ subscription/status também falhou');
+            console.log('⚠️ Erro no subscription/status:', subError.message);
         }
         
         // Último recurso: usar dados locais
         console.log('📦 Usando dados locais do usuário');
+        console.log('👤 Dados locais antes da normalização:', JSON.stringify(currentUser, null, 2));
+        
         normalizeUserPlans();
+        
+        console.log('📦 Plans após normalização local:', currentUser.plans);
+        
+        localStorage.setItem('user', JSON.stringify(currentUser));
         updatePlanInfo();
         return false;
         
@@ -121,6 +183,11 @@ async function refreshUserData() {
         }
         updatePlanInfo();
         return false;
+    } finally {
+        console.log('🏁 ===== FIM DA ATUALIZAÇÃO =====');
+        console.log('👤 Estado final do usuário:', JSON.stringify(currentUser, null, 2));
+        console.log('📦 Plans finais:', currentUser?.plans);
+        console.log('✅ userHasActivePlan():', userHasActivePlan());
     }
 }
 
