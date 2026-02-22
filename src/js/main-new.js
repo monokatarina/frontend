@@ -123,6 +123,18 @@ async function refreshUserData() {
         return false;
     }
 }
+
+// ===== VERIFICAR SE PRECISA FORÇAR ATUALIZAÇÃO =====
+const forceRefresh = localStorage.getItem('forceUserRefresh');
+if (forceRefresh === 'true') {
+    localStorage.removeItem('forceUserRefresh');
+    // Forçar atualização dos dados
+    setTimeout(() => {
+        if (currentUser) {
+            refreshUserData();
+        }
+    }, 500);
+}
 // ============================================
 // FRONTEND - SISTEMA DE AGENDAMENTO
 // VERSÃO COM VISUALIZAÇÃO SEMANAL MELHORADA

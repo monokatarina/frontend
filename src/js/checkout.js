@@ -506,7 +506,7 @@ function copyPixCode() {
 }
 
 // ============================================
-// MOSTRAR MODAL DE SUCESSO
+// MOSTRAR MODAL DE SUCESSO (VERSÃO ATUALIZADA)
 // ============================================
 function showSuccessModal() {
     const modal = document.getElementById('successModal');
@@ -516,6 +516,9 @@ function showSuccessModal() {
     
     // Limpar seleção da sessionStorage
     sessionStorage.removeItem('selectedPlans');
+    
+    // ATUALIZAR OS DADOS DO USUÁRIO NO LOCALSTORAGE
+    refreshUserDataAfterPayment();
     
     // Contador regressivo
     let seconds = 5;
@@ -535,10 +538,124 @@ function showSuccessModal() {
 }
 
 // ============================================
+// FUNÇÃO PARA ATUALIZAR DADOS DO USUÁRIO APÓS PAGAMENTO
+// ============================================
+async function refreshUserDataAfterPayment() {
+    if (!currentUser) return;
+    
+    try {
+        console.log('🔄 Atualizando dados do usuário após pagamento...');
+        
+        // Tentar buscar da rota /me (se existir)
+        const response = await fetch(`${API}/auth/me`, {
+            credentials: 'include',
+            headers: {
+                'X-User-ID': currentUser.id
+            }
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            const updatedUser = data.user || data.data || data;
+            
+            if (updatedUser) {
+                // Atualizar currentUser
+                currentUser = { ...currentUser, ...updatedUser };
+                
+                // Salvar no localStorage
+                localStorage.setItem('user', JSON.stringify(currentUser));
+                
+                console.log('✅ Dados do usuário atualizados:', currentUser);
+            }
+        } else {
+            // Fallback: buscar status da assinatura
+            const subResponse = await fetch(`${API}/payments/subscription/status/${currentUser.id}`, {
+                credentials: 'include'
+            });
+            
+            if (subResponse.ok) {
+                const subData = await subResponse.json();
+                const data = subData.data || subData;
+                
+                if (data.plan || data.subscription) {
+                    // Atualizar currentUser com os dados recebidos
+                    currentUser.plan = data.plan || currentUser.plan;
+                    currentUser.subscription = data.subscription || currentUser.subscription;
+                    
+                    // Se tiver planos no formato antigo, converter
+                    if (currentUser.plan && !currentUser.plans) {
+                        if (typeof normalizeUserPlans === 'function') {
+                            normalizeUserPlans();
+                        } else {
+                            // Fallback manual
+                            currentUser.plans = [{
+                                id: currentUser.plan.id || 'normal_2x',
+                                name: currentUser.plan.name || 'Plano Ativo',
+                                categoria: currentUser.plan.categoria || 'normal',
+                                aulasPorSemana: currentUser.plan.aulasPorSemana || 2
+                            }];
+                        }
+                    }
+                    
+                    localStorage.setItem('user', JSON.stringify(currentUser));
+                    console.log('✅ Dados atualizados via subscription/status');
+                }
+            }
+        }
+    } catch (error) {
+        console.error('❌ Erro ao atualizar dados após pagamento:', error);
+    }
+}
+
+// ============================================
+// FUNÇÃO PARA NORMALIZAR PLANOS (cópia do main-new.js)
+// ============================================
+function normalizeUserPlans() {
+    if (!currentUser) return;
+    if (currentUser.isAdmin) return;
+
+    // Se já tem a estrutura nova, manter
+    if (currentUser.plans && Array.isArray(currentUser.plans)) {
+        return;
+    }
+
+    // Migrar da estrutura antiga para a nova
+    const planAntigo = currentUser.plan || currentUser.subscription;
+    
+    if (planAntigo && planAntigo.active) {
+        const planId = planAntigo.id || planAntigo.planType || 'normal_2x';
+        const planData = PLANS[planId] || {};
+        
+        currentUser.plans = [{
+            id: planId,
+            name: planData.name || planAntigo.name || planId,
+            categoria: planData.categoria || planAntigo.categoria || 'normal',
+            aulasPorSemana: planData.aulasPorSemana || planAntigo.aulasPorSemana || 2,
+            horariosPermitidos: planData.horariosPermitidos || 
+                (planData.categoria === 'danca' ? [14,15] : [6,7,8,9,10,11,12,16,17,18,19]),
+            color: planData.color || '#6366f1',
+            icon: planData.icon || 'fa-crown',
+            price: planData.price || 0,
+            active: true,
+            status: 'active'
+        }];
+        
+        delete currentUser.plan;
+    } else {
+        currentUser.plans = [];
+    }
+}
+
+// ============================================
 // REDIRECIONAR PARA AGENDA
 // ============================================
 function redirectToAgenda() {
+    // Forçar recarga da página para atualizar todos os dados
     window.location.href = '/';
+    
+    // Alternativa: se quiser evitar recarga, use:
+    // localStorage.setItem('forceUserRefresh', 'true');
+    // window.location.href = '/';
 }
 
 // ============================================
