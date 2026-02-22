@@ -2556,6 +2556,8 @@ const additionalStyles = `
         .btn-cancel {
             width: 100%;
         }
+    }
+
     .weeks-container {
         display: grid;
         grid-template-columns: 1fr 1fr;
@@ -3092,6 +3094,7 @@ styleSheet.textContent = additionalStyles;
 document.head.appendChild(styleSheet);
 
 console.log('✅ Código carregado completamente!');
+
 
 
 
