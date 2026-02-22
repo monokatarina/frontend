@@ -1286,7 +1286,6 @@ function createHeaderCell(className, content) {
     div.innerHTML = content;
     return div;
 }
-
 function createHourLabel(hour) {
     const div = document.createElement('div');
     div.className = 'hour-label';
