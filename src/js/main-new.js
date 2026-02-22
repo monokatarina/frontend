@@ -620,15 +620,28 @@ function updatePlansButton() {
 }
 // Atualiza informações do plano na interface
 // Atualiza informações do plano na interface (VERSÃO CORRIGIDA)
+// Atualiza informações do plano na interface (VERSÃO ULTRA DEBUG)
 function updatePlanInfo() {
-    if (!currentUser) return;
+    if (!currentUser) {
+        console.log('❌ updatePlanInfo: currentUser é null');
+        return;
+    }
+    
+    console.log('🖥️ ===== ATUALIZANDO INTERFACE =====');
+    console.log('👤 Usuário:', currentUser.name);
+    console.log('📦 Plans do usuário (raw):', currentUser.plans);
+    console.log('📦 Plans stringified:', JSON.stringify(currentUser.plans, null, 2));
     
     const userInfo = document.getElementById('userInfo');
-    if (!userInfo) return;
+    if (!userInfo) {
+        console.log('❌ Elemento userInfo não encontrado');
+        return;
+    }
     
     let planHtml = '';
     
     if (currentUser.isAdmin) {
+        console.log('👑 Usuário é admin');
         planHtml = `
             <span class="plan-badge admin">
                 <i class="fas fa-crown"></i>
@@ -636,26 +649,42 @@ function updatePlanInfo() {
             </span>
         `;
     } else {
-        // Verificar se tem planos ativos (nova estrutura)
+        // Verificar se tem planos ativos
+        console.log('🔍 Chamando getUserActivePlans()...');
         const activePlans = getUserActivePlans();
+        console.log('📊 Planos ativos encontrados:', activePlans);
+        console.log('📊 Quantidade de planos ativos:', activePlans.length);
         
-        if (activePlans.length > 0) {
+        if (activePlans && activePlans.length > 0) {
+            console.log('✅ Temos planos! Vamos renderizar...');
+            
             // Mostrar múltiplos planos
             planHtml = '<div class="plans-container-mini">';
-            activePlans.forEach(plan => {
+            activePlans.forEach((plan, index) => {
                 const planData = PLANS[plan.id] || plan;
                 const planColor = planData.color || '#6366f1';
+                const planIcon = planData.icon || 'fa-crown';
+                const planName = planData.name || plan.id;
+                const planAulas = planData.aulasPorSemana || 0;
+                
+                console.log(`  Plano ${index + 1}:`, { 
+                    id: plan.id, 
+                    name: planName, 
+                    color: planColor,
+                    aulas: planAulas 
+                });
+                
                 planHtml += `
-                    <span class="plan-badge" style="background: ${planColor}; margin-right: 5px;">
-                        <i class="fas ${planData.icon || 'fa-crown'}"></i>
-                        ${planData.name || plan.id}
-                        <span class="plan-aulas">${planData.aulasPorSemana || 0}/semana</span>
+                    <span class="plan-badge" style="background: ${planColor}; margin-right: 5px; margin-bottom: 5px; display: inline-block;">
+                        <i class="fas ${planIcon}"></i>
+                        ${planName}
+                        <span class="plan-aulas">${planAulas}/semana</span>
                     </span>
                 `;
             });
             planHtml += '</div>';
         } else {
-            // Sem planos ativos
+            console.log('⚠️ Nenhum plano ativo encontrado');
             planHtml = `
                 <span class="plan-badge no-plan" onclick="window.location.href='/plans'">
                     <i class="fas fa-exclamation-circle"></i>
@@ -674,7 +703,11 @@ function updatePlanInfo() {
         </span>
     `;
     
-    userInfo.innerHTML = userBadge + planHtml;
+    const finalHtml = userBadge + planHtml;
+    console.log('📝 HTML gerado:', finalHtml);
+    
+    userInfo.innerHTML = finalHtml;
+    console.log('✅ Interface atualizada');
 
     updatePlansButton();
 
@@ -695,8 +728,10 @@ function updatePlanInfo() {
     
     // Atualizar aviso semanal
     if (userHasActivePlan()) {
+        console.log('📅 Chamando updateWeeklyWarning()');
         updateWeeklyWarning();
     } else {
+        console.log('📅 Chamando updateWeeklyWarningNoPlan()');
         updateWeeklyWarningNoPlan();
     }
 }
