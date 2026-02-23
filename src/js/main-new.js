@@ -751,41 +751,84 @@ function isHorarioPermitido(weekday, hour) {
     });
 }
 // ============================================
-// ADICIONE ESTA FUNÇÃO
+// FUNÇÃO CORRIGIDA - USA DADOS REAIS DO USUÁRIO
 // ============================================
 async function verificarStatusPagamentoUsuario() {
     if (!currentUser) return { status: 'ativo' };
     
+    // Se for admin, sempre ativo
+    if (currentUser.isAdmin) {
+        return { status: 'ativo' };
+    }
+    
     try {
-        // Tentar obter do backend (se tiver rota)
+        // Tentar obter do backend primeiro
         const response = await fetch(`${API}/payments/status/${currentUser.id}`);
         if (response.ok) {
             const data = await response.json();
             return data;
         }
     } catch (error) {
-        console.log('Usando status simulado');
+        console.log('Backend não disponível, usando dados locais');
     }
     
-    // Simulação para teste (remover em produção)
-    const vencimentoSimulado = new Date();
-    vencimentoSimulado.setDate(vencimentoSimulado.getDate() - 3);
+    // USAR DADOS REAIS DO USUÁRIO, NÃO SIMULAÇÃO
+    if (!currentUser.pagamento || !currentUser.pagamento.dataVencimento) {
+        return { status: 'ativo' };
+    }
     
     const hoje = new Date();
-    const diffTime = hoje - vencimentoSimulado;
-    const diasEmAtraso = Math.max(0, Math.floor(diffTime / (1000 * 60 * 60 * 24)));
+    hoje.setHours(0, 0, 0, 0);
+    
+    const vencimento = new Date(currentUser.pagamento.dataVencimento);
+    vencimento.setHours(0, 0, 0, 0);
+    
+    console.log('📅 Verificando pagamento:', {
+        hoje: hoje.toISOString().split('T')[0],
+        vencimento: vencimento.toISOString().split('T')[0],
+        status: currentUser.pagamento.status
+    });
+    
+    // Se já tem status no backend, usar ele
+    if (currentUser.pagamento.status) {
+        return {
+            status: currentUser.pagamento.status,
+            diasEmAtraso: currentUser.pagamento.diasEmAtraso || 0,
+            mensagem: currentUser.pagamento.status === 'em_atraso' 
+                ? `⚠️ Pagamento pendente há ${currentUser.pagamento.diasEmAtraso} dias. Regularize para não perder o acesso.`
+                : currentUser.pagamento.status === 'bloqueado'
+                ? '❌ Plano suspenso por falta de pagamento.'
+                : '',
+            podeAgendar: currentUser.pagamento.status !== 'bloqueado'
+        };
+    }
+    
+    // Calcular dias em atraso apenas se necessário
+    let diasEmAtraso = 0;
+    if (vencimento < hoje) {
+        const diffTime = hoje - vencimento;
+        diasEmAtraso = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    }
     
     if (diasEmAtraso <= 0) {
-        return { status: 'ativo' };
+        return { 
+            status: 'ativo',
+            diasEmAtraso: 0,
+            podeAgendar: true 
+        };
     } else if (diasEmAtraso <= 7) {
         return {
             status: 'em_atraso',
-            mensagem: `⚠️ Pagamento pendente há ${diasEmAtraso} dias. Você tem mais ${7 - diasEmAtraso} dias para regularizar.`
+            diasEmAtraso: diasEmAtraso,
+            mensagem: `⚠️ Pagamento pendente há ${diasEmAtraso} dias. Você tem mais ${7 - diasEmAtraso} dias para regularizar.`,
+            podeAgendar: true
         };
     } else {
         return {
             status: 'bloqueado',
-            mensagem: '❌ Plano suspenso por falta de pagamento.'
+            diasEmAtraso: diasEmAtraso,
+            mensagem: '❌ Plano suspenso por falta de pagamento.',
+            podeAgendar: false
         };
     }
 }
