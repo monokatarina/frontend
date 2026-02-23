@@ -450,22 +450,29 @@ function showNotification(message, type = 'info', duration = 3000) {
 // ============================================
 // FUNÇÃO PARA TESTAR CONEXÃO COM ENDPOINTS
 // ============================================
+// ============================================
+// FUNÇÃO PARA TESTAR CONEXÃO COM ENDPOINTS - CORRIGIDA
+// ============================================
 async function testAPIEndpoints() {
     console.log('🔍 Testando conectividade com a API...');
     const endpoints = [
         '/auth/me',
         '/bookings',
         '/admin/availability',
-        '/admin/dates',
-        '/dates'
+        '/admin/dates'
     ];
     
     for (const endpoint of endpoints) {
         try {
             const start = Date.now();
+            // Usar GET em vez de HEAD para evitar problemas
             const response = await fetch(`${API}${endpoint}`, {
-                method: 'HEAD', // Apenas cabeçalhos, mais rápido
-                credentials: 'include'
+                method: 'GET',
+                credentials: 'include',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'X-User-ID': currentUser?.id || ''
+                }
             });
             const time = Date.now() - start;
             console.log(`📡 ${endpoint}: ${response.status} (${time}ms)`);
