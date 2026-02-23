@@ -1775,7 +1775,7 @@ function createHourLabel(hour) {
     return div;
 }
 
-function createSlot(wd, h) {  // <-- SUBSTITUIR
+function createSlot(wd, h) {
     const slot = document.createElement('button');
     slot.className = 'slot-btn';
 
@@ -1793,9 +1793,10 @@ function createSlot(wd, h) {  // <-- SUBSTITUIR
     const userHasBooking = bookedList.some(b => b.userId === currentUser?.id);
     const hasActivePlan = userHasActivePlan() || currentUser?.isAdmin;
     
-    // NOVO: verificar permissão baseada em múltiplos planos
+    // Verificar permissão baseada em múltiplos planos
     const horarioPermitido = isHorarioPermitido(wd, h);
 
+    // Definir classes e conteúdo baseado no estado
     if (!isAvailable) {
         slot.classList.add('disabled');
         slot.innerHTML = '<i class="fas fa-ban"></i>';
@@ -1828,9 +1829,13 @@ function createSlot(wd, h) {  // <-- SUBSTITUIR
         slot.classList.add('my-booking');
     }
 
+    // 🔥 IMPORTANTE: Setar todos os datasets necessários
     slot.dataset.weekday = wd;
     slot.dataset.hour = h;
     slot.dataset.date = dateStr;
+    slot.dataset.available = isAvailable;  // <-- LINHA FALTANDO!
+    slot.dataset.bookCount = bookCount;     // <-- TAMBÉM É BOM TER
+    
     slot.addEventListener('click', onSlotClick);
 
     return slot;
@@ -2047,12 +2052,29 @@ function onSlotClick(e) {
     const wd = Number(btn.dataset.weekday);
     const h = Number(btn.dataset.hour);
     const date = btn.dataset.date;
-    const isAvailable = btn.dataset.available === 'true';
-    const bookCount = Number(btn.dataset.bookCount);
+    const isAvailable = btn.dataset.available === 'true'; // Convertendo string para boolean
+    const bookCount = Number(btn.dataset.bookCount || 0);
 
-    // VERIFICAÇÃO DE HORÁRIO PASSADO - AGORA COM MODAL
+    // 🔥 LOG PARA DEBUG
+    console.log('🔍 Slot clicado:', {
+        weekday: wd,
+        hour: h,
+        date: date,
+        isAvailable: isAvailable,
+        bookCount: bookCount,
+        classList: btn.className
+    });
+
+    // VERIFICAÇÃO DE HORÁRIO PASSADO
     if (isPastDateTime(date, h)) {
-        showPastTimeModal(date, h); // <-- NOVO MODAL
+        showPastTimeModal(date, h);
+        return;
+    }
+
+    // VERIFICAÇÃO DE DISPONIBILIDADE - AGORA CORRETA
+    if (!isAvailable) {
+        console.log('❌ Horário indisponível:', { wd, h, date });
+        showNotification('Este horário está indisponível', 'error');
         return;
     }
 
@@ -2077,6 +2099,8 @@ function onSlotClick(e) {
         return;
     }
     
+    // Resto do código continua igual...
+    
     // Verificar login
     if (!currentUser) {
         showNotification('Faça login para reservar um horário', 'error');
@@ -2084,22 +2108,16 @@ function onSlotClick(e) {
         return;
     }
 
-    // VERIFICA��O PRINCIPAL: Usu�rio tem plano ativo?
+    // Verificar se usuário tem plano ativo
     if (!currentUser.isAdmin && !userHasActivePlan()) {
         showNotification('Você precisa escolher um plano primeiro', 'warning');
         showPlanRequiredModal();
         return;
     }
 
-    // Verificar se o horario eh permitido pelo plano
+    // Verificar se o horário é permitido pelo plano
     if (!currentUser.isAdmin && !isHorarioPermitido(wd, h)) {
-        showNotification('Seu plano nao permite este horario. Para danca: 14:00 e 15:00.', 'warning');
-        return;
-    }
-
-    // Verificar disponibilidade
-    if (!isAvailable) {
-        showNotification('Este horário está indisponível', 'error');
+        showNotification('Seu plano não permite este horário. Para dança: 14:00 e 15:00.', 'warning');
         return;
     }
 
@@ -2116,16 +2134,25 @@ function onSlotClick(e) {
         return;
     }
     
-    // Verificar limite semanal
-    const limite = currentUser.plan?.aulasPorSemana || 0;
-    if (getWeeklyBookingsCount() >= limite) {
-        showNotification(`Seu plano permite apenas ${limite} aulas por semana`, 'warning');
-        return;
+    // Verificar limite semanal (agora considerando múltiplos planos)
+    const activePlans = getUserActivePlans();
+    const nextWeekCounts = countBookingsInWeek(new Date(date), currentUser.id);
+    
+    // Verificar se cada plano já atingiu seu limite
+    for (const plan of activePlans) {
+        const planData = PLANS[plan.id] || plan;
+        const categoria = planData.categoria;
+        const limit = planData.aulasPorSemana || 0;
+        const used = nextWeekCounts.byCategory[categoria] || 0;
+        
+        if (used >= limit) {
+            showNotification(`Seu plano ${planData.name} já atingiu o limite de ${limit} aulas nesta semana`, 'warning');
+            return;
+        }
     }
 
     openBookingModal(date, h);
 }
-
 // ============================================
 // FUNÇÃO PARA CRIAR AULA FIXA
 // ============================================
