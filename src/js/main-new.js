@@ -481,49 +481,6 @@ async function testAPIEndpoints() {
         }
     }
 }
-
-// ============================================
-// FUNÇÃO PARA ATUALIZAR TUDO APÓS AÇÕES
-// ============================================
-// ============================================
-// FUNÇÃO PARA ATUALIZAR TUDO APÓS AÇÕES (VERSÃO MELHORADA)
-// ============================================
-async function refreshAllData(showNotificationMessage = true) {
-    console.log('🔄 Atualizando todos os dados...');
-    
-    try {
-        // Mostrar indicador de carregamento nos botões se necessário
-        const refreshBtn = document.getElementById('refreshBtn');
-        const originalText = refreshBtn?.innerHTML;
-        if (refreshBtn) {
-            refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-            refreshBtn.disabled = true;
-        }
-        
-        // Recarregar todos os dados
-        await loadData(); // loadData já chama updateWeeklyWarning internamente agora
-        
-        // 🔥 GARANTIR QUE O AVISO SEMANAL SEJA ATUALIZADO (redundância segura)
-        await forceUpdateWeeklyWarning();
-        
-        // Restaurar botão
-        if (refreshBtn) {
-            refreshBtn.innerHTML = originalText || '<i class="fas fa-sync-alt"></i>';
-            refreshBtn.disabled = false;
-        }
-        
-        if (showNotificationMessage) {
-            showNotification('✅ Dados atualizados!', 'success', 2000);
-        }
-        
-        console.log('✅ Atualização completa!');
-        return true;
-    } catch (error) {
-        console.error('❌ Erro na atualização:', error);
-        showNotification('Erro ao atualizar dados', 'error');
-        return false;
-    }
-}
 // ============================================
 // FUNÇÃO PARA CARREGAR DATAS - VERSÃO CORRIGIDA
 // ============================================
@@ -1247,8 +1204,9 @@ async function updateWeeklyWarning() {
     // HTML PRINCIPAL CORRIGIDO
     weeklyWarning.innerHTML = `
         <div class="warning-content">
-            <!-- HEADER COM MÚLTIPLOS PLANOS -->
+
             ${pagamentoHtml}
+
             <!-- CONTAINER DAS SEMANAS -->
             <div class="weeks-container">
                 <!-- SEMANA EM ANDAMENTO -->
@@ -2091,15 +2049,17 @@ function onSlotClick(e) {
     const wd = Number(btn.dataset.weekday);
     const h = Number(btn.dataset.hour);
     const date = btn.dataset.date;
-    const isAvailable = btn.dataset.available === 'true';
+    const isAvailable = btn.dataset.available === 'true'; // Convertendo string para boolean
     const bookCount = Number(btn.dataset.bookCount || 0);
 
+    // 🔥 LOG PARA DEBUG
     console.log('🔍 Slot clicado:', {
         weekday: wd,
         hour: h,
         date: date,
         isAvailable: isAvailable,
-        bookCount: bookCount
+        bookCount: bookCount,
+        classList: btn.className
     });
 
     // VERIFICAÇÃO DE HORÁRIO PASSADO
@@ -2108,7 +2068,7 @@ function onSlotClick(e) {
         return;
     }
 
-    // VERIFICAÇÃO DE DISPONIBILIDADE
+    // VERIFICAÇÃO DE DISPONIBILIDADE - AGORA CORRETA
     if (!isAvailable) {
         console.log('❌ Horário indisponível:', { wd, h, date });
         showNotification('Este horário está indisponível', 'error');
@@ -2126,9 +2086,9 @@ function onSlotClick(e) {
         fetchAPI('/admin/availability/toggle', {
             method: 'POST',
             body: JSON.stringify({ weekday: wd, hour: h, enabled: newState })
-        }).then(async () => {
+        }).then(() => {
             showNotification(`Horário ${newState ? 'ativado' : 'desativado'}!`, 'success');
-            await refreshAllData(false); // Atualizar sem mostrar notificação
+            loadData();
         }).catch(() => {
             btn.disabled = false;
             showNotification('Erro ao alterar disponibilidade', 'error');
@@ -2171,10 +2131,11 @@ function onSlotClick(e) {
         return;
     }
     
-    // Verificar limite semanal
+    // Verificar limite semanal (agora considerando múltiplos planos)
     const activePlans = getUserActivePlans();
     const nextWeekCounts = countBookingsInWeek(new Date(date), currentUser.id);
     
+    // Verificar se cada plano já atingiu seu limite
     for (const plan of activePlans) {
         const planData = PLANS[plan.id] || plan;
         const categoria = planData.categoria;
@@ -2187,205 +2148,44 @@ function onSlotClick(e) {
         }
     }
 
-    // MODIFICADO: Passar callback para atualizar após reserva
-    openBookingModalWithRefresh(date, h);
-}
-
-// ============================================
-// MODAL DE RESERVA COM ATUALIZAÇÃO AUTOMÁTICA
-// ============================================
-// ============================================
-// MODAL DE RESERVA COM ATUALIZAÇÃO AUTOMÁTICA - CORRIGIDA
-// ============================================
-function openBookingModalWithRefresh(date, h) {
-    // Verificar novamente se é horário passado (segurança)
-    if (isPastDateTime(date, h)) {
-        showPastTimeModal(date, h);
-        return;
-    }
-    
-    modalContext = { date, hour: h };
-    const weekday = new Date(date).getDay();
-    const bookedList = isBooked(date, h);
-    const bookCount = bookedList.length;
-    const availableSpots = 4 - bookCount;
-    const weeklyCount = getWeeklyBookingsCount();
-    const weekRange = formatWeekRange(new Date(date));
-    
-    const timeValidation = validateBookingTime(date, h);
-    
-    modalTitle.innerHTML = `
-        <i class="fas fa-calendar-check"></i>
-        Reservar ${formatDate(date)} — ${h}:00
-    `;
-    
-    const warningHtml = timeValidation.warning ? 
-        `<div class="booking-warning">
-            <i class="fas fa-exclamation-triangle"></i>
-            ${timeValidation.message}
-        </div>` : '';
-    
-    const fixedButtonHtml = `
-        <div class="fixed-booking-option">
-            <hr>
-            <p><i class="fas fa-repeat"></i> <strong>Quer tornar este horário fixo?</strong></p>
-            <p class="fixed-description">Isso criará uma aula automática toda ${weekdays[weekday-1]} às ${h}:00.</p>
-            <button class="btn-secondary btn-fixed" onclick="createFixedBooking(${weekday}, ${h})">
-                <i class="fas fa-calendar-plus"></i>
-                Tornar Fixo
-            </button>
-        </div>
-    `;
-    
-    modalUserName.innerHTML = `
-        <div class="user-info-detail">
-            <p><i class="fas fa-user"></i> <strong>${currentUser.name}</strong></p>
-            <p><i class="fas fa-crown" style="color: ${currentUser.plan?.color || '#6366f1'}"></i> 
-                <strong>Plano ${currentUser.plan?.name || 'Ativo'}</strong> (${currentUser.plan?.aulasPorSemana || 0}/semana)
-            </p>
-            <p><i class="fas fa-calendar-week"></i> <strong>Semana de ${weekRange}</strong></p>
-            <p class="${availableSpots > 0 ? 'text-success' : 'text-danger'}">
-                <i class="fas fa-users"></i> Vagas disponíveis: ${availableSpots}/4
-            </p>
-            <p>
-                <i class="fas fa-chart-line"></i> Seus agendamentos nesta semana: ${weeklyCount}/${currentUser.plan?.aulasPorSemana || 0}
-            </p>
-            ${warningHtml}
-        </div>
-        ${fixedButtonHtml}
-    `;
-    
-    modalConfirm.disabled = false;
-    modalConfirm.innerHTML = 'Confirmar';
-    
-    // CORREÇÃO: Verificar se modalConfirm existe antes de tentar manipular
-    if (modalConfirm) {
-        // Remover listeners antigos de forma segura
-        const newConfirm = modalConfirm.cloneNode(true);
-        if (modalConfirm.parentNode) {
-            modalConfirm.parentNode.replaceChild(newConfirm, modalConfirm);
-            // Atualizar a referência global para o novo elemento
-            modalConfirm = newConfirm;
-        }
-    }
-    
-    // Verificar novamente se modalConfirm existe após a substituição
-    if (!modalConfirm) {
-        console.error('❌ Erro: modalConfirm não encontrado');
-        return;
-    }
-    
-    modalConfirm.addEventListener('click', async () => {
-        if (processingReservation) return;
-        
-        if (!modalContext) {
-            closeModal();
-            return;
-        }
-        
-        if (!currentUser) {
-            closeModal();
-            showNotification('Usuário não autenticado', 'error');
-            return;
-        }
-        
-        processingReservation = true;
-        modalConfirm.disabled = true;
-        modalConfirm.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Confirmando...';
-        
-        try {
-            const result = await fetchAPI('/bookings', {
-                method: 'POST',
-                body: JSON.stringify({
-                    date: modalContext.date,
-                    hour: modalContext.hour,
-                    name: currentUser.name,
-                    userId: currentUser.id
-                })
-            });
-            
-            if (result.success) {
-                showNotification('✅ Horário reservado com sucesso!', 'success');
-                closeModal();
-                
-                // 🔥 ATUALIZAÇÃO AUTOMÁTICA APÓS RESERVA
-                await refreshAllData(false);
-                
-                // Mostrar mensagem de confirmação extra
-                setTimeout(() => {
-                    showNotification('📊 Grade de horários atualizada!', 'info', 2000);
-                }, 500);
-            } else {
-                showNotification(`Erro ao reservar: ${result.error}`, 'error');
-                modalConfirm.disabled = false;
-                modalConfirm.innerHTML = 'Confirmar';
-            }
-        } catch (error) {
-            showNotification('Erro ao processar reserva', 'error');
-            modalConfirm.disabled = false;
-            modalConfirm.innerHTML = 'Confirmar';
-        } finally {
-            processingReservation = false;
-        }
-    });
-    
-    modal.hidden = false;
-    setTimeout(() => modal.classList.add('show'), 10);
+    openBookingModal(date, h);
 }
 // ============================================
 // FUNÇÃO PARA CRIAR AULA FIXA
 // ============================================
 async function createFixedBooking(weekday, hour) {
-    if (!currentUser) {
-        showNotification('Faça login primeiro', 'error');
-        return;
+  if (!currentUser) {
+    showNotification('Faça login primeiro', 'error');
+    return;
+  }
+
+  if (!confirm(`Deseja transformar esta aula em fixa?\n\nIsso significa que você terá aula automática toda ${weekdays[weekday-1]} às ${hour}:00.`)) {
+    return;
+  }
+
+  try {
+    const response = await fetch(`${API}/fixed-bookings`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userId: currentUser.id,
+        weekday: weekday,
+        hour: hour
+      })
+    });
+
+    const data = await response.json();
+
+    if (response.ok) {
+      showNotification('Aula fixa criada com sucesso!', 'success');
+      loadData(); // Recarregar dados
+    } else {
+      showNotification(data.error || 'Erro ao criar aula fixa', 'error');
     }
-
-    if (!confirm(`Deseja transformar esta aula em fixa?\n\nIsso significa que você terá aula automática toda ${weekdays[weekday-1]} às ${hour}:00.`)) {
-        return;
-    }
-
-    // Desabilitar botão se existir
-    const fixedBtn = event?.target;
-    if (fixedBtn) {
-        fixedBtn.disabled = true;
-        fixedBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processando...';
-    }
-
-    try {
-        const response = await fetch(`${API}/fixed-bookings`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                userId: currentUser.id,
-                weekday: weekday,
-                hour: hour
-            })
-        });
-
-        const data = await response.json();
-
-        if (response.ok) {
-            showNotification('✅ Aula fixa criada com sucesso!', 'success');
-            closeModal(); // Fechar modal de reserva
-            
-            // 🔥 ATUALIZAÇÃO AUTOMÁTICA APÓS CRIAR AULA FIXA
-            await refreshAllData(false);
-        } else {
-            showNotification(data.error || 'Erro ao criar aula fixa', 'error');
-            if (fixedBtn) {
-                fixedBtn.disabled = false;
-                fixedBtn.innerHTML = '<i class="fas fa-calendar-plus"></i> Tornar Fixo';
-            }
-        }
-    } catch (error) {
-        console.error('Erro:', error);
-        showNotification('Erro ao conectar com o servidor', 'error');
-        if (fixedBtn) {
-            fixedBtn.disabled = false;
-            fixedBtn.innerHTML = '<i class="fas fa-calendar-plus"></i> Tornar Fixo';
-        }
-    }
+  } catch (error) {
+    console.error('Erro:', error);
+    showNotification('Erro ao conectar com o servidor', 'error');
+  }
 }
 
 
@@ -2518,14 +2318,6 @@ window.closePastTimeModal = function() {
         }, 300);
     }
 };
-
-window.addEventListener('focus', () => {
-    // Só atualizar se o usuário estiver logado e não estiver carregando
-    if (currentUser && !loading) {
-        console.log('🔄 Janela ganhou foco, atualizando dados...');
-        refreshAllData(false);
-    }
-});
 
 // ============================================
 // MODAL DE LIMITE SEMANAL ATINGIDO
@@ -2673,20 +2465,6 @@ window.redirectToPlans = function() {
 window.checkPendingPayments = checkPendingPayments;
 window.monitorPayment = monitorPayment;
 window.initPaymentMonitoring = initPaymentMonitoring;
-
-window.addEventListener('load', async function() {
-    console.log('🚀 Página carregada completamente, verificando aviso semanal...');
-    
-    // Pequeno atraso para garantir que todos os elementos estejam prontos
-    setTimeout(async () => {
-        if (currentUser) {
-            console.log('👤 Usuário logado, forçando atualização do aviso semanal');
-            await forceUpdateWeeklyWarning();
-        } else {
-            console.log('👤 Usuário não logado, aviso semanal não será mostrado');
-        }
-    }, 500);
-});
 
 // ============================================
 // 9. FUNÇÕES DE MODAL DE RESERVA
@@ -2972,65 +2750,17 @@ async function loadData() {
         renderMyBookings();
         startTimers();
         
-        // 🔥 IMPORTANTE: ATUALIZAR AVISO SEMANAL SEMPRE QUE CARREGAR DADOS
-        if (userHasActivePlan()) {
-            console.log('📅 Atualizando aviso semanal (loadData)');
-            await updateWeeklyWarning(); // Adicionar await para garantir
-        } else {
-            console.log('📅 Atualizando aviso semanal sem plano (loadData)');
-            updateWeeklyWarningNoPlan();
-        }
-        
         // Mostrar/esconder painel admin
         const adminPanel = document.getElementById('adminPanel');
         if (adminPanel) {
             adminPanel.style.display = currentUser?.isAdmin && adminMode ? '' : 'none';
         }
         
-        console.log('✅ Dados carregados e interface atualizada');
-        
     } catch (e) {
         console.error('❌ Erro ao carregar dados:', e);
         showNotification('Erro ao carregar dados', 'error');
     } finally {
         loading = false;
-    }
-}
-// ============================================
-// FUNÇÃO PARA FORÇAR ATUALIZAÇÃO DO AVISO SEMANAL
-// ============================================
-async function forceUpdateWeeklyWarning() {
-    console.log('🔄 Forçando atualização do aviso semanal...');
-    
-    if (!weeklyWarning) {
-        weeklyWarning = document.getElementById('weeklyWarning');
-        if (!weeklyWarning) {
-            console.error('❌ Elemento weeklyWarning não encontrado');
-            return;
-        }
-    }
-    
-    // Garantir que temos dados atualizados do usuário
-    if (currentUser) {
-        // Atualizar dados do usuário do backend
-        await refreshUserData();
-        
-        // Verificar status de pagamento
-        const statusPagamento = await verificarStatusPagamentoUsuario();
-        console.log('💰 Status de pagamento:', statusPagamento);
-        
-        // Atualizar o aviso baseado nos dados mais recentes
-        if (userHasActivePlan()) {
-            console.log('📅 Usuário tem plano ativo, atualizando aviso completo');
-            await updateWeeklyWarning();
-        } else {
-            console.log('📅 Usuário sem plano, mostrando aviso de plano necessário');
-            updateWeeklyWarningNoPlan();
-        }
-        
-        console.log('✅ Aviso semanal atualizado com sucesso');
-    } else {
-        console.log('⚠️ Usuário não logado, não é possível atualizar aviso');
     }
 }
 // ============================================
