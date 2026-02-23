@@ -2194,6 +2194,9 @@ function onSlotClick(e) {
 // ============================================
 // MODAL DE RESERVA COM ATUALIZAÇÃO AUTOMÁTICA
 // ============================================
+// ============================================
+// MODAL DE RESERVA COM ATUALIZAÇÃO AUTOMÁTICA - CORRIGIDA
+// ============================================
 function openBookingModalWithRefresh(date, h) {
     // Verificar novamente se é horário passado (segurança)
     if (isPastDateTime(date, h)) {
@@ -2255,11 +2258,22 @@ function openBookingModalWithRefresh(date, h) {
     modalConfirm.disabled = false;
     modalConfirm.innerHTML = 'Confirmar';
     
-    // MODIFICADO: Substituir o evento de clique do confirmar
-    // Remover listeners antigos e adicionar novo
-    const newConfirm = modalConfirm.cloneNode(true);
-    modalConfirm.parentNode.replaceChild(newConfirm, modalConfirm);
-    modalConfirm = newConfirm;
+    // CORREÇÃO: Verificar se modalConfirm existe antes de tentar manipular
+    if (modalConfirm) {
+        // Remover listeners antigos de forma segura
+        const newConfirm = modalConfirm.cloneNode(true);
+        if (modalConfirm.parentNode) {
+            modalConfirm.parentNode.replaceChild(newConfirm, modalConfirm);
+            // Atualizar a referência global para o novo elemento
+            modalConfirm = newConfirm;
+        }
+    }
+    
+    // Verificar novamente se modalConfirm existe após a substituição
+    if (!modalConfirm) {
+        console.error('❌ Erro: modalConfirm não encontrado');
+        return;
+    }
     
     modalConfirm.addEventListener('click', async () => {
         if (processingReservation) return;
