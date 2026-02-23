@@ -1248,26 +1248,7 @@ async function updateWeeklyWarning() {
     weeklyWarning.innerHTML = `
         <div class="warning-content">
             <!-- HEADER COM MÚLTIPLOS PLANOS -->
-            <div class="warning-header multi-plan-header">
-                <div class="plans-summary">
-                    <i class="fas fa-crown"></i>
-                    <span>Seus planos ativos (${activePlans.length})</span>
-                </div>
-                <div class="plan-tags">
-                    ${activePlans.map(p => {
-                        const planData = PLANS[p.id] || p;
-                        return `
-                            <span class="plan-tag" style="background: ${planData.color}20; color: ${planData.color}">
-                                <i class="fas ${planData.icon}"></i>
-                                ${planData.name}
-                            </span>
-                        `;
-                    }).join('')}
-                </div>
-            </div>
-
             ${pagamentoHtml}
-
             <!-- CONTAINER DAS SEMANAS -->
             <div class="weeks-container">
                 <!-- SEMANA EM ANDAMENTO -->
