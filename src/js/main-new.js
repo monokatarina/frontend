@@ -485,6 +485,9 @@ async function testAPIEndpoints() {
 // ============================================
 // FUNÇÃO PARA ATUALIZAR TUDO APÓS AÇÕES
 // ============================================
+// ============================================
+// FUNÇÃO PARA ATUALIZAR TUDO APÓS AÇÕES (VERSÃO MELHORADA)
+// ============================================
 async function refreshAllData(showNotificationMessage = true) {
     console.log('🔄 Atualizando todos os dados...');
     
@@ -498,7 +501,10 @@ async function refreshAllData(showNotificationMessage = true) {
         }
         
         // Recarregar todos os dados
-        await loadData();
+        await loadData(); // loadData já chama updateWeeklyWarning internamente agora
+        
+        // 🔥 GARANTIR QUE O AVISO SEMANAL SEJA ATUALIZADO (redundância segura)
+        await forceUpdateWeeklyWarning();
         
         // Restaurar botão
         if (refreshBtn) {
@@ -2673,6 +2679,20 @@ window.checkPendingPayments = checkPendingPayments;
 window.monitorPayment = monitorPayment;
 window.initPaymentMonitoring = initPaymentMonitoring;
 
+window.addEventListener('load', async function() {
+    console.log('🚀 Página carregada completamente, verificando aviso semanal...');
+    
+    // Pequeno atraso para garantir que todos os elementos estejam prontos
+    setTimeout(async () => {
+        if (currentUser) {
+            console.log('👤 Usuário logado, forçando atualização do aviso semanal');
+            await forceUpdateWeeklyWarning();
+        } else {
+            console.log('👤 Usuário não logado, aviso semanal não será mostrado');
+        }
+    }, 500);
+});
+
 // ============================================
 // 9. FUNÇÕES DE MODAL DE RESERVA
 // ============================================
@@ -2957,17 +2977,65 @@ async function loadData() {
         renderMyBookings();
         startTimers();
         
+        // 🔥 IMPORTANTE: ATUALIZAR AVISO SEMANAL SEMPRE QUE CARREGAR DADOS
+        if (userHasActivePlan()) {
+            console.log('📅 Atualizando aviso semanal (loadData)');
+            await updateWeeklyWarning(); // Adicionar await para garantir
+        } else {
+            console.log('📅 Atualizando aviso semanal sem plano (loadData)');
+            updateWeeklyWarningNoPlan();
+        }
+        
         // Mostrar/esconder painel admin
         const adminPanel = document.getElementById('adminPanel');
         if (adminPanel) {
             adminPanel.style.display = currentUser?.isAdmin && adminMode ? '' : 'none';
         }
         
+        console.log('✅ Dados carregados e interface atualizada');
+        
     } catch (e) {
         console.error('❌ Erro ao carregar dados:', e);
         showNotification('Erro ao carregar dados', 'error');
     } finally {
         loading = false;
+    }
+}
+// ============================================
+// FUNÇÃO PARA FORÇAR ATUALIZAÇÃO DO AVISO SEMANAL
+// ============================================
+async function forceUpdateWeeklyWarning() {
+    console.log('🔄 Forçando atualização do aviso semanal...');
+    
+    if (!weeklyWarning) {
+        weeklyWarning = document.getElementById('weeklyWarning');
+        if (!weeklyWarning) {
+            console.error('❌ Elemento weeklyWarning não encontrado');
+            return;
+        }
+    }
+    
+    // Garantir que temos dados atualizados do usuário
+    if (currentUser) {
+        // Atualizar dados do usuário do backend
+        await refreshUserData();
+        
+        // Verificar status de pagamento
+        const statusPagamento = await verificarStatusPagamentoUsuario();
+        console.log('💰 Status de pagamento:', statusPagamento);
+        
+        // Atualizar o aviso baseado nos dados mais recentes
+        if (userHasActivePlan()) {
+            console.log('📅 Usuário tem plano ativo, atualizando aviso completo');
+            await updateWeeklyWarning();
+        } else {
+            console.log('📅 Usuário sem plano, mostrando aviso de plano necessário');
+            updateWeeklyWarningNoPlan();
+        }
+        
+        console.log('✅ Aviso semanal atualizado com sucesso');
+    } else {
+        console.log('⚠️ Usuário não logado, não é possível atualizar aviso');
     }
 }
 // ============================================
