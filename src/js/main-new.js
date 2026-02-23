@@ -1258,7 +1258,6 @@ async function updateWeeklyWarning() {
                         `}
                     </div>
                     
-                    // SEMANA EM ANDAMENTO - Substitua o bloco atual por este:
                     <div class="week-card current ${!hasAnyCurrentBookings ? 'empty' : ''}">
                         <div class="week-title">
                             <i class="fas fa-calendar-alt"></i>
