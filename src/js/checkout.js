@@ -1,6 +1,4 @@
-// ============================================
-// checkout.js - Página de Checkout da FitLife
-// VERSÃO ATUALIZADA - COM REMOÇÃO DE PLANOS
+
 // ============================================
 
 const API = 'https://jokesteronline.org/api';

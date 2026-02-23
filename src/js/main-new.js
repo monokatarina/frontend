@@ -1,14 +1,14 @@
+﻿// ============================================
+// FUNï¿½ï¿½O PARA NORMALIZAR O PLANO DO USUï¿½RIO
 // ============================================
-// FUN��O PARA NORMALIZAR O PLANO DO USU�RIO
 // ============================================
-// ============================================
-// FUNÇÃO PARA NORMALIZAR MÚLTIPLOS PLANOS DO USUÁRIO
+// FUNÃ‡ÃƒO PARA NORMALIZAR MÃšLTIPLOS PLANOS DO USUÃRIO
 // ============================================
 function normalizeUserPlans() {
     if (!currentUser) return;
     if (currentUser.isAdmin) return;
 
-    // Se já tem a estrutura nova, manter
+    // Se jÃ¡ tem a estrutura nova, manter
     if (currentUser.plans && Array.isArray(currentUser.plans)) {
         return;
     }
@@ -34,21 +34,21 @@ function normalizeUserPlans() {
             status: 'active'
         }];
         
-        // Limpar estrutura antiga para não conflitar
+        // Limpar estrutura antiga para nÃ£o conflitar
         delete currentUser.plan;
     } else {
         currentUser.plans = [];
     }
 }
 // ============================================
-// FUNÇÃO PARA ATUALIZAR DADOS DO USUÁRIO DO BACKEND
+// FUNÃ‡ÃƒO PARA ATUALIZAR DADOS DO USUÃRIO DO BACKEND
 // ============================================
 
 async function refreshUserData() {
     if (!currentUser) return false;
     
     try {
-        console.log('🔄 ===== INICIANDO ATUALIZAÇÃO DE DADOS =====');
+        console.log('ðŸ”„ ===== INICIANDO ATUALIZAÃ‡ÃƒO DE DADOS =====');
         
         // Tentar buscar da rota /me com userId
         const response = await fetch(`${API}/auth/me?userId=${currentUser.id}`, {
@@ -64,7 +64,7 @@ async function refreshUserData() {
             const updatedUser = data.user || data.data || data;
             
             if (updatedUser) {
-                console.log('📦 Dados recebidos do servidor:', {
+                console.log('ðŸ“¦ Dados recebidos do servidor:', {
                     id: updatedUser.id,
                     name: updatedUser.name,
                     plans: updatedUser.plans,
@@ -73,7 +73,7 @@ async function refreshUserData() {
                 
                 // Verificar se tem pendingPlans
                 if (updatedUser.pendingPlans && updatedUser.pendingPlans.length > 0) {
-                    console.log('⏳ Pagamento ainda pendente:', updatedUser.pendingPlans);
+                    console.log('â³ Pagamento ainda pendente:', updatedUser.pendingPlans);
                     
                     // Se tiver pendingPayment, monitorar
                     if (updatedUser.pendingPayment) {
@@ -83,7 +83,7 @@ async function refreshUserData() {
                 
                 // Verificar se tem plans ativos
                 if (updatedUser.plans && updatedUser.plans.length > 0) {
-                    console.log('✅ Planos ativos encontrados:', updatedUser.plans);
+                    console.log('âœ… Planos ativos encontrados:', updatedUser.plans);
                     currentUser.plans = updatedUser.plans;
                 }
                 
@@ -93,26 +93,26 @@ async function refreshUserData() {
                 localStorage.setItem('user', JSON.stringify(currentUser));
                 updatePlanInfo();
                 
-                console.log('✅ Dados atualizados com sucesso');
+                console.log('âœ… Dados atualizados com sucesso');
                 return true;
             }
         } else {
-            console.log('⚠️ Falha ao buscar dados do servidor');
+            console.log('âš ï¸ Falha ao buscar dados do servidor');
         }
         
         return false;
         
     } catch (error) {
-        console.error('❌ Erro ao atualizar usuário:', error);
+        console.error('âŒ Erro ao atualizar usuÃ¡rio:', error);
         return false;
     }
 }
 
-// ===== VERIFICAR SE PRECISA FORÇAR ATUALIZAÇÃO =====
+// ===== VERIFICAR SE PRECISA FORÃ‡AR ATUALIZAÃ‡ÃƒO =====
 const forceRefresh = localStorage.getItem('forceUserRefresh');
 if (forceRefresh === 'true') {
     localStorage.removeItem('forceUserRefresh');
-    // Forçar atualização dos dados
+    // ForÃ§ar atualizaÃ§Ã£o dos dados
     setTimeout(() => {
         if (currentUser) {
             refreshUserData();
@@ -124,7 +124,7 @@ async function checkPendingPayments() {
     if (!currentUser) return;
     
     try {
-        console.log('🔍 Verificando pagamentos pendentes...');
+        console.log('ðŸ” Verificando pagamentos pendentes...');
         
         const response = await fetch(`${API}/auth/me?userId=${currentUser.id}`, {
             credentials: 'include',
@@ -137,10 +137,10 @@ async function checkPendingPayments() {
             
             // Verificar se tem pendingPlans
             if (userData.pendingPlans && userData.pendingPlans.length > 0) {
-                console.log('⏳ Pagamento pendente detectado!', userData.pendingPlans);
+                console.log('â³ Pagamento pendente detectado!', userData.pendingPlans);
                 
-                // Mostrar notificação
-                showNotification('⏳ Você tem um pagamento pendente. Aguardando confirmação...', 'info', 5000);
+                // Mostrar notificaÃ§Ã£o
+                showNotification('â³ VocÃª tem um pagamento pendente. Aguardando confirmaÃ§Ã£o...', 'info', 5000);
                 
                 // Verificar se tem pendingPayment com PIX
                 if (userData.pendingPayment) {
@@ -152,39 +152,39 @@ async function checkPendingPayments() {
                         const statusData = await statusResponse.json();
                         
                         if (statusData.status === 'approved') {
-                            console.log('✅ Pagamento aprovado! Atualizando dados...');
+                            console.log('âœ… Pagamento aprovado! Atualizando dados...');
                             
-                            // Forçar atualização dos dados
+                            // ForÃ§ar atualizaÃ§Ã£o dos dados
                             await refreshUserData();
                             
                             // Limpar pendingPayment
                             sessionStorage.removeItem('pendingPayment');
                             
-                            showNotification('✅ Pagamento confirmado! Seus planos foram ativados.', 'success');
+                            showNotification('âœ… Pagamento confirmado! Seus planos foram ativados.', 'success');
                         }
                     }
                 }
             }
             
-            // Se não tem pendingPlans mas tem plans, atualizar
+            // Se nÃ£o tem pendingPlans mas tem plans, atualizar
             if (!userData.pendingPlans && userData.plans && userData.plans.length > 0) {
                 if (!currentUser.plans || currentUser.plans.length === 0) {
-                    console.log('✅ Planos ativos encontrados! Atualizando frontend...');
+                    console.log('âœ… Planos ativos encontrados! Atualizando frontend...');
                     currentUser.plans = userData.plans;
                     localStorage.setItem('user', JSON.stringify(currentUser));
                     updatePlanInfo();
-                    showNotification('✅ Seus planos foram ativados!', 'success');
+                    showNotification('âœ… Seus planos foram ativados!', 'success');
                 }
             }
         }
     } catch (error) {
-        console.error('❌ Erro ao verificar pagamentos pendentes:', error);
+        console.error('âŒ Erro ao verificar pagamentos pendentes:', error);
     }
 }
 
-// Função para monitorar pagamento específico
+// FunÃ§Ã£o para monitorar pagamento especÃ­fico
 function monitorPayment(paymentId, planIds) {
-    console.log(`🔍 Iniciando monitoramento do pagamento: ${paymentId}`);
+    console.log(`ðŸ” Iniciando monitoramento do pagamento: ${paymentId}`);
     
     let attempts = 0;
     const maxAttempts = 60; // 2 minutos (2s * 60)
@@ -196,7 +196,7 @@ function monitorPayment(paymentId, planIds) {
             const response = await fetch(`${API}/payments/payment/${paymentId}/status`);
             if (response.ok) {
                 const data = await response.json();
-                console.log(`📊 Status do pagamento (tentativa ${attempts}):`, data.status);
+                console.log(`ðŸ“Š Status do pagamento (tentativa ${attempts}):`, data.status);
                 
                 if (data.status === 'approved') {
                     clearInterval(interval);
@@ -204,12 +204,12 @@ function monitorPayment(paymentId, planIds) {
                     // Limpar pendingPayment
                     sessionStorage.removeItem('pendingPayment');
                     
-                    showNotification('✅ Pagamento aprovado! Seus planos foram ativados.', 'success');
+                    showNotification('âœ… Pagamento aprovado! Seus planos foram ativados.', 'success');
                     
-                    // Atualizar dados do usuário
+                    // Atualizar dados do usuÃ¡rio
                     await refreshUserData();
                     
-                    // Recarregar a página para mostrar os planos
+                    // Recarregar a pÃ¡gina para mostrar os planos
                     setTimeout(() => {
                         window.location.reload();
                     }, 2000);
@@ -218,9 +218,9 @@ function monitorPayment(paymentId, planIds) {
             
             if (attempts >= maxAttempts) {
                 clearInterval(interval);
-                console.log('⏹️ Monitoramento encerrado após', maxAttempts, 'tentativas');
+                console.log('â¹ï¸ Monitoramento encerrado apÃ³s', maxAttempts, 'tentativas');
                 
-                // Verificar manualmente uma última vez
+                // Verificar manualmente uma Ãºltima vez
                 setTimeout(() => {
                     checkPendingPayments();
                 }, 5000);
@@ -234,7 +234,7 @@ function monitorPayment(paymentId, planIds) {
     return interval;
 }
 
-// Verificar pagamentos pendentes ao carregar a página
+// Verificar pagamentos pendentes ao carregar a pÃ¡gina
 function initPaymentMonitoring() {
     // Verificar sessionStorage
     const pendingPayment = sessionStorage.getItem('pendingPayment');
@@ -243,9 +243,9 @@ function initPaymentMonitoring() {
             const pending = JSON.parse(pendingPayment);
             const timeElapsed = Date.now() - pending.timestamp;
             
-            // Se o pagamento foi criado há menos de 2 horas
+            // Se o pagamento foi criado hÃ¡ menos de 2 horas
             if (timeElapsed < 2 * 60 * 60 * 1000) {
-                console.log('🔄 Retomando monitoramento de pagamento:', pending);
+                console.log('ðŸ”„ Retomando monitoramento de pagamento:', pending);
                 monitorPayment(pending.paymentId, pending.planIds);
             } else {
                 sessionStorage.removeItem('pendingPayment');
@@ -385,7 +385,7 @@ const adminMenuContainer = document.getElementById('adminMenuContainer');
 const adminToggleContainer = document.querySelector('.admin-toggle');
 
 // ============================================
-// 1. FUNÇÕES UTILITÁRIAS BÁSICAS
+// 1. FUNÃ‡Ã•ES UTILITÃRIAS BÃSICAS
 // ============================================
 // ============================================
 // LIMPAR DADOS CORROMPIDOS
@@ -395,9 +395,9 @@ function limparDadosCorrompidos() {
     if (savedUser) {
         try {
             const user = JSON.parse(savedUser);
-            // Se o ID for muito alto (8) e não for admin, pode ser problema
+            // Se o ID for muito alto (8) e nÃ£o for admin, pode ser problema
             if (user.id > 5 && !user.isAdmin) {
-                console.warn('⚠️ Possível usuário corrompido detectado (ID:', user.id, ')');
+                console.warn('âš ï¸ PossÃ­vel usuÃ¡rio corrompido detectado (ID:', user.id, ')');
                 
                 // Perguntar se quer limpar
                 if (confirm('Detectamos um problema com seus dados salvos. Deseja fazer login novamente?')) {
@@ -411,9 +411,9 @@ function limparDadosCorrompidos() {
     }
 }
 
-// Executar no início
+// Executar no inÃ­cio
 limparDadosCorrompidos();
-// Sistema de notificações
+// Sistema de notificaÃ§Ãµes
 function showNotification(message, type = 'info', duration = 3000) {
     let container = document.getElementById('toastContainer');
     if (!container) {
@@ -448,13 +448,10 @@ function showNotification(message, type = 'info', duration = 3000) {
     }, duration);
 }
 // ============================================
-// FUNÇÃO PARA TESTAR CONEXÃO COM ENDPOINTS
-// ============================================
-// ============================================
-// FUNÇÃO PARA TESTAR CONEXÃO COM ENDPOINTS - CORRIGIDA
+// FUNÇÃO PARA TESTAR CONEXÃO COM ENDPOINT
 // ============================================
 async function testAPIEndpoints() {
-    console.log('🔍 Testando conectividade com a API...');
+    console.log('ðŸ” Testando conectividade com a API...');
     const endpoints = [
         '/auth/me',
         '/bookings',
@@ -475,18 +472,18 @@ async function testAPIEndpoints() {
                 }
             });
             const time = Date.now() - start;
-            console.log(`📡 ${endpoint}: ${response.status} (${time}ms)`);
+            console.log(`ðŸ“¡ ${endpoint}: ${response.status} (${time}ms)`);
         } catch (error) {
-            console.log(`📡 ${endpoint}: FALHA - ${error.message}`);
+            console.log(`ðŸ“¡ ${endpoint}: FALHA - ${error.message}`);
         }
     }
 }
 // ============================================
-// FUNÇÃO PARA CARREGAR DATAS - VERSÃO CORRIGIDA
+// FUNÃ‡ÃƒO PARA CARREGAR DATAS - VERSÃƒO CORRIGIDA
 // ============================================
 async function loadDates() {
     try {
-        console.log('📅 Tentando carregar datas do servidor...');
+        console.log('ðŸ“… Tentando carregar datas do servidor...');
         
         // PRIMEIRA TENTATIVA: Endpoint principal
         try {
@@ -498,7 +495,7 @@ async function loadDates() {
             
             if (response.ok) {
                 const data = await response.json();
-                console.log('📅 Datas carregadas com sucesso:', data);
+                console.log('ðŸ“… Datas carregadas com sucesso:', data);
                 
                 if (data.success && data.data) {
                     nextDates = data.data;
@@ -511,15 +508,15 @@ async function loadDates() {
                     return nextDates;
                 }
             } else {
-                console.warn(`⚠️ Endpoint /admin/dates respondeu com status ${response.status}`);
+                console.warn(`âš ï¸ Endpoint /admin/dates respondeu com status ${response.status}`);
             }
         } catch (error) {
-            console.warn('⚠️ Erro ao acessar /admin/dates:', error.message);
+            console.warn('âš ï¸ Erro ao acessar /admin/dates:', error.message);
         }
         
-        // SEGUNDA TENTATIVA: Tentar obter do /auth/me (alguns backends retornam lá)
+        // SEGUNDA TENTATIVA: Tentar obter do /auth/me (alguns backends retornam lÃ¡)
         try {
-            console.log('📅 Tentando obter datas via /auth/me...');
+            console.log('ðŸ“… Tentando obter datas via /auth/me...');
             const meResponse = await fetch(`${API}/auth/me?userId=${currentUser?.id || ''}`, {
                 credentials: 'include',
                 headers: { 'Content-Type': 'application/json' }
@@ -530,18 +527,18 @@ async function loadDates() {
                 const userData = meData.user || meData.data || meData;
                 
                 if (userData && userData.nextDates) {
-                    console.log('📅 Datas encontradas no /auth/me:', userData.nextDates);
+                    console.log('ðŸ“… Datas encontradas no /auth/me:', userData.nextDates);
                     nextDates = userData.nextDates;
                     return nextDates;
                 }
             }
         } catch (error) {
-            console.warn('⚠️ Erro ao buscar datas via /auth/me:', error.message);
+            console.warn('âš ï¸ Erro ao buscar datas via /auth/me:', error.message);
         }
         
         // TERCEIRA TENTATIVA: Tentar endpoint alternativo
         try {
-            console.log('📅 Tentando /api/dates...');
+            console.log('ðŸ“… Tentando /api/dates...');
             const altResponse = await fetch(`${API}/dates`, {
                 credentials: 'include',
                 headers: { 'Content-Type': 'application/json' }
@@ -551,20 +548,20 @@ async function loadDates() {
                 const altData = await altResponse.json();
                 if (altData.data || altData.dates) {
                     nextDates = altData.data || altData.dates;
-                    console.log('📅 Datas carregadas via /api/dates:', nextDates);
+                    console.log('ðŸ“… Datas carregadas via /api/dates:', nextDates);
                     return nextDates;
                 }
             }
         } catch (error) {
-            console.warn('⚠️ Erro no endpoint alternativo:', error.message);
+            console.warn('âš ï¸ Erro no endpoint alternativo:', error.message);
         }
         
         // FALLBACK: Gerar datas localmente
-        console.log('📅 Nenhum endpoint funcionou, gerando datas localmente');
+        console.log('ðŸ“… Nenhum endpoint funcionou, gerando datas localmente');
         return generateLocalDates();
         
     } catch (error) {
-        console.error('❌ Erro crítico em loadDates:', error);
+        console.error('Erro crítico em loadDates:', error);
         return generateLocalDates();
     }
 }
@@ -590,7 +587,7 @@ function generateLocalDates() {
     }
     
     nextDates = dates;
-    console.log('📅 Datas geradas localmente:', dates);
+    console.log('ðŸ“… Datas geradas localmente:', dates);
     return dates;
 }
 
@@ -611,7 +608,7 @@ const fetchAPI = async (endpoint, options = {}) => {
         
         return { success: true, data: data.data || data, status: res.status };
     } catch (err) {
-        console.error(`❌ Fetch error (${endpoint}):`, err.message);
+        console.error(`âŒ Fetch error (${endpoint}):`, err.message);
         return { success: false, error: err.message };
     }
 };
@@ -734,6 +731,57 @@ function getUserActivePlans() {
     
     return currentUser.plans || [];
 }
+
+function getCategoryHours(category) {
+    const hours = new Set();
+    Object.values(PLANS).forEach(plan => {
+        if (plan.categoria === category && Array.isArray(plan.horariosPermitidos)) {
+            plan.horariosPermitidos.forEach(hour => hours.add(Number(hour)));
+        }
+    });
+    return hours;
+}
+
+function getHorarioCategoria(hour) {
+    const normalizedHour = Number(hour);
+    const dancaHours = getCategoryHours('danca');
+    return dancaHours.has(normalizedHour) ? 'danca' : 'normal';
+}
+
+function getSlotSectionGroups() {
+    const dancaHours = getCategoryHours('danca');
+    const normalHours = HOURS.filter(hour => !dancaHours.has(Number(hour)));
+    const danceHours = HOURS.filter(hour => dancaHours.has(Number(hour)));
+
+    return [
+        {
+            key: 'normal',
+            title: 'Horarios do Plano Normal',
+            subtitle: 'Use estes horarios para aulas do plano de treino normal.',
+            hours: normalHours
+        },
+        {
+            key: 'danca',
+            title: 'Horarios do Plano de Danca',
+            subtitle: 'Use estes horarios somente para aulas do plano de danca.',
+            hours: danceHours
+        }
+    ].filter(group => group.hours.length > 0);
+}
+
+function createCategoryDivider(section) {
+    const divider = document.createElement('div');
+    divider.className = `schedule-category-divider category-${section.key}`;
+    divider.innerHTML = `
+        <div class="schedule-category-title">
+            <i class="fas ${section.key === 'danca' ? 'fa-music' : 'fa-dumbbell'}"></i>
+            ${section.title}
+        </div>
+        <div class="schedule-category-subtitle">${section.subtitle}</div>
+    `;
+    return divider;
+}
+
 function isHorarioPermitido(weekday, hour) {
     if (!currentUser) return true; // Visitante pode ver todos horários
     if (currentUser.isAdmin) return true;
@@ -783,27 +831,27 @@ async function verificarStatusPagamentoUsuario() {
     const vencimento = new Date(currentUser.pagamento.dataVencimento);
     vencimento.setHours(0, 0, 0, 0);
     
-    console.log('📅 Verificando pagamento:', {
+    console.log('Verificando pagamento:', {
         hoje: hoje.toISOString().split('T')[0],
         vencimento: vencimento.toISOString().split('T')[0],
         status: currentUser.pagamento.status
     });
     
-    // Se já tem status no backend, usar ele
+    // Se jÃ¡ tem status no backend, usar ele
     if (currentUser.pagamento.status) {
         return {
             status: currentUser.pagamento.status,
             diasEmAtraso: currentUser.pagamento.diasEmAtraso || 0,
             mensagem: currentUser.pagamento.status === 'em_atraso' 
-                ? `⚠️ Pagamento pendente há ${currentUser.pagamento.diasEmAtraso} dias. Regularize para não perder o acesso.`
+                ? `Pagamento pendente há ${currentUser.pagamento.diasEmAtraso} dias. Regularize para não perder o acesso.`
                 : currentUser.pagamento.status === 'bloqueado'
-                ? '❌ Plano suspenso por falta de pagamento.'
+                ? 'Plano suspenso por falta de pagamento.'
                 : '',
             podeAgendar: currentUser.pagamento.status !== 'bloqueado'
         };
     }
     
-    // Calcular dias em atraso apenas se necessário
+    // Calcular dias em atraso apenas se necessÃ¡rio
     let diasEmAtraso = 0;
     if (vencimento < hoje) {
         const diffTime = hoje - vencimento;
@@ -820,19 +868,19 @@ async function verificarStatusPagamentoUsuario() {
         return {
             status: 'em_atraso',
             diasEmAtraso: diasEmAtraso,
-            mensagem: `⚠️ Pagamento pendente há ${diasEmAtraso} dias. Você tem mais ${7 - diasEmAtraso} dias para regularizar.`,
+            mensagem: `Pagamento pendente há ${diasEmAtraso} dias. Você tem mais ${7 - diasEmAtraso} dias para regularizar.`,
             podeAgendar: true
         };
     } else {
         return {
             status: 'bloqueado',
             diasEmAtraso: diasEmAtraso,
-            mensagem: '❌ Plano suspenso por falta de pagamento.',
+            mensagem: 'âŒ Plano suspenso por falta de pagamento.',
             podeAgendar: false
         };
     }
 }
-// Fun��o para atualizar o bot�o de planos
+// Funï¿½ï¿½o para atualizar o botï¿½o de planos
 function updatePlansButton() {
     const plansBtn = document.getElementById('plansMenuBtn');
     if (!plansBtn) return;
@@ -851,30 +899,24 @@ function updatePlansButton() {
         plansBtn.classList.remove('has-plan');
     }
 }
-// Atualiza informações do plano na interface
-// Atualiza informações do plano na interface (VERSÃO CORRIGIDA)
-// Atualiza informações do plano na interface (VERSÃO ULTRA DEBUG)
+// Atualiza informaÃ§Ãµes do plano na interface
 function updatePlanInfo() {
     if (!currentUser) {
-        console.log('❌ updatePlanInfo: currentUser é null');
+        console.log('âŒ updatePlanInfo: currentUser Ã© null');
         return;
     }
     
-    console.log('🖥️ ===== ATUALIZANDO INTERFACE =====');
-    console.log('👤 Usuário:', currentUser.name);
-    console.log('📦 Plans do usuário (raw):', currentUser.plans);
-    console.log('📦 Plans stringified:', JSON.stringify(currentUser.plans, null, 2));
     
     const userInfo = document.getElementById('userInfo');
     if (!userInfo) {
-        console.log('❌ Elemento userInfo não encontrado');
+        console.log('âŒ Elemento userInfo nÃ£o encontrado');
         return;
     }
     
     let planHtml = '';
     
     if (currentUser.isAdmin) {
-        console.log('👑 Usuário é admin');
+        console.log('o usuario nao é admin');
         planHtml = `
             <span class="plan-badge admin">
                 <i class="fas fa-crown"></i>
@@ -883,15 +925,15 @@ function updatePlanInfo() {
         `;
     } else {
         // Verificar se tem planos ativos
-        console.log('🔍 Chamando getUserActivePlans()...');
+        console.log('ðŸ” Chamando getUserActivePlans()...');
         const activePlans = getUserActivePlans();
-        console.log('📊 Planos ativos encontrados:', activePlans);
-        console.log('📊 Quantidade de planos ativos:', activePlans.length);
+        console.log('ðŸ“Š Planos ativos encontrados:', activePlans);
+        console.log('ðŸ“Š Quantidade de planos ativos:', activePlans.length);
         
         if (activePlans && activePlans.length > 0) {
-            console.log('✅ Temos planos! Vamos renderizar...');
+            console.log('âœ… Temos planos! Vamos renderizar...');
             
-            // Mostrar múltiplos planos
+            // Mostrar mÃºltiplos planos
             planHtml = '<div class="plans-container-mini">';
             activePlans.forEach((plan, index) => {
                 const planData = PLANS[plan.id] || plan;
@@ -917,7 +959,7 @@ function updatePlanInfo() {
             });
             planHtml += '</div>';
         } else {
-            console.log('⚠️ Nenhum plano ativo encontrado');
+            console.log('âš ï¸ Nenhum plano ativo encontrado');
             planHtml = `
                 <span class="plan-badge no-plan" onclick="window.location.href='/plans'">
                     <i class="fas fa-exclamation-circle"></i>
@@ -928,7 +970,7 @@ function updatePlanInfo() {
         }
     }
     
-    // Adicionar badge do usuário
+    // Adicionar badge do usuÃ¡rio
     const userBadge = `
         <span class="user-badge ${currentUser.isAdmin ? 'admin' : ''}">
             <i class="fas fa-${currentUser.isAdmin ? 'crown' : 'user'}"></i>
@@ -937,10 +979,10 @@ function updatePlanInfo() {
     `;
     
     const finalHtml = userBadge + planHtml;
-    console.log('📝 HTML gerado:', finalHtml);
+    console.log('ðŸ“ HTML gerado:', finalHtml);
     
     userInfo.innerHTML = finalHtml;
-    console.log('✅ Interface atualizada');
+    console.log('âœ… Interface atualizada');
 
     updatePlansButton();
 
@@ -961,17 +1003,17 @@ function updatePlanInfo() {
     
     // Atualizar aviso semanal
     if (userHasActivePlan()) {
-        console.log('📅 Chamando updateWeeklyWarning()');
+        console.log('ðŸ“… Chamando updateWeeklyWarning()');
         updateWeeklyWarning();
     } else {
-        console.log('📅 Chamando updateWeeklyWarningNoPlan()');
+        console.log('ðŸ“… Chamando updateWeeklyWarningNoPlan()');
         updateWeeklyWarningNoPlan();
     }
 }
 
-// Funções auxiliares para planos
+// FunÃ§Ãµes auxiliares para planos
 function getPlanName(planId) {
-    return PLANS[planId]?.name || 'Básico';
+    return PLANS[planId]?.name || 'basico';
 }
 
 function getPlanAulas(planId) {
@@ -979,10 +1021,10 @@ function getPlanAulas(planId) {
 }
 
 // ============================================
-// 3. FUNÇÕES DE AVISO SEMANAL MELHORADAS
+// 3. FUNÃ‡Ã•ES DE AVISO SEMANAL MELHORADAS
 // ============================================
 
-// Função para obter o range da semana de uma data
+// FunÃ§Ã£o para obter o range da semana de uma data
 function getWeekRange(date) {
     const d = new Date(date);
     const day = d.getDay(); // 0 = domingo, 1 = segunda, ...
@@ -1006,7 +1048,7 @@ function getNextWeekRange() {
     const { monday, sunday } = getWeekRange(nextWeek);
     return { monday, sunday };
 }
-// Função para formatar range da semana
+// FunÃ§Ã£o para formatar range da semana
 function formatWeekRange(date) {
     const { monday, sunday } = getWeekRange(date);
     
@@ -1017,7 +1059,7 @@ function formatWeekRange(date) {
     return `${formatDayMonth(monday)} a ${formatDayMonth(sunday)}`;
 }
 
-// Função para agrupar reservas por semana
+// FunÃ§Ã£o para agrupar reservas por semana
 function groupBookingsByWeek(bookings) {
     const grouped = {};
     
@@ -1043,7 +1085,7 @@ function groupBookingsByWeek(bookings) {
 }
 
 // ============================================
-// FUNÇÃO PARA CONTAR RESERVAS EM UMA SEMANA ESPECÍFICA
+// FUNÃ‡ÃƒO PARA CONTAR RESERVAS EM UMA SEMANA ESPECÃFICA
 // ============================================
 function countBookingsInWeek(date, userId) {  // <-- SUBSTITUIR
     const { monday, sunday } = getWeekRange(date);
@@ -1057,12 +1099,12 @@ function countBookingsInWeek(date, userId) {  // <-- SUBSTITUIR
     // Agrupar por categoria
     const byCategory = {};
     bookingsInWeek.forEach(b => {
-        const cat = b.categoria || 'normal';
+        const cat = b.categoria || getHorarioCategoria(b.hour);
         if (!byCategory[cat]) byCategory[cat] = 0;
         byCategory[cat]++;
     });
     
-    console.log('📊 Reservas na semana por categoria:', byCategory);
+    console.log('ðŸ“Š Reservas na semana por categoria:', byCategory);
     
     return {
         total: bookingsInWeek.length,
@@ -1071,7 +1113,7 @@ function countBookingsInWeek(date, userId) {  // <-- SUBSTITUIR
 }
 
 // ============================================
-// FUNÇÃO ATUALIZADA - SUPORTE A MÚLTIPLOS PLANOS
+// FUNÃ‡ÃƒO ATUALIZADA - SUPORTE A MÃšLTIPLOS PLANOS
 // ============================================
 async function updateWeeklyWarning() {
     if (!weeklyWarning) return;
@@ -1180,7 +1222,7 @@ async function updateWeeklyWarning() {
             </div>
         `;
         
-        // HTML para próxima semana
+        // HTML para proxima semana
         plansNextHtml += `
             <div class="plan-week-item" style="border-left-color: ${color}">
                 <div class="plan-week-header">
@@ -1265,7 +1307,7 @@ async function updateWeeklyWarning() {
                 <div class="week-card next ${hasAnyNextBookings ? 'has-bookings' : 'available'}">
                     <div class="week-title">
                         <i class="fas fa-calendar-plus"></i>
-                        <span>Próxima semana</span>
+                        <span>Proxima semana</span>
                         <span class="week-dates">${nextWeekRange}</span>
                         ${hasAnyNextBookings ? 
                             '<span class="bookings-badge">Aulas agendadas</span>' : 
@@ -1294,7 +1336,7 @@ async function updateWeeklyWarning() {
                                 </span>` : 
                                 `<span class="remaining positive">
                                     <i class="fas fa-arrow-up"></i>
-                                    ${totalNextRemaining} vaga${totalNextRemaining !== 1 ? 's' : ''} disponível(eis)
+                                    ${totalNextRemaining} vaga${totalNextRemaining !== 1 ? 's' : ''} disponivel
                                 </span>`
                             }
                         </div>
@@ -1304,8 +1346,8 @@ async function updateWeeklyWarning() {
                         <i class="fas fa-${hasAnyNextBookings ? 'info-circle' : 'calendar-plus'}"></i>
                         <span>
                             ${hasAnyNextBookings ? 
-                                `Você já tem aulas marcadas para a próxima semana` : 
-                                `Vagas disponíveis em ${activePlans.length} plano${activePlans.length > 1 ? 's' : ''}`
+                                `Voce ja tem aulas marcadas para a proxima semana` : 
+                                `Vagas disponiveis em ${activePlans.length} plano${activePlans.length > 1 ? 's' : ''}`
                             }
                         </span>
                     </div>
@@ -1316,7 +1358,7 @@ async function updateWeeklyWarning() {
     
     weeklyWarning.className = 'weekly-warning info';
     
-    // Verificar se algum plano atingiu o limite na próxima semana
+    // Verificar se algum plano atingiu o limite na proxima semana
     const plansAtLimit = activePlans.filter(plan => {
         const planData = PLANS[plan.id] || plan;
         const categoria = planData.categoria;
@@ -1338,7 +1380,7 @@ async function updateWeeklyWarning() {
 }
 
 // ============================================
-// NOVA FUNÇÃO AUXILIAR - MODAL DE LIMITE MÚLTIPLO
+// NOVA FUNÃ‡ÃƒO AUXILIAR - MODAL DE LIMITE MÃšLTIPLO
 // ============================================
 function showLimitReachedModalMulti(planNames, count) {
     const modal = document.createElement('div');
@@ -1371,12 +1413,12 @@ function showLimitReachedModalMulti(planNames, count) {
                 <div class="limit-info">
                     <i class="fas fa-info-circle"></i>
                     <p>
-                        Para agendar mais aulas nesta semana, você pode:
+                        Para agendar mais aulas nesta semana, vocÃª pode:
                     </p>
                     <ul style="margin-top: 10px; padding-left: 20px;">
                         <li>Adicionar outro plano da mesma categoria</li>
                         <li>Fazer upgrade para um plano com mais aulas</li>
-                        <li>Aguardar a próxima semana</li>
+                        <li>Aguardar a proxima semana</li>
                     </ul>
                 </div>
             </div>
@@ -1408,7 +1450,7 @@ function showLimitReachedModalMulti(planNames, count) {
 }
 
 // ============================================
-// CSS ADICIONAL PARA SUPORTE A MÚLTIPLOS PLANOS
+// CSS ADICIONAL PARA SUPORTE A MÃšLTIPLOS PLANOS
 // ============================================
 const multiPlanStyles = `
     .multi-plan-header {
@@ -1512,26 +1554,26 @@ const multiPlanStyles = `
     }
 `;
 
-// Adicionar estilos se não existirem
+// Adicionar estilos se nÃ£o existirem
 if (!document.getElementById('multiPlanStyles')) {
     const style = document.createElement('style');
     style.id = 'multiPlanStyles';
     style.textContent = multiPlanStyles;
     document.head.appendChild(style);
 }
-// 4. FUNÇÕES DE CONTAGEM E VALIDAÇÃO
+// 4. FUNÃ‡Ã•ES DE CONTAGEM E VALIDAÃ‡ÃƒO
 // ============================================
 
-// Conta reservas do usuário na semana atual (para compatibilidade)
+// Conta reservas do usuÃ¡rio na semana atual (para compatibilidade)
 const getWeeklyBookingsCount = () => {
     if (!currentUser) return 0;
     const result = countBookingsInWeek(new Date(), currentUser.id);
-    return result.total; // Retorna apenas o total, não o objeto completo
+    return result.total; // Retorna apenas o total, nÃ£o o objeto completo
 };
 
 // Valida se pode cancelar uma reserva
 function canCancelBooking(booking) {
-    if (!booking) return { canCancel: false, reason: 'Reserva não encontrada' };
+    if (!booking) return { canCancel: false, reason: 'Reserva nÃ£o encontrada' };
     
     const now = new Date();
     const bookingDate = new Date(`${booking.date}T${String(booking.hour).padStart(2, '0')}:00:00`);
@@ -1592,59 +1634,59 @@ function canCancelBooking(booking) {
 
 // Mensagem de cancelamento
 function getCancellationMessage(cancelCheck) {
-    if (!cancelCheck) return 'Não é possível cancelar esta reserva';
+    if (!cancelCheck) return 'NÃ£o Ã© possÃ­vel cancelar esta reserva';
     
     switch (cancelCheck.reason) {
         case 'ok':
-            return `✅ Você pode cancelar esta reserva. Faltam ${cancelCheck.diffHours}h ${cancelCheck.diffMinutes}min para a aula.`;
+            return `âœ… VocÃª pode cancelar esta reserva. Faltam ${cancelCheck.diffHours}h ${cancelCheck.diffMinutes}min para a aula.`;
         
         case 'grace_period':
-            return `⏰ Período de graça: você tem ${cancelCheck.minutesLeft} minutos para cancelar esta reserva (aula em menos de ${CANCEL_LIMIT_HOURS}h).`;
+            return `â° PerÃ­odo de graÃ§a: vocÃª tem ${cancelCheck.minutesLeft} minutos para cancelar esta reserva (aula em menos de ${CANCEL_LIMIT_HOURS}h).`;
         
         case 'too_late':
-            return `❌ Cancelamento não permitido. Aula começa em ${cancelCheck.timeMessage}.`;
+            return `âŒ Cancelamento nÃ£o permitido. Aula comeÃ§a em ${cancelCheck.timeMessage}.`;
         
         default:
-            return 'Não é possível cancelar esta reserva';
+            return 'NÃ£o Ã© possÃ­vel cancelar esta reserva';
     }
 }
 
-// Valida horário da reserva
+// Valida horÃ¡rio da reserva
 function validateBookingTime(date, hour) {
     const now = new Date();
     const bookingDate = new Date(`${date}T${String(hour).padStart(2, '0')}:00:00`);
     
-    // Verificar se é horário passado
+    // Verificar se Ã© horÃ¡rio passado
     if (bookingDate < now) {
         return {
             valid: false,
             error: 'past',
-            message: '❌ Não é possível agendar em horários que já passaram.'
+            message: 'não é possível agendar em horários que já passaram.'
         };
     }
     
-    // Verificar se está muito próximo (menos de 9 horas)
+    // Verificar se estÃ¡ muito proximo (menos de 9 horas)
     if (bookingDate - now < CANCEL_LIMIT_HOURS * 60 * 60 * 1000) {
         return {
             valid: true,
             warning: true,
-            message: `⏰ Esta aula começará em menos de ${CANCEL_LIMIT_HOURS}h. Você terá apenas ${PROXIMITY_GRACE_MINUTES} minutos para cancelar após a reserva.`
+            message: `â° Esta aula comeÃ§arÃ¡ em menos de ${CANCEL_LIMIT_HOURS}h. VocÃª terÃ¡ apenas ${PROXIMITY_GRACE_MINUTES} minutos para cancelar apÃ³s a reserva.`
         };
     }
     
     return { valid: true };
 }
-// FUNÇÃO PARA VERIFICAR SE O HORÁRIO JÁ PASSOU
+// FUNÃ‡ÃƒO PARA VERIFICAR SE O HORÃRIO JÃ PASSOU
 function isPastDateTime(date, hour) {
     const now = new Date();
     const bookingDateTime = new Date(`${date}T${String(hour).padStart(2, '0')}:00:00`);
     
-    // Comparar se a data/hora do agendamento é anterior ao momento atual
+    // Comparar se a data/hora do agendamento Ã© anterior ao momento atual
     return bookingDateTime < now;
 }
 
 // ============================================
-// 5. FUNÇÕES DE CRONÔMETRO
+// 5. FUNÃ‡Ã•ES DE CRONÃ”METRO
 // ============================================
 
 function formatTimeRemaining(bookingDate) {
@@ -1652,7 +1694,7 @@ function formatTimeRemaining(bookingDate) {
     const diffMs = bookingDate - now;
     
     if (diffMs <= 0) {
-        return { text: 'Aula já passou', class: 'expired', expired: true };
+        return { text: 'Aula jÃ¡ passou', class: 'expired', expired: true };
     }
     
     const diffSeconds = Math.floor(diffMs / 1000);
@@ -1726,7 +1768,7 @@ function updateAllTimers() {
 }
 
 // ============================================
-// 6. FUNÇÕES DE RENDERIZAÇÃO
+// 6. FUNÃ‡Ã•ES DE RENDERIZAÃ‡ÃƒO
 // ============================================
 
 function renderSchedule() {
@@ -1735,21 +1777,26 @@ function renderSchedule() {
     const grid = document.createElement('div');
     grid.className = 'grid';
 
-    // Cabeçalho
-    grid.appendChild(createHeaderCell('hour-header', '<i class="fas fa-clock"></i> Horário'));
+    // CabeÃ§alho
+    grid.appendChild(createHeaderCell('hour-header', '<i class="fas fa-clock"></i> HorÃ¡rio'));
     for (let i = 0; i < 5; i++) {
         grid.appendChild(createHeaderCell('weekday-header', weekdays[i]));
     }
 
-    // Renderizar linhas de horário
-    for (const h of HOURS) {
-        grid.appendChild(createHourLabel(h));
-        
-        for (let wd = 1; wd <= 5; wd++) {
-            const slot = createSlot(wd, h);
-            grid.appendChild(slot);
+    // Renderizar linhas de horario separadas por categoria de plano
+    const sections = getSlotSectionGroups();
+    sections.forEach(section => {
+        grid.appendChild(createCategoryDivider(section));
+
+        for (const h of section.hours) {
+            grid.appendChild(createHourLabel(h));
+            
+            for (let wd = 1; wd <= 5; wd++) {
+                const slot = createSlot(wd, h);
+                grid.appendChild(slot);
+            }
         }
-    }
+    });
 
     scheduleEl.style.opacity = '0';
     setTimeout(() => {
@@ -1790,19 +1837,21 @@ function createSlot(wd, h) {
     const isFull = bookCount >= 4;
     const userHasBooking = bookedList.some(b => b.userId === currentUser?.id);
     const hasActivePlan = userHasActivePlan() || currentUser?.isAdmin;
+    const slotCategoria = getHorarioCategoria(h);
+    const categoriaLabel = slotCategoria === 'danca' ? 'Danca' : 'Normal';
     
-    // Verificar permissão baseada em múltiplos planos
+    // Verificar permissao baseada em multiplos planos
     const horarioPermitido = isHorarioPermitido(wd, h);
 
-    // Definir classes e conteúdo baseado no estado
+    // Definir classes e conteudo baseado no estado
     if (!isAvailable) {
         slot.classList.add('disabled');
         slot.innerHTML = '<i class="fas fa-ban"></i>';
     } else if (!horarioPermitido && !currentUser?.isAdmin) {
         slot.classList.add('disabled', 'plano-nao-permite');
         slot.disabled = true;
-        slot.title = 'Nenhum dos seus planos permite este horário';
-        slot.innerHTML = `<span class="count">${bookCount}/4</span><span class="label"> Não permitido</span>`;
+        slot.title = `Este horario pertence ao plano ${categoriaLabel}`;
+        slot.innerHTML = `<span class="count">${bookCount}/4</span><span class="label"> Nao permitido</span>`;
     } else if (isFull) {
         slot.classList.add('full');
         slot.innerHTML = `<span class="count">${bookCount}/4</span><span class="label"> Lotado</span>`;
@@ -1816,30 +1865,33 @@ function createSlot(wd, h) {
         }
     } else {
         slot.classList.add('available');
-        slot.innerHTML = `<span class="count">0/4</span><span class="label"> Disponível</span>`;
+        slot.innerHTML = `<span class="count">0/4</span><span class="label"> Disponivel</span>`;
         if (!hasActivePlan) {
             slot.disabled = true;
             slot.classList.add('requires-plan');
         }
     }
 
+    slot.classList.add(`slot-category-${slotCategoria}`);
+
     if (userHasBooking) {
         slot.classList.add('my-booking');
     }
 
-    // 🔥 IMPORTANTE: Setar todos os datasets necessários
+    // IMPORTANTE: Setar todos os datasets necessarios
     slot.dataset.weekday = wd;
     slot.dataset.hour = h;
     slot.dataset.date = dateStr;
-    slot.dataset.available = isAvailable;  // <-- LINHA FALTANDO!
-    slot.dataset.bookCount = bookCount;     // <-- TAMBÉM É BOM TER
+    slot.dataset.available = isAvailable;
+    slot.dataset.bookCount = bookCount;
+    slot.dataset.category = slotCategoria;
     
     slot.addEventListener('click', onSlotClick);
 
     return slot;
 }
 // ============================================
-// 7. RENDERIZAÇÃO DE RESERVAS POR SEMANA
+// 7. RENDERIZAÃ‡ÃƒO DE RESERVAS POR SEMANA
 // ============================================
 
 function renderMyBookings() {
@@ -1849,14 +1901,14 @@ function renderMyBookings() {
     el.innerHTML = '';
     
     if (!currentUser) {
-        el.innerHTML = '<p class="empty-message"><i class="fas fa-lock"></i> Faça login para ver suas reservas</p>';
+        el.innerHTML = '<p class="empty-message"><i class="fas fa-lock"></i> FaÃ§a login para ver suas reservas</p>';
         return;
     }
 
     const myBookings = bookings.filter(b => b.userId === currentUser.id);
     
     if (myBookings.length === 0) {
-        el.innerHTML = '<p class="empty-message"><i class="fas fa-calendar-times"></i> Você não possui reservas</p>';
+        el.innerHTML = '<p class="empty-message"><i class="fas fa-calendar-times"></i> VocÃª nÃ£o possui reservas</p>';
         return;
     }
 
@@ -1893,14 +1945,50 @@ function renderMyBookings() {
         
         el.appendChild(weekHeader);
         
-        // Renderizar cada reserva da semana
+        // Separar reservas por categoria para melhorar a visualizacao
+        const treinoBookings = [];
+        const dancaBookings = [];
+
         weekBookings.forEach(booking => {
-            const item = createBookingItem(booking);
-            el.appendChild(item);
+            const categoria = booking.categoria || getHorarioCategoria(booking.hour);
+            if (categoria === 'danca') {
+                dancaBookings.push(booking);
+            } else {
+                treinoBookings.push(booking);
+            }
         });
+
+        if (treinoBookings.length > 0) {
+            el.appendChild(createBookingCategoryHeader('treino', 'Treino', 'fa-dumbbell', treinoBookings.length));
+            treinoBookings.forEach(booking => {
+                const item = createBookingItem(booking);
+                el.appendChild(item);
+            });
+        }
+
+        if (dancaBookings.length > 0) {
+            el.appendChild(createBookingCategoryHeader('danca', 'Danca', 'fa-music', dancaBookings.length));
+            dancaBookings.forEach(booking => {
+                const item = createBookingItem(booking);
+                el.appendChild(item);
+            });
+        }
     });
     
     startTimers();
+}
+
+function createBookingCategoryHeader(categoryKey, title, icon, count) {
+    const header = document.createElement('div');
+    header.className = `booking-category-header ${categoryKey}`;
+    header.innerHTML = `
+        <span class="booking-category-title">
+            <i class="fas ${icon}"></i>
+            ${title}
+        </span>
+        <span class="booking-category-count">${count} aula${count !== 1 ? 's' : ''}</span>
+    `;
+    return header;
 }
 
 function createBookingItem(booking) {
@@ -1916,7 +2004,7 @@ function createBookingItem(booking) {
     const timeRemaining = formatTimeRemaining(bookingDateTime);
     const weekRange = formatWeekRange(bookingDateTime);
     
-    // Determinar se é semana atual
+    // Determinar se Ã© semana atual
     const isCurrentWeek = getWeekRange(new Date()).monday.toISOString().split('T')[0] === 
                           getWeekRange(bookingDateTime).monday.toISOString().split('T')[0];
     
@@ -1939,7 +2027,7 @@ function createBookingItem(booking) {
                 <span class="${timeRemaining.class}">${timeRemaining.text}</span>
             </div>
             <div class="booking-footer">
-                ${!canCancel ? '<span class="cannot-cancel-badge"><i class="fas fa-lock"></i> Não pode cancelar</span>' : ''}
+                ${!canCancel ? '<span class="cannot-cancel-badge"><i class="fas fa-lock"></i> NÃ£o pode cancelar</span>' : ''}
             </div>
         </div>
         <button class="btn-cancel" data-id="${booking.id}" ${!canCancel ? 'disabled' : ''}>
@@ -2008,7 +2096,7 @@ function renderDayControls() {
 }
 
 // ============================================
-// 8. FUNÇÕES DE AÇÃO
+// 8. FUNÃ‡Ã•ES DE AÃ‡ÃƒO
 // ============================================
 
 async function cancelBooking(id) {
@@ -2023,12 +2111,12 @@ async function cancelBooking(id) {
         return;
     }
     
-    let confirmMessage = '⚠️ Deseja realmente cancelar esta reserva?';
+    let confirmMessage = 'âš ï¸ Deseja realmente cancelar esta reserva?';
     
     if (cancelCheck.reason === 'grace_period') {
-        confirmMessage = `⚠️ Aula em menos de ${CANCEL_LIMIT_HOURS}h! Você tem apenas ${cancelCheck.minutesLeft} minutos para cancelar. Deseja cancelar agora?`;
+        confirmMessage = `âš ï¸ Aula em menos de ${CANCEL_LIMIT_HOURS}h! VocÃª tem apenas ${cancelCheck.minutesLeft} minutos para cancelar. Deseja cancelar agora?`;
     } else {
-        confirmMessage = `⚠️ Cancelar reserva para ${formatDate(booking.date)} às ${booking.hour}:00?`;
+        confirmMessage = `âš ï¸ Cancelar reserva para ${formatDate(booking.date)} Ã s ${booking.hour}:00?`;
     }
     
     if (!confirm(confirmMessage)) return;
@@ -2053,9 +2141,11 @@ function onSlotClick(e) {
     const date = btn.dataset.date;
     const isAvailable = btn.dataset.available === 'true'; // Convertendo string para boolean
     const bookCount = Number(btn.dataset.bookCount || 0);
+    const slotCategoria = btn.dataset.category || getHorarioCategoria(h);
+    const categoriaLabel = slotCategoria === 'danca' ? 'Danca' : 'Normal';
 
-    // 🔥 LOG PARA DEBUG
-    console.log('🔍 Slot clicado:', {
+    // ðŸ”¥ LOG PARA DEBUG
+    console.log('ðŸ” Slot clicado:', {
         weekday: wd,
         hour: h,
         date: date,
@@ -2064,23 +2154,23 @@ function onSlotClick(e) {
         classList: btn.className
     });
 
-    // VERIFICAÇÃO DE HORÁRIO PASSADO
+    // VERIFICAÃ‡ÃƒO DE HORÃRIO PASSADO
     if (isPastDateTime(date, h)) {
         showPastTimeModal(date, h);
         return;
     }
 
-    // VERIFICAÇÃO DE DISPONIBILIDADE - AGORA CORRETA
+    // VERIFICAÃ‡ÃƒO DE DISPONIBILIDADE - AGORA CORRETA
     if (!isAvailable) {
-        console.log('❌ Horário indisponível:', { wd, h, date });
-        showNotification('Este horário está indisponível', 'error');
+        console.log('âŒ HorÃ¡rio indisponÃ­vel:', { wd, h, date });
+        showNotification('Este horÃ¡rio estÃ¡ indisponÃ­vel', 'error');
         return;
     }
 
     // Modo Admin - toggle disponibilidade
     if (adminMode && currentUser?.isAdmin) {
         const newState = !isAvailable;
-        if (!confirm(`${newState ? '✅ Ativar' : '❌ Desativar'} horário ${h}:00 de ${weekdays[wd - 1]}?`)) return;
+        if (!confirm(`${newState ? 'âœ… Ativar' : 'âŒ Desativar'} horÃ¡rio ${h}:00 de ${weekdays[wd - 1]}?`)) return;
         
         btn.disabled = true;
         btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
@@ -2089,7 +2179,7 @@ function onSlotClick(e) {
             method: 'POST',
             body: JSON.stringify({ weekday: wd, hour: h, enabled: newState })
         }).then(() => {
-            showNotification(`Horário ${newState ? 'ativado' : 'desativado'}!`, 'success');
+            showNotification(`HorÃ¡rio ${newState ? 'ativado' : 'desativado'}!`, 'success');
             loadData();
         }).catch(() => {
             btn.disabled = false;
@@ -2098,54 +2188,64 @@ function onSlotClick(e) {
         return;
     }
     
-    // Resto do código continua igual...
+ 
     
     // Verificar login
     if (!currentUser) {
-        showNotification('Faça login para reservar um horário', 'error');
+        showNotification('FaÃ§a login para reservar um horÃ¡rio', 'error');
         showAuthScreen();
         return;
     }
 
-    // Verificar se usuário tem plano ativo
+    // Verificar se usuÃ¡rio tem plano ativo
     if (!currentUser.isAdmin && !userHasActivePlan()) {
-        showNotification('Você precisa escolher um plano primeiro', 'warning');
+        showNotification('VocÃª precisa escolher um plano primeiro', 'warning');
         showPlanRequiredModal();
         return;
     }
 
-    // Verificar se o horário é permitido pelo plano
+    // Verificar se o horÃ¡rio Ã© permitido pelo plano
     if (!currentUser.isAdmin && !isHorarioPermitido(wd, h)) {
-        showNotification('Seu plano não permite este horário. Para dança: 14:00 e 15:00.', 'warning');
+        showNotification(`Este horario pertence ao plano ${categoriaLabel}. Selecione um horario da sua categoria ativa.`, 'warning');
         return;
     }
 
-    // Verificar se já reservou
+    // Verificar se jÃ¡ reservou
     const bookedList = isBooked(date, h);
     if (bookedList.some(b => b.userId === currentUser.id)) {
-        showNotification('Você já reservou este horário', 'warning');
+        showNotification('VocÃª jÃ¡ reservou este horÃ¡rio', 'warning');
         return;
     }
     
-    // Verificar lotação
+    // Verificar lotaÃ§Ã£o
     if (bookCount >= 4) {
-        showNotification('Este horário já está lotado!', 'error');
+        showNotification('Este horÃ¡rio jÃ¡ estÃ¡ lotado!', 'error');
         return;
     }
     
-    // Verificar limite semanal (agora considerando múltiplos planos)
+    // Verificar limite semanal (agora considerando mÃºltiplos planos)
     const activePlans = getUserActivePlans();
     const nextWeekCounts = countBookingsInWeek(new Date(date), currentUser.id);
     
-    // Verificar se cada plano já atingiu seu limite
-    for (const plan of activePlans) {
+    // Verificar limite apenas da categoria do horario selecionado
+    const eligiblePlans = activePlans.filter(plan => {
         const planData = PLANS[plan.id] || plan;
-        const categoria = planData.categoria;
+        return (planData.categoria || 'normal') === slotCategoria;
+    });
+
+    if (eligiblePlans.length === 0) {
+        showNotification(`Voce nao possui um plano ${categoriaLabel} ativo para este horario.`, 'warning');
+        return;
+    }
+
+    for (const plan of eligiblePlans) {
+        const planData = PLANS[plan.id] || plan;
+        const categoria = planData.categoria || 'normal';
         const limit = planData.aulasPorSemana || 0;
         const used = nextWeekCounts.byCategory[categoria] || 0;
-        
+
         if (used >= limit) {
-            showNotification(`Seu plano ${planData.name} já atingiu o limite de ${limit} aulas nesta semana`, 'warning');
+            showNotification(`Seu plano ${planData.name} ja atingiu o limite de ${limit} aulas nesta semana`, 'warning');
             return;
         }
     }
@@ -2153,15 +2253,15 @@ function onSlotClick(e) {
     openBookingModal(date, h);
 }
 // ============================================
-// FUNÇÃO PARA CRIAR AULA FIXA
+// FUNÃ‡ÃƒO PARA CRIAR AULA FIXA
 // ============================================
 async function createFixedBooking(weekday, hour) {
   if (!currentUser) {
-    showNotification('Faça login primeiro', 'error');
+    showNotification('FaÃ§a login primeiro', 'error');
     return;
   }
 
-  if (!confirm(`Deseja transformar esta aula em fixa?\n\nIsso significa que você terá aula automática toda ${weekdays[weekday-1]} às ${hour}:00.`)) {
+  if (!confirm(`Deseja transformar esta aula em fixa?\n\nIsso significa que vocÃª terÃ¡ aula automÃ¡tica toda ${weekdays[weekday-1]} Ã s ${hour}:00.`)) {
     return;
   }
 
@@ -2202,7 +2302,7 @@ function showPlanRequiredModal() {
         modal.innerHTML = `
             <div class="modal-content" style="max-width: 400px; text-align: center;">
                 <div class="modal-header">
-                    <h3><i class="fas fa-crown" style="color: #f59e0b;"></i> Plano necessário</h3>
+                    <h3><i class="fas fa-crown" style="color: #f59e0b;"></i> Plano necessÃ¡rio</h3>
                     <button class="modal-close" onclick="closePlanModal()">
                         <i class="fas fa-times"></i>
                     </button>
@@ -2210,21 +2310,21 @@ function showPlanRequiredModal() {
                 <div class="modal-body">
                     <i class="fas fa-lock" style="font-size: 48px; color: #f59e0b; margin: 20px 0;"></i>
                     <p style="font-size: 16px; margin-bottom: 20px;">
-                        Para realizar agendamentos, você precisa escolher um plano.
+                        Para realizar agendamentos, vocÃª precisa escolher um plano.
                     </p>
                     <div style="background: #f8f9fa; padding: 15px; border-radius: 10px; margin-bottom: 20px;">
-                        <p style="color: #666; margin-bottom: 10px;">Benefícios dos planos:</p>
+                        <p style="color: #666; margin-bottom: 10px;">BenefÃ­cios dos planos:</p>
                         <ul style="list-style: none; padding: 0; text-align: left;">
-                            <li style="margin: 8px 0;">✓ Acesso a todos horários</li>
-                            <li style="margin: 8px 0;">✓ Até 5 aulas por semana</li>
-                            <li style="margin: 8px 0;">✓ Suporte personalizado</li>
+                            <li style="margin: 8px 0;">âœ“ Acesso a todos horÃ¡rios</li>
+                            <li style="margin: 8px 0;">âœ“ AtÃ© 5 aulas por semana</li>
+                            <li style="margin: 8px 0;">âœ“ Suporte personalizado</li>
                         </ul>
                     </div>
                 </div>
                 <div class="modal-actions" style="flex-direction: column;">
                     <button class="btn-primary" onclick="redirectToPlans()" style="width: 100%;">
                         <i class="fas fa-crown"></i>
-                        Ver planos disponíveis
+                        Ver planos disponÃ­veis
                     </button>
                     <button class="btn-secondary" onclick="closePlanModal()" style="width: 100%;">
                         Cancelar
@@ -2238,7 +2338,7 @@ function showPlanRequiredModal() {
     modal.style.display = 'flex';
     setTimeout(() => modal.classList.add('show'), 10);
 }
-// MODAL PARA HORÁRIO PASSADO
+// MODAL PARA HORÃRIO PASSADO
 function showPastTimeModal(date, hour) {
     // Fechar qualquer modal existente primeiro
     const existingModal = document.getElementById('pastTimeModal');
@@ -2253,16 +2353,16 @@ function showPastTimeModal(date, hour) {
     modal.setAttribute('role', 'dialog');
     modal.setAttribute('aria-modal', 'true');
     
-    // Formatar data e hora para exibição
+    // Formatar data e hora para exibiÃ§Ã£o
     const formattedDate = formatDate(date);
-    const dateTimeStr = `${formattedDate} às ${hour}:00`;
+    const dateTimeStr = `${formattedDate} Ã s ${hour}:00`;
     
     modal.innerHTML = `
         <div class="modal-content past-time-modal">
             <div class="modal-header">
                 <h3>
                     <i class="fas fa-clock"></i>
-                    Horário indisponível
+                    HorÃ¡rio indisponÃ­vel
                 </h3>
                 <button class="modal-close" onclick="closePastTimeModal()">
                     <i class="fas fa-times"></i>
@@ -2273,13 +2373,13 @@ function showPastTimeModal(date, hour) {
                     <i class="fas fa-hourglass-end"></i>
                 </div>
                 <p class="past-time-message">
-                    Este horário <br>
+                    Este horÃ¡rio <br>
                     <strong>${dateTimeStr}</strong> <br>
-                    já passou.
+                    jÃ¡ passou.
                 </p>
                 <div class="past-time-suggestion">
                     <i class="fas fa-lightbulb"></i>
-                    <span>Que tal escolher um horário futuro?</span>
+                    <span>Que tal escolher um horÃ¡rio futuro?</span>
                 </div>
             </div>
             <div class="modal-actions">
@@ -2293,7 +2393,7 @@ function showPastTimeModal(date, hour) {
     
     document.body.appendChild(modal);
     
-    // Mostrar modal com animação
+    // Mostrar modal com animaÃ§Ã£o
     setTimeout(() => {
         modal.style.display = 'flex';
         setTimeout(() => modal.classList.add('show'), 10);
@@ -2308,7 +2408,7 @@ function showPastTimeModal(date, hour) {
 }
 
 
-// Função global para fechar o modal - CORRIGIDA
+// FunÃ§Ã£o global para fechar o modal - CORRIGIDA
 window.closePastTimeModal = function() {
     const modal = document.getElementById('pastTimeModal');
     if (modal) {
@@ -2354,7 +2454,7 @@ function showLimitReachedModal(limit, used, planName) {
                 </div>
                 
                 <p class="limit-message-main">
-                    Você já utilizou <strong>${used} de ${limit} aulas</strong> disponíveis nesta semana.
+                    VocÃª jÃ¡ utilizou <strong>${used} de ${limit} aulas</strong> disponÃ­veis nesta semana.
                 </p>
                 
                 <div class="progress-container large">
@@ -2364,17 +2464,17 @@ function showLimitReachedModal(limit, used, planName) {
                 <div class="limit-info">
                     <p>
                         <i class="fas fa-info-circle"></i>
-                        Para agendar mais aulas nesta semana, você precisará fazer um upgrade de plano.
+                        Para agendar mais aulas nesta semana, vocÃª precisarÃ¡ fazer um upgrade de plano.
                     </p>
                 </div>
                 
                 <div class="plans-comparison">
-                    <h4>Planos disponíveis:</h4>
+                    <h4>Planos disponÃ­veis:</h4>
                     
                     <div class="plan-option">
                         <div class="plan-name">
                             <i class="fas fa-seedling" style="color: #10b981;"></i>
-                            Plano Básico
+                            Plano BÃ¡sico
                         </div>
                         <div class="plan-limit">2 aulas/semana</div>
                     </div>
@@ -2382,7 +2482,7 @@ function showLimitReachedModal(limit, used, planName) {
                     <div class="plan-option">
                         <div class="plan-name">
                             <i class="fas fa-fire" style="color: #3b82f6;"></i>
-                            Plano Intermediário
+                            Plano IntermediÃ¡rio
                         </div>
                         <div class="plan-limit">3 aulas/semana</div>
                     </div>
@@ -2390,7 +2490,7 @@ function showLimitReachedModal(limit, used, planName) {
                     <div class="plan-option">
                         <div class="plan-name">
                             <i class="fas fa-rocket" style="color: #f59e0b;"></i>
-                            Plano Avançado
+                            Plano AvanÃ§ado
                         </div>
                         <div class="plan-limit">4 aulas/semana</div>
                     </div>
@@ -2411,7 +2511,7 @@ function showLimitReachedModal(limit, used, planName) {
                 </button>
                 <button class="btn-secondary" onclick="closeLimitModal()">
                     <i class="fas fa-clock"></i>
-                    Agendar para próxima semana
+                    Agendar para proxima semana
                 </button>
             </div>
         </div>
@@ -2432,7 +2532,7 @@ function showLimitReachedModal(limit, used, planName) {
     });
 }
 
-// Funções globais para o modal de limite
+// FunÃ§Ãµes globais para o modal de limite
 window.closeLimitModal = function() {
     const modal = document.getElementById('limitReachedModal');
     if (modal) {
@@ -2445,13 +2545,13 @@ window.closeLimitModal = function() {
     }
 };
 
-// Redirecionar para página de planos
+// Redirecionar para pÃ¡gina de planos
 window.redirectToUpgrade = function() {
     closeLimitModal();
     window.location.href = '/plans';
 };
 
-// Funções globais para o modal
+// FunÃ§Ãµes globais para o modal
 window.closePlanModal = function() {
     const modal = document.getElementById('planRequiredModal');
     if (modal) {
@@ -2469,11 +2569,11 @@ window.monitorPayment = monitorPayment;
 window.initPaymentMonitoring = initPaymentMonitoring;
 
 // ============================================
-// 9. FUNÇÕES DE MODAL DE RESERVA
+// 9. FUNÃ‡Ã•ES DE MODAL DE RESERVA
 // ============================================
 
 function openBookingModal(date, h) {
-    // Verificar novamente se é horário passado (segurança)
+    // Verificar novamente se Ã© horÃ¡rio passado (seguranÃ§a)
     if (isPastDateTime(date, h)) {
         showPastTimeModal(date, h); // <-- USAR O MESMO MODAL
         return;
@@ -2491,7 +2591,7 @@ function openBookingModal(date, h) {
     
     modalTitle.innerHTML = `
         <i class="fas fa-calendar-check"></i>
-        Reservar ${formatDate(date)} — ${h}:00
+        Reservar ${formatDate(date)} â€” ${h}:00
     `;
     
     const warningHtml = timeValidation.warning ? 
@@ -2502,8 +2602,8 @@ function openBookingModal(date, h) {
     const fixedButtonHtml = `
         <div class="fixed-booking-option">
         <hr>
-        <p><i class="fas fa-repeat"></i> <strong>Quer tornar este horário fixo?</strong></p>
-        <p class="fixed-description">Isso criará uma aula automática toda ${weekdays[weekday-1]} às ${h}:00.</p>
+        <p><i class="fas fa-repeat"></i> <strong>Quer tornar este horÃ¡rio fixo?</strong></p>
+        <p class="fixed-description">Isso criarÃ¡ uma aula automÃ¡tica toda ${weekdays[weekday-1]} Ã s ${h}:00.</p>
         <button class="btn-secondary btn-fixed" onclick="createFixedBooking(${weekday}, ${h})">
             <i class="fas fa-calendar-plus"></i>
             Tornar Fixo
@@ -2520,7 +2620,7 @@ function openBookingModal(date, h) {
             </p>
             <p><i class="fas fa-calendar-week"></i> <strong>Semana de ${weekRange}</strong></p>
             <p class="${availableSpots > 0 ? 'text-success' : 'text-danger'}">
-                <i class="fas fa-users"></i> Vagas disponíveis: ${availableSpots}/4
+                <i class="fas fa-users"></i> Vagas disponÃ­veis: ${availableSpots}/4
             </p>
             <p>
                 <i class="fas fa-chart-line"></i> Seus agendamentos nesta semana: ${weeklyCount}/${currentUser.plan?.aulasPorSemana || 0}
@@ -2547,7 +2647,7 @@ function closeModal() {
 }
 
 // ============================================
-// FUNÇÃO PARA AVISO QUANDO NÃO TEM PLANO
+// FUNÃ‡ÃƒO PARA AVISO QUANDO NÃƒO TEM PLANO
 // ============================================
 function updateWeeklyWarningNoPlan() {
     if (!weeklyWarning) return;
@@ -2555,7 +2655,7 @@ function updateWeeklyWarningNoPlan() {
     weeklyWarning.innerHTML = `
         <div class="warning-content warning">
             <i class="fas fa-exclamation-triangle"></i>
-            <span>Você não possui um plano ativo</span>
+            <span>VocÃª nÃ£o possui um plano ativo</span>
             <button class="btn-small" onclick="window.location.href='/plans'">
                 <i class="fas fa-crown"></i>
                 Ver planos
@@ -2569,14 +2669,14 @@ function startPlanChecker() {
     // Verificar a cada 30 segundos se o plano foi ativado
     setInterval(async () => {
         if (currentUser && !userHasActivePlan()) {
-            console.log('🔍 Verificando se plano foi ativado...');
+            console.log('ðŸ” Verificando se plano foi ativado...');
             await refreshUserData();
         }
     }, 30000); // 30 segundos
 }
 
 // ============================================
-// 10. FUNÇÕES DE PLANOS (REDIRECIONAMENTO)
+// 10. FUNÃ‡Ã•ES DE PLANOS (REDIRECIONAMENTO)
 // ============================================
 
 function showPlans() {
@@ -2585,7 +2685,7 @@ function showPlans() {
 
 async function selectPlan(planId) {
     if (!currentUser) {
-        showNotification('Faça login primeiro', 'warning');
+        showNotification('FaÃ§a login primeiro', 'warning');
         showAuthScreen();
         return;
     }
@@ -2606,7 +2706,7 @@ async function selectPlan(planId) {
 // ============================================
 
 // ============================================
-// CRIAR BOT�O FLUTUANTE PARA MOBILE
+// CRIAR BOTï¿½O FLUTUANTE PARA MOBILE
 // ============================================
 function createFloatingPlansButton() {
     if (document.getElementById('floatingPlansBtn')) return;
@@ -2621,7 +2721,7 @@ function createFloatingPlansButton() {
 
     floatingBtn.addEventListener('click', () => {
         if (!currentUser) {
-            showNotification('Fa�a login para ver os planos', 'warning');
+            showNotification('Faï¿½a login para ver os planos', 'warning');
             showAuthScreen();
             return;
         }
@@ -2650,31 +2750,31 @@ function showAppScreen() {
 // 12. CARREGAR DADOS
 // ============================================
 // ============================================
-// DIAGNÓSTICO DO SISTEMA
+// DIAGNÃ“STICO DO SISTEMA
 // ============================================
 async function diagnosticarSistema() {
-    console.log('🔍 ===== DIAGNÓSTICO DO SISTEMA =====');
+    console.log('ðŸ” ===== DIAGNÃ“STICO DO SISTEMA =====');
     
-    // 1. Verificar usuário no localStorage
+    // 1. Verificar usuÃ¡rio no localStorage
     const savedUser = localStorage.getItem('user');
-    console.log('📦 localStorage.user:', savedUser ? 'EXISTE' : 'NÃO EXISTE');
+    console.log('ðŸ“¦ localStorage.user:', savedUser ? 'EXISTE' : 'NÃƒO EXISTE');
     if (savedUser) {
         try {
             const user = JSON.parse(savedUser);
-            console.log('👤 Usuário no localStorage:', { 
+            console.log('ðŸ‘¤ UsuÃ¡rio no localStorage:', { 
                 id: user.id, 
                 name: user.name, 
                 email: user.email 
             });
         } catch (e) {
-            console.log('❌ Erro ao parsear localStorage.user');
+            console.log('âŒ Erro ao parsear localStorage.user');
         }
     }
     
-    // 2. Testar endpoints de usuário
-    console.log('\n📡 Testando endpoints do usuário:');
+    // 2. Testar endpoints de usuÃ¡rio
+    console.log('\nðŸ“¡ Testando endpoints do usuÃ¡rio:');
     
-    // Tentar buscar usuário por ID se existir no localStorage
+    // Tentar buscar usuÃ¡rio por ID se existir no localStorage
     if (savedUser) {
         const user = JSON.parse(savedUser);
         
@@ -2683,22 +2783,22 @@ async function diagnosticarSistema() {
                 credentials: 'include',
                 headers: { 'Content-Type': 'application/json' }
             });
-            console.log(`📡 /auth/me?userId=${user.id}: ${response.status}`);
+            console.log(`ðŸ“¡ /auth/me?userId=${user.id}: ${response.status}`);
             
             if (response.ok) {
                 const data = await response.json();
-                console.log('✅ Usuário encontrado no backend!');
+                console.log('âœ… UsuÃ¡rio encontrado no backend!');
             } else {
                 const error = await response.json();
-                console.log(`❌ Usuário NÃO encontrado: ${error.error}`);
+                console.log(`âŒ UsuÃ¡rio NÃƒO encontrado: ${error.error}`);
             }
         } catch (error) {
-            console.log(`❌ Erro na requisição: ${error.message}`);
+            console.log(`âŒ Erro na requisiÃ§Ã£o: ${error.message}`);
         }
     }
     
-    // 3. Verificar conexão com backend
-    console.log('\n📡 Testando conectividade geral:');
+    // 3. Verificar conexÃ£o com backend
+    console.log('\nðŸ“¡ Testando conectividade geral:');
     const endpoints = ['/auth/me', '/bookings', '/admin/availability', '/admin/dates'];
     
     for (const endpoint of endpoints) {
@@ -2707,16 +2807,16 @@ async function diagnosticarSistema() {
                 method: 'HEAD',
                 credentials: 'include'
             });
-            console.log(`📡 ${endpoint}: ${response.status}`);
+            console.log(`ðŸ“¡ ${endpoint}: ${response.status}`);
         } catch (error) {
-            console.log(`📡 ${endpoint}: FALHA - ${error.message}`);
+            console.log(`ðŸ“¡ ${endpoint}: FALHA - ${error.message}`);
         }
     }
     
-    console.log('🔍 ===== FIM DO DIAGNÓSTICO =====\n');
+    console.log('ðŸ” ===== FIM DO DIAGNÃ“STICO =====\n');
 }
 
-// Executar diagnóstico ao iniciar
+// Executar diagnÃ³stico ao iniciar
 diagnosticarSistema();
 async function loadData() {
     if (loading) return;
@@ -2727,7 +2827,7 @@ async function loadData() {
     try {
         scheduleEl.innerHTML = `<div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i> Carregando...</div>`;
         
-        // PRIMEIRO: Atualizar dados do usuário
+        // PRIMEIRO: Atualizar dados do usuÃ¡rio
         await refreshUserData();
         
         await loadDates();
@@ -2743,7 +2843,7 @@ async function loadData() {
         availability = availabilityRes.data;
         bookings = bookingsRes.data;
         
-        // Normalizar planos (já foi feito no refreshUserData, mas garantimos)
+        // Normalizar planos (jÃ¡ foi feito no refreshUserData, mas garantimos)
         normalizeUserPlans();
         
         // Renderizar interface
@@ -2759,18 +2859,18 @@ async function loadData() {
         }
         
     } catch (e) {
-        console.error('❌ Erro ao carregar dados:', e);
+        console.error('âŒ Erro ao carregar dados:', e);
         showNotification('Erro ao carregar dados', 'error');
     } finally {
         loading = false;
     }
 }
 // ============================================
-// 13. INICIALIZAÇÃO
+// 13. INICIALIZAÃ‡ÃƒO
 // ============================================
 
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('🚀 Sistema iniciado - Versão com Visualização Semanal');
+    console.log('ðŸš€ Sistema iniciado - VersÃ£o com VisualizaÃ§Ã£o Semanal');
     
     const loginForm = document.getElementById('loginForm');
     const cadastroForm = document.getElementById('cadastroForm');
@@ -2780,7 +2880,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const refreshBtn = document.getElementById('refreshBtn');
     const logoutBtn = document.getElementById('logoutBtn');
     
-    // ===== TABS DE AUTENTICAÇÃO =====
+    // ===== TABS DE AUTENTICAÃ‡ÃƒO =====
     tabLogin.addEventListener('click', () => {
         tabLogin.classList.add('active');
         tabCadastro.classList.remove('active');
@@ -2837,7 +2937,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 submitBtn.innerHTML = originalText;
             }
         } catch (error) {
-            showNotification('Erro de conexão', 'error');
+            showNotification('Erro de conexÃ£o', 'error');
             submitBtn.disabled = false;
             submitBtn.innerHTML = originalText;
         }
@@ -2860,7 +2960,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const password2 = document.getElementById('cadastroPassword2').value;
         
         if (password !== password2) {
-            showNotification('As senhas não conferem', 'error');
+            showNotification('As senhas nÃ£o conferem', 'error');
             return;
         }
         
@@ -2880,7 +2980,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const data = await response.json();
             
             if (response.ok) {
-                showNotification('Cadastro realizado! Faça login.', 'success');
+                showNotification('Cadastro realizado! FaÃ§a login.', 'success');
                 tabLogin.click();
                 
                 ['cadastroName', 'cadastroEmail', 'cadastroPhone', 'cadastroPassword', 'cadastroPassword2']
@@ -2894,7 +2994,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 submitBtn.innerHTML = originalText;
             }
         } catch (error) {
-            showNotification('Erro de conexão', 'error');
+            showNotification('Erro de conexÃ£o', 'error');
             submitBtn.disabled = false;
             submitBtn.innerHTML = originalText;
         }
@@ -2931,18 +3031,18 @@ document.addEventListener('DOMContentLoaded', function() {
         showNotification(adminMode ? 'Modo admin ativado' : 'Modo admin desativado', 'info');
     });
     
-    // ===== BOT�O DE PLANOS (sempre vis�vel) =====
+    // ===== BOTï¿½O DE PLANOS (sempre visï¿½vel) =====
     if (plansMenuBtn) {
         plansMenuBtn.addEventListener('click', () => {
             if (!currentUser) {
-                showNotification('Fa�a login para ver os planos', 'warning');
+                showNotification('Faï¿½a login para ver os planos', 'warning');
                 showAuthScreen();
                 return;
             }
             window.location.href = '/plans';
         });
     }
-    // ===== BOTÃO ATUALIZAR =====
+    // ===== BOTÃƒO ATUALIZAR =====
     refreshBtn.addEventListener('click', () => {
         loadData();
         showNotification('Dados atualizados', 'success');
@@ -2966,7 +3066,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         if (!currentUser) {
             closeModal();
-            showNotification('Usuário não autenticado', 'error');
+            showNotification('UsuÃ¡rio nÃ£o autenticado', 'error');
             return;
         }
         
@@ -2986,7 +3086,7 @@ document.addEventListener('DOMContentLoaded', function() {
             });
             
             if (result.success) {
-                showNotification('Horário reservado com sucesso!', 'success');
+                showNotification('HorÃ¡rio reservado com sucesso!', 'success');
                 closeModal();
                 updateWeeklyWarning();
                 await loadData();
@@ -3022,14 +3122,14 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
-    // ===== VERIFICAR USUÁRIO SALVO =====
+    // ===== VERIFICAR USUÃRIO SALVO =====
     const savedUser = localStorage.getItem('user');
     if (savedUser) {
         try {
             currentUser = JSON.parse(savedUser);
             showAppScreen();
         } catch (err) {
-            console.error('Erro ao recuperar usuário');
+            console.error('Erro ao recuperar usuÃ¡rio');
             localStorage.removeItem('user');
             showAuthScreen();
         }
@@ -3043,7 +3143,7 @@ document.addEventListener('DOMContentLoaded', function() {
 // ============================================
 
 const additionalStyles = `
-    /* Modal de horário passado - CORRIGIDO */
+    /* Modal de horÃ¡rio passado - CORRIGIDO */
     .past-time-modal {
         max-width: 380px !important;
         text-align: center;
@@ -3193,7 +3293,7 @@ const additionalStyles = `
     }
 
     .past-slot::before {
-        content: "⏰ Passado";
+        content: "â° Passado";
         position: absolute;
         top: 50%;
         left: 50%;
@@ -3205,7 +3305,7 @@ const additionalStyles = `
         padding: 2px 6px;
         border-radius: 4px;
     }
-    /* Estilos para informações do plano */
+    /* Estilos para informaÃ§Ãµes do plano */
     .user-info {
         display: flex;
         align-items: center;
@@ -3269,7 +3369,7 @@ const additionalStyles = `
     }
     
     .slot-btn.requires-plan:hover::after {
-        content: "🔒 Necessário plano";
+        content: "ðŸ”’ NecessÃ¡rio plano";
         position: absolute;
         top: -30px;
         left: 50%;
@@ -3472,6 +3572,44 @@ const additionalStyles = `
         font-size: 13px;
         font-weight: 500;
         color: #475569;
+    }
+
+    .booking-category-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        margin: 12px 0 8px 0;
+        padding: 8px 12px;
+        border-radius: 8px;
+        font-size: 12px;
+        font-weight: 700;
+        border: 1px solid #e2e8f0;
+        background: #f8fafc;
+    }
+
+    .booking-category-header.treino {
+        border-left: 4px solid #10b981;
+    }
+
+    .booking-category-header.danca {
+        border-left: 4px solid #ec4899;
+        background: #fdf2f8;
+    }
+
+    .booking-category-title {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        color: #0f172a;
+    }
+
+    .booking-category-count {
+        font-size: 11px;
+        color: #475569;
+        background: #e2e8f0;
+        padding: 2px 8px;
+        border-radius: 999px;
     }
     
     .my-booking-item {
@@ -4076,7 +4214,7 @@ const additionalStyles = `
         }
     }
     /* ============================= */
-    /* BOTÃO DE PLANOS */
+    /* BOTÃƒO DE PLANOS */
     /* ============================= */
 
     .btn-plans {
@@ -4117,7 +4255,7 @@ const additionalStyles = `
         display: inline;
     }
 
-    /* Botão quando já possui plano (Upgrade) */
+    /* BotÃ£o quando jÃ¡ possui plano (Upgrade) */
     .btn-plans.has-plan {
         color: #f59e0b;
         border-color: #f59e0b;
@@ -4180,7 +4318,7 @@ const additionalStyles = `
 
 
     /* ============================= */
-    /* INFORMAÇÕES DE DANÇA */
+    /* INFORMAÃ‡Ã•ES DE DANÃ‡A */
     /* ============================= */
 
     .info-danca {
@@ -4242,12 +4380,52 @@ const additionalStyles = `
         margin-bottom: 5px;
     }
 
+    .schedule-category-divider {
+        grid-column: 1 / -1;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 10px 14px;
+        margin-top: 8px;
+        border-radius: 10px;
+        border: 1px solid #e5e7eb;
+        background: #f8fafc;
+    }
+
+    .schedule-category-divider.category-normal {
+        border-left: 4px solid #10b981;
+    }
+
+    .schedule-category-divider.category-danca {
+        border-left: 4px solid #ec4899;
+        background: #fdf2f8;
+    }
+
+    .schedule-category-title {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 14px;
+        font-weight: 700;
+        color: #111827;
+    }
+
+    .schedule-category-subtitle {
+        font-size: 12px;
+        color: #6b7280;
+    }
 
     /* ============================= */
     /* RESPONSIVIDADE */
     /* ============================= */
 
     @media (max-width: 768px) {
+
+        .schedule-category-divider {
+            flex-direction: column;
+            align-items: flex-start;
+        }
 
         .btn-plans {
             width: 40px;
@@ -4292,7 +4470,7 @@ const additionalStyles = `
             align-items: flex-start;
         }
     }
-    /* Estilos para múltiplos planos */
+    /* Estilos para mÃºltiplos planos */
     .multi-plans-container {
         display: flex;
         flex-direction: column;
@@ -4352,7 +4530,7 @@ const additionalStyles = `
         font-size: 13px;
     }
 
-    /* Container para múltiplos planos */
+    /* Container para mÃºltiplos planos */
     .plans-container-mini {
         display: flex;
         flex-wrap: wrap;
@@ -4407,5 +4585,6 @@ const styleSheet = document.createElement('style');
 styleSheet.textContent = additionalStyles;
 document.head.appendChild(styleSheet);
 
-console.log('✅ Código carregado completamente!');
+console.log('âœ… CÃ³digo carregado completamente!');
+
 

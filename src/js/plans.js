@@ -1,7 +1,3 @@
-// ============================================
-// plans.js - Página de Planos da FitLife
-// VERSÃO ATUALIZADA - SUPORTE A MÚLTIPLOS PLANOS COM VALIDAÇÃO
-// ============================================
 
 const API = 'https://jokesteronline.org/api';
 
