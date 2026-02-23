@@ -3611,6 +3611,11 @@ const additionalStyles = `
         padding: 2px 8px;
         border-radius: 999px;
     }
+
+    .booking-info {
+        flex: 1;
+        min-width: 0;
+    }
     
     .my-booking-item {
         background: white;
@@ -3775,12 +3780,42 @@ const additionalStyles = `
             width: 100%;
             justify-content: space-between;
         }
-        
+
+        .booking-category-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 6px;
+            padding: 8px 10px;
+        }
+
+        .booking-category-title {
+            font-size: 12px;
+        }
+
+        .booking-category-count {
+            font-size: 10px;
+        }
+
         .my-booking-item {
             flex-direction: column;
             align-items: flex-start;
+            padding: 10px 12px;
         }
-        
+
+        .booking-info {
+            width: 100%;
+        }
+
+        .booking-datetime,
+        .booking-week {
+            flex-wrap: wrap;
+        }
+
+        .booking-timer {
+            width: 100%;
+            justify-content: center;
+        }
+
         .btn-cancel {
             width: 100%;
         }
@@ -4425,6 +4460,22 @@ const additionalStyles = `
         .schedule-category-divider {
             flex-direction: column;
             align-items: flex-start;
+            gap: 6px;
+            padding: 8px 10px;
+            margin-top: 6px;
+        }
+
+        .schedule-category-title {
+            font-size: 13px;
+        }
+
+        .schedule-category-subtitle {
+            font-size: 11px;
+            line-height: 1.3;
+        }
+
+        .slot-btn.plano-nao-permite:hover::after {
+            display: none;
         }
 
         .btn-plans {
@@ -4468,6 +4519,28 @@ const additionalStyles = `
         .warning-header {
             flex-direction: column;
             align-items: flex-start;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .week-header {
+            padding: 10px 12px;
+        }
+
+        .week-count {
+            font-size: 12px;
+        }
+
+        .booking-datetime {
+            font-size: 13px;
+        }
+
+        .schedule-category-title {
+            font-size: 12px;
+        }
+
+        .schedule-category-subtitle {
+            display: none;
         }
     }
     /* Estilos para mÃºltiplos planos */
