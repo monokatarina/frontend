@@ -1,6 +1,6 @@
 // ============================================
 // plans.js - Página de Planos da FitLife
-// VERSÃO ATUALIZADA - SUPORTE A MÚLTIPLOS PLANOS
+// VERSÃO ATUALIZADA - SUPORTE A MÚLTIPLOS PLANOS COM VALIDAÇÃO
 // ============================================
 
 const API = 'https://jokesteronline.org/api';
@@ -117,8 +117,39 @@ const PLANOS_POR_CATEGORIA = {
 // ============================================
 // ESTADO GLOBAL
 // ============================================
-let selectedPlans = []; // Array de planos selecionados (agora é array)
+let selectedPlans = [];
 let currentUser = null;
+
+// ============================================
+// FUNÇÃO DE VALIDAÇÃO DE COMBINAÇÕES
+// ============================================
+function isValidCombination(plans, newPlanId) {
+    const planToAdd = PLANS[newPlanId];
+    const currentPlans = [...plans];
+    
+    // Contar planos por categoria
+    const hasNormal = currentPlans.some(id => PLANS[id].categoria === 'normal');
+    const hasDanca = currentPlans.some(id => PLANS[id].categoria === 'danca');
+    const normalCount = currentPlans.filter(id => PLANS[id].categoria === 'normal').length;
+    const dancaCount = currentPlans.filter(id => PLANS[id].categoria === 'danca').length;
+    
+    // Regras para adicionar novo plano
+    if (planToAdd.categoria === 'normal') {
+        if (hasNormal || normalCount >= 1) {
+            showNotification('Você já possui um plano normal. Não é permitido ter dois planos normais.', 'warning');
+            return false;
+        }
+    }
+    
+    if (planToAdd.categoria === 'danca') {
+        if (hasDanca || dancaCount >= 1) {
+            showNotification('Você já possui um plano de dança. Não é permitido ter dois planos de dança.', 'warning');
+            return false;
+        }
+    }
+    
+    return true;
+}
 
 // ============================================
 // INICIALIZAÇÃO
@@ -126,22 +157,11 @@ let currentUser = null;
 document.addEventListener('DOMContentLoaded', () => {
     console.log('🚀 Página de Planos iniciada - Modo Multiplanos');
     
-    // Verificar usuário logado
     checkUserLogin();
-    
-    // Carregar seleções anteriores da sessionStorage
     loadSelectedPlansFromStorage();
-    
-    // Renderizar planos
     renderPlans();
-    
-    // Configurar event listeners
     setupEventListeners();
-    
-    // Adicionar estilos dinâmicos
     addDynamicStyles();
-    
-    // Criar botão flutuante de continuar
     createFloatingContinueButton();
 });
 
@@ -221,7 +241,6 @@ function renderPlans() {
         grid.appendChild(card);
     });
     
-    // Adicionar animação após renderizar
     setTimeout(() => {
         document.querySelectorAll('.plan-card').forEach(card => {
             card.style.opacity = '1';
@@ -229,12 +248,11 @@ function renderPlans() {
         });
     }, 100);
     
-    // Atualizar botão flutuante
     updateFloatingButton();
 }
 
 // ============================================
-// CRIAÇÃO DO CARD DO PLANO (VERSÃO MULTISELECT)
+// CRIAÇÃO DO CARD DO PLANO
 // ============================================
 function createPlanCard(id, plan) {
     const card = document.createElement('div');
@@ -244,19 +262,16 @@ function createPlanCard(id, plan) {
     card.setAttribute('tabindex', '0');
     card.setAttribute('aria-label', `Selecionar plano ${plan.name}`);
     
-    // Verificar se já está selecionado
     const isSelected = selectedPlans.includes(id);
     if (isSelected) {
         card.classList.add('selected');
         card.setAttribute('aria-selected', 'true');
     }
     
-    // Estilo inicial para animação
     card.style.opacity = '0';
     card.style.transform = 'translateY(20px)';
     card.style.transition = 'all 0.3s ease';
     
-    // Badge de popular
     const popularBadge = plan.popular ? 
         '<span class="popular-badge"><i class="fas fa-star"></i> Mais popular</span>' : '';
     
@@ -292,7 +307,6 @@ function createPlanCard(id, plan) {
         </button>
     `;
 
-    // Event listeners
     card.addEventListener('click', () => togglePlan(id, card));
     card.addEventListener('keypress', (e) => {
         if (e.key === 'Enter' || e.key === ' ') {
@@ -305,10 +319,9 @@ function createPlanCard(id, plan) {
 }
 
 // ============================================
-// FUNÇÃO PARA ALTERNAR SELEÇÃO DO PLANO (MULTISELECT)
+// FUNÇÃO PARA ALTERNAR SELEÇÃO DO PLANO (COM VALIDAÇÃO)
 // ============================================
 function togglePlan(planId, card) {
-    // Verificar se usuário está logado
     if (!currentUser) {
         showNotification('Faça login para continuar', 'warning');
         setTimeout(() => {
@@ -320,12 +333,15 @@ function togglePlan(planId, card) {
     const index = selectedPlans.indexOf(planId);
     
     if (index === -1) {
-        // ADICIONAR PLANO
+        // ADICIONAR PLANO - Validar antes
+        if (!isValidCombination(selectedPlans, planId)) {
+            return;
+        }
+        
         selectedPlans.push(planId);
         card.classList.add('selected');
         card.setAttribute('aria-selected', 'true');
         
-        // Atualizar texto do botão
         const btn = card.querySelector('.btn-select');
         btn.innerHTML = `<i class="fas fa-check-circle"></i> Selecionado`;
         
@@ -336,17 +352,13 @@ function togglePlan(planId, card) {
         card.classList.remove('selected');
         card.setAttribute('aria-selected', 'false');
         
-        // Atualizar texto do botão
         const btn = card.querySelector('.btn-select');
         btn.innerHTML = `<i class="fas fa-plus-circle"></i> Adicionar plano`;
         
         showNotification(`❌ ${PLANS[planId].name} removido`, 'info');
     }
     
-    // Salvar no sessionStorage
     sessionStorage.setItem('selectedPlans', JSON.stringify(selectedPlans));
-    
-    // Atualizar botão flutuante
     updateFloatingButton();
 }
 
@@ -354,11 +366,9 @@ function togglePlan(planId, card) {
 // CRIAR BOTÃO FLUTUANTE DE CONTINUAR
 // ============================================
 function createFloatingContinueButton() {
-    // Remover botão existente se houver
     const existingBtn = document.getElementById('floatingContinueBtn');
     if (existingBtn) existingBtn.remove();
     
-    // Criar novo botão
     const floatingBtn = document.createElement('div');
     floatingBtn.id = 'floatingContinueBtn';
     floatingBtn.className = 'floating-continue-btn';
@@ -380,8 +390,6 @@ function createFloatingContinueButton() {
     `;
     
     document.body.appendChild(floatingBtn);
-    
-    // Adicionar estilos para o botão
     addButtonStyles();
 }
 
@@ -395,14 +403,11 @@ function updateFloatingButton() {
     if (selectedPlans.length > 0) {
         floatingBtn.style.display = 'block';
         
-        // Atualizar badge
         const badge = document.getElementById('selectedCountBadge');
         if (badge) badge.textContent = selectedPlans.length;
         
-        // Calcular preço total
         const totalPrice = selectedPlans.reduce((sum, id) => sum + PLANS[id].price, 0);
         
-        // Atualizar texto do botão
         const btnText = floatingBtn.querySelector('.btn-text');
         if (btnText) {
             btnText.innerHTML = `Continuar (R$ ${totalPrice.toFixed(2)})`;
@@ -413,7 +418,7 @@ function updateFloatingButton() {
 }
 
 // ============================================
-// IR PARA CHECKOUT
+// IR PARA CHECKOUT (COM VALIDAÇÃO FINAL)
 // ============================================
 function goToCheckout() {
     if (selectedPlans.length === 0) {
@@ -421,66 +426,25 @@ function goToCheckout() {
         return;
     }
     
-    // Salvar no sessionStorage
-    sessionStorage.setItem('selectedPlans', JSON.stringify(selectedPlans));
+    const normalCount = selectedPlans.filter(id => PLANS[id].categoria === 'normal').length;
+    const dancaCount = selectedPlans.filter(id => PLANS[id].categoria === 'danca').length;
     
-    // Feedback visual
+    if (normalCount > 1) {
+        showNotification('Você não pode ter mais de um plano normal', 'error');
+        return;
+    }
+    
+    if (dancaCount > 1) {
+        showNotification('Você não pode ter mais de um plano de dança', 'error');
+        return;
+    }
+    
+    sessionStorage.setItem('selectedPlans', JSON.stringify(selectedPlans));
     showNotification('Redirecionando para checkout...', 'info');
     
-    // Redirecionar
     setTimeout(() => {
         window.location.href = '/checkout';
     }, 500);
-}
-
-// ============================================
-// CONFIGURAÇÃO DOS EVENT LISTENERS
-// ============================================
-function setupEventListeners() {
-    // Botão de voltar (se existir)
-    const backBtn = document.getElementById('backToHome');
-    if (backBtn) {
-        backBtn.addEventListener('click', () => {
-            window.location.href = '/';
-        });
-    }
-    
-    // Botão de limpar seleção (opcional)
-    const clearBtn = document.getElementById('clearSelection');
-    if (!clearBtn) {
-        // Criar botão de limpar seleção
-        const header = document.querySelector('.plans-header');
-        if (header) {
-            const clearButton = document.createElement('button');
-            clearButton.id = 'clearSelection';
-            clearButton.className = 'btn-clear';
-            clearButton.innerHTML = '<i class="fas fa-times"></i> Limpar seleção';
-            clearButton.onclick = clearAllSelections;
-            clearButton.style.cssText = `
-                background: none;
-                border: 1px solid rgba(255,255,255,0.3);
-                color: white;
-                padding: 8px 16px;
-                border-radius: 30px;
-                margin-top: 10px;
-                cursor: pointer;
-                transition: all 0.3s;
-            `;
-            clearButton.onmouseover = () => {
-                clearButton.style.background = 'rgba(255,255,255,0.1)';
-            };
-            clearButton.onmouseout = () => {
-                clearButton.style.background = 'none';
-            };
-            header.appendChild(clearButton);
-        }
-    }
-    
-    // Remover formulário antigo se existir
-    const oldPaymentForm = document.getElementById('paymentForm');
-    if (oldPaymentForm) {
-        oldPaymentForm.remove();
-    }
 }
 
 // ============================================
@@ -490,14 +454,12 @@ function clearAllSelections() {
     selectedPlans = [];
     sessionStorage.removeItem('selectedPlans');
     
-    // Atualizar UI
     document.querySelectorAll('.plan-card').forEach(card => {
         card.classList.remove('selected');
         card.setAttribute('aria-selected', 'false');
         
         const btn = card.querySelector('.btn-select');
         if (btn) {
-            const planId = card.dataset.plan;
             btn.innerHTML = `<i class="fas fa-plus-circle"></i> Adicionar plano`;
         }
     });
@@ -507,7 +469,119 @@ function clearAllSelections() {
 }
 
 // ============================================
-// ADICIONAR ESTILOS DO BOTÃO
+// CONFIGURAÇÃO DOS EVENT LISTENERS
+// ============================================
+function setupEventListeners() {
+    const backBtn = document.getElementById('backToHome');
+    if (backBtn) {
+        backBtn.addEventListener('click', () => {
+            window.location.href = '/';
+        });
+    }
+    
+    const header = document.querySelector('.plans-header');
+    if (header) {
+        const clearButton = document.createElement('button');
+        clearButton.id = 'clearSelection';
+        clearButton.className = 'btn-clear';
+        clearButton.innerHTML = '<i class="fas fa-times"></i> Limpar seleção';
+        clearButton.onclick = clearAllSelections;
+        clearButton.style.cssText = `
+            background: none;
+            border: 1px solid rgba(255,255,255,0.3);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 30px;
+            margin-top: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+        `;
+        clearButton.onmouseover = () => {
+            clearButton.style.background = 'rgba(255,255,255,0.1)';
+        };
+        clearButton.onmouseout = () => {
+            clearButton.style.background = 'none';
+        };
+        header.appendChild(clearButton);
+    }
+}
+
+// ============================================
+// SISTEMA DE NOTIFICAÇÕES
+// ============================================
+function showNotification(message, type = 'info') {
+    let container = document.getElementById('notificationContainer');
+    
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'notificationContainer';
+        container.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        `;
+        document.body.appendChild(container);
+    }
+    
+    const notification = document.createElement('div');
+    notification.style.cssText = `
+        min-width: 300px;
+        padding: 16px 20px;
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        animation: slideIn 0.3s ease;
+        border-left: 4px solid ${getNotificationColor(type)};
+    `;
+    
+    const icon = getNotificationIcon(type);
+    const color = getNotificationColor(type);
+    
+    notification.innerHTML = `
+        <i class="fas ${icon}" style="color: ${color}; font-size: 20px;"></i>
+        <span style="flex: 1; color: #1f2937;">${message}</span>
+        <button onclick="this.parentElement.remove()" style="background: none; border: none; cursor: pointer; color: #9ca3af;">
+            <i class="fas fa-times"></i>
+        </button>
+    `;
+    
+    container.appendChild(notification);
+    
+    setTimeout(() => {
+        notification.style.animation = 'slideOut 0.3s ease';
+        setTimeout(() => notification.remove(), 300);
+    }, 5000);
+}
+
+function getNotificationColor(type) {
+    const colors = {
+        success: '#10b981',
+        error: '#ef4444',
+        warning: '#f59e0b',
+        info: '#3b82f6'
+    };
+    return colors[type] || colors.info;
+}
+
+function getNotificationIcon(type) {
+    const icons = {
+        success: 'fa-check-circle',
+        error: 'fa-exclamation-circle',
+        warning: 'fa-exclamation-triangle',
+        info: 'fa-info-circle'
+    };
+    return icons[type] || icons.info;
+}
+
+// ============================================
+// ESTILOS DINÂMICOS
 // ============================================
 function addButtonStyles() {
     const style = document.createElement('style');
@@ -585,6 +659,17 @@ function addButtonStyles() {
             }
         }
         
+        @keyframes slideOut {
+            from {
+                opacity: 1;
+                transform: translateX(0);
+            }
+            to {
+                opacity: 0;
+                transform: translateX(100%);
+            }
+        }
+        
         @media (max-width: 768px) {
             .btn-continue {
                 padding: 12px 24px;
@@ -601,87 +686,6 @@ function addButtonStyles() {
     document.head.appendChild(style);
 }
 
-// ============================================
-// SISTEMA DE NOTIFICAÇÕES
-// ============================================
-function showNotification(message, type = 'info') {
-    // Verificar se já existe container
-    let container = document.getElementById('notificationContainer');
-    
-    if (!container) {
-        container = document.createElement('div');
-        container.id = 'notificationContainer';
-        container.style.cssText = `
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            z-index: 9999;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        `;
-        document.body.appendChild(container);
-    }
-    
-    // Criar notificação
-    const notification = document.createElement('div');
-    notification.style.cssText = `
-        min-width: 300px;
-        padding: 16px 20px;
-        background: white;
-        border-radius: 12px;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.15);
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        animation: slideIn 0.3s ease;
-        border-left: 4px solid ${getNotificationColor(type)};
-    `;
-    
-    // Ícone baseado no tipo
-    const icon = getNotificationIcon(type);
-    const color = getNotificationColor(type);
-    
-    notification.innerHTML = `
-        <i class="fas ${icon}" style="color: ${color}; font-size: 20px;"></i>
-        <span style="flex: 1; color: #1f2937;">${message}</span>
-        <button onclick="this.parentElement.remove()" style="background: none; border: none; cursor: pointer; color: #9ca3af;">
-            <i class="fas fa-times"></i>
-        </button>
-    `;
-    
-    container.appendChild(notification);
-    
-    // Remover após 5 segundos
-    setTimeout(() => {
-        notification.style.animation = 'slideOut 0.3s ease';
-        setTimeout(() => notification.remove(), 300);
-    }, 5000);
-}
-
-function getNotificationColor(type) {
-    const colors = {
-        success: '#10b981',
-        error: '#ef4444',
-        warning: '#f59e0b',
-        info: '#3b82f6'
-    };
-    return colors[type] || colors.info;
-}
-
-function getNotificationIcon(type) {
-    const icons = {
-        success: 'fa-check-circle',
-        error: 'fa-exclamation-circle',
-        warning: 'fa-exclamation-triangle',
-        info: 'fa-info-circle'
-    };
-    return icons[type] || icons.info;
-}
-
-// ============================================
-// ESTILOS DINÂMICOS (adicionais)
-// ============================================
 function addDynamicStyles() {
     const style = document.createElement('style');
     style.textContent = `
@@ -856,4 +860,4 @@ window.togglePlan = togglePlan;
 window.goToCheckout = goToCheckout;
 window.clearAllSelections = clearAllSelections;
 
-console.log('✅ plans.js carregado com sucesso! (Modo Multiplanos)');
+console.log('✅ plans.js carregado com sucesso! (Modo Multiplanos com Validação)');

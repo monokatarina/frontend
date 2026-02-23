@@ -1,15 +1,14 @@
 // ============================================
 // checkout.js - Página de Checkout da FitLife
-// VERSÃO ATUALIZADA - SUPORTE A MÚLTIPLOS PLANOS
+// VERSÃO ATUALIZADA - COM REMOÇÃO DE PLANOS
 // ============================================
 
 const API = 'https://jokesteronline.org/api';
 
 // ============================================
-// CONFIGURAÇÃO DOS PLANOS (mesma do plans.js)
+// CONFIGURAÇÃO DOS PLANOS
 // ============================================
 const PLANS = {
-    // ===== TREINO NORMAL =====
     normal_2x: {
         id: 'normal_2x',
         name: 'Treino Normal 2x',
@@ -65,7 +64,6 @@ const PLANS = {
         ]
     },
     
-    // ===== DANÇA =====
     danca_2x: {
         id: 'danca_2x',
         name: 'Dança 2x',
@@ -116,7 +114,6 @@ let paymentData = {};
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('🚀 Checkout Multiplanos iniciado');
     
-    // Verificar usuário logado
     const savedUser = localStorage.getItem('user');
     if (!savedUser) {
         console.log('❌ Usuário não logado, redirecionando...');
@@ -133,16 +130,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
     }
     
-    // Carregar planos selecionados
     loadSelectedPlans();
-    
-    // Renderizar resumo do pedido
     renderOrderSummary();
-    
-    // Configurar tabs de pagamento
     setupPaymentTabs();
-    
-    // Adicionar estilos adicionais
     addCheckoutStyles();
 });
 
@@ -172,7 +162,32 @@ function loadSelectedPlans() {
 }
 
 // ============================================
-// RENDERIZAR RESUMO DO PEDIDO
+// FUNÇÃO PARA REMOVER PLANO DO CARRINHO
+// ============================================
+function removePlan(planId) {
+    if (!selectedPlans || selectedPlans.length === 0) return;
+    
+    const index = selectedPlans.indexOf(planId);
+    if (index > -1) {
+        selectedPlans.splice(index, 1);
+        
+        sessionStorage.setItem('selectedPlans', JSON.stringify(selectedPlans));
+        renderOrderSummary();
+        
+        showNotification(`Plano removido do carrinho`, 'info');
+        
+        if (selectedPlans.length === 0) {
+            setTimeout(() => {
+                if (confirm('Seu carrinho está vazio. Deseja escolher novos planos?')) {
+                    window.location.href = '/plans';
+                }
+            }, 1500);
+        }
+    }
+}
+
+// ============================================
+// RENDERIZAR RESUMO DO PEDIDO (COM BOTÕES DE REMOVER)
 // ============================================
 function renderOrderSummary() {
     const planSummary = document.getElementById('planSummary');
@@ -198,27 +213,62 @@ function renderOrderSummary() {
         uniqueCategories.add(plan.categoria);
         allFeatures = [...allFeatures, ...plan.features];
         
-        // Criar elemento do plano
         const planElement = document.createElement('div');
         planElement.className = 'plan-detail';
-        planElement.style.borderLeft = `4px solid ${plan.color}`;
-        planElement.style.paddingLeft = '15px';
-        planElement.style.marginBottom = '10px';
+        planElement.style.cssText = `
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-left: 4px solid ${plan.color};
+            padding: 15px;
+            margin-bottom: 10px;
+            background: #f8fafc;
+            border-radius: 8px;
+            transition: all 0.3s;
+        `;
+        
         planElement.innerHTML = `
-            <div style="display: flex; align-items: center; gap: 10px;">
+            <div style="display: flex; align-items: center; gap: 15px; flex: 1;">
                 <i class="fas ${plan.icon}" style="color: ${plan.color}; font-size: 20px;"></i>
-                <span class="plan-name">${plan.name}</span>
+                <div>
+                    <div class="plan-name" style="font-weight: 600; color: #1f2937;">${plan.name}</div>
+                    <div style="font-size: 12px; color: #6b7280;">${plan.categoria === 'normal' ? 'Treino' : 'Dança'}</div>
+                </div>
             </div>
-            <span class="plan-price" style="color: ${plan.color}">R$ ${plan.price.toFixed(2)}</span>
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <span class="plan-price" style="color: ${plan.color}; font-weight: 700;">R$ ${plan.price.toFixed(2)}</span>
+                <button onclick="removePlan('${planId}')" 
+                    style="background: none; border: none; color: #ef4444; cursor: pointer; font-size: 18px; padding: 5px 10px; transition: all 0.3s;"
+                    title="Remover plano"
+                    onmouseover="this.style.transform='scale(1.1)'"
+                    onmouseout="this.style.transform='scale(1)'">
+                    <i class="fas fa-times-circle"></i>
+                </button>
+            </div>
         `;
         
         planSummary.appendChild(planElement);
     });
     
-    // Features únicas (sem duplicatas)
+    const addMoreButton = document.createElement('div');
+    addMoreButton.style.cssText = `
+        margin-top: 15px;
+        text-align: center;
+    `;
+    addMoreButton.innerHTML = `
+        <button onclick="window.location.href='/plans'" 
+            style="background: none; border: 1px dashed #6366f1; color: #6366f1; padding: 10px 20px; border-radius: 8px; cursor: pointer; width: 100%; transition: all 0.3s;"
+            onmouseover="this.style.background='#6366f110'"
+            onmouseout="this.style.background='none'">
+            <i class="fas fa-plus-circle"></i> Adicionar mais planos
+        </button>
+    `;
+    planSummary.appendChild(addMoreButton);
+    
     const uniqueFeatures = [...new Set(allFeatures)];
     
-    // Mostrar resumo das categorias
+    planFeatures.innerHTML = '';
+    
     if (uniqueCategories.size > 1) {
         const categoriesElement = document.createElement('div');
         categoriesElement.className = 'categories-summary';
@@ -228,25 +278,37 @@ function renderOrderSummary() {
             border-radius: 8px;
             margin: 10px 0;
             font-size: 13px;
+            border: 1px solid #bfdbfe;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         `;
         categoriesElement.innerHTML = `
             <i class="fas fa-info-circle" style="color: #3b82f6;"></i>
-            <span>Planos combinados: ${Array.from(uniqueCategories).map(c => 
+            <span>Plano combinado: ${Array.from(uniqueCategories).map(c => 
                 c === 'normal' ? 'Treino Normal' : 'Dança'
             ).join(' + ')}</span>
         `;
-        planSummary.appendChild(categoriesElement);
+        planFeatures.appendChild(categoriesElement);
     }
     
-    // Features
-    planFeatures.innerHTML = uniqueFeatures.map(f => `
-        <div class="feature-item">
-            <i class="fas fa-check-circle" style="color: #10b981;"></i>
+    uniqueFeatures.forEach(f => {
+        const featureItem = document.createElement('div');
+        featureItem.className = 'feature-item';
+        featureItem.style.cssText = `
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 0;
+            color: var(--gray-700);
+        `;
+        featureItem.innerHTML = `
+            <i class="fas fa-check-circle" style="color: #10b981; font-size: 14px;"></i>
             <span>${f}</span>
-        </div>
-    `).join('');
+        `;
+        planFeatures.appendChild(featureItem);
+    });
     
-    // Total
     totalPrice.innerHTML = `R$ ${total.toFixed(2)}`;
     totalPrice.style.color = '#6366f1';
     totalPrice.style.fontSize = '28px';
@@ -274,7 +336,6 @@ function setupPaymentTabs() {
         </button>
     `;
     
-    // Garantir que a primeira tab (PIX) esteja ativa
     switchTab('pix');
 }
 
@@ -282,14 +343,12 @@ function setupPaymentTabs() {
 // ALTERNAR TABS DE PAGAMENTO
 // ============================================
 function switchTab(tab) {
-    // Atualizar tabs
     document.querySelectorAll('.payment-tab').forEach(t => {
         t.classList.remove('active');
     });
     const selectedTab = document.querySelector(`.payment-tab.${tab}`);
     if (selectedTab) selectedTab.classList.add('active');
     
-    // Mostrar conteúdo correspondente
     document.querySelectorAll('.payment-content').forEach(c => {
         c.classList.remove('active');
     });
@@ -298,41 +357,7 @@ function switchTab(tab) {
 }
 
 // ============================================
-// PROCESSAR PAGAMENTO PIX
-// ============================================
-async function processPixPayment() {
-    const button = document.getElementById('pixButton');
-    if (!button) return;
-    
-    await processPayment('pix', button);
-}
-
-// ============================================
-// PROCESSAR PAGAMENTO COM CARTÃO
-// ============================================
-async function processCardPayment() {
-    const button = document.getElementById('cardButton');
-    if (!button) return;
-    
-    // Validar dados do cartão
-    if (!validateCardData()) {
-        return;
-    }
-    
-    await processPayment('credit', button);
-}
-
-// ============================================
-// PROCESSAR PAGAMENTO COM BOLETO
-// ============================================
-async function processBoletoPayment() {
-    const button = document.getElementById('boletoButton');
-    if (!button) return;
-    
-    await processPayment('boleto', button);
-}
-// ============================================
-// FUNÇÃO GENÉRICA DE PROCESSAMENTO (VERSÃO COM MONITORAMENTO)
+// PROCESSAR PAGAMENTO (COM VALIDAÇÃO)
 // ============================================
 async function processPayment(method, button) {
     if (!currentUser) {
@@ -345,7 +370,19 @@ async function processPayment(method, button) {
         return;
     }
     
-    // Desabilitar botão
+    const normalCount = selectedPlans.filter(id => PLANS[id].categoria === 'normal').length;
+    const dancaCount = selectedPlans.filter(id => PLANS[id].categoria === 'danca').length;
+    
+    if (normalCount > 1) {
+        showError('Configuração inválida: múltiplos planos normais detectados');
+        return;
+    }
+    
+    if (dancaCount > 1) {
+        showError('Configuração inválida: múltiplos planos de dança detectados');
+        return;
+    }
+    
     const originalText = button.innerHTML;
     button.disabled = true;
     button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processando...';
@@ -353,7 +390,6 @@ async function processPayment(method, button) {
     try {
         console.log(`📤 Processando pagamento via ${method} para planos:`, selectedPlans);
         
-        // Coletar dados do pagamento
         const paymentData = {
             userId: currentUser.id,
             planIds: selectedPlans,
@@ -367,7 +403,6 @@ async function processPayment(method, button) {
             }
         };
         
-        // Adicionar dados específicos do cartão se for crédito
         if (method === 'credit') {
             paymentData.cardInfo = {
                 number: document.getElementById('cardNumber')?.value.replace(/\s/g, ''),
@@ -388,20 +423,13 @@ async function processPayment(method, button) {
         console.log('📥 Resposta do servidor:', data);
         
         if (data.success) {
-            // Se for PIX, mostrar QR Code e começar a monitorar
             if (method === 'pix') {
                 showPixPayment(data.data);
-                
-                // Começar a monitorar o status do pagamento
                 startPaymentStatusCheck(data.data.id);
-                
             } else if (method === 'boleto') {
                 showBoletoPayment(data.data);
-                // Começar a monitorar o status do pagamento
                 startPaymentStatusCheck(data.data.id);
-                
             } else {
-                // Para cartão, pode ser aprovado imediatamente
                 showSuccessModal();
             }
         } else {
@@ -418,121 +446,27 @@ async function processPayment(method, button) {
     }
 }
 
-// ============================================
-// FUNÇÃO PARA MONITORAR STATUS DO PAGAMENTO
-// ============================================
-function startPaymentStatusCheck(paymentId) {
-    console.log(`🔍 Monitorando pagamento ID: ${paymentId}`);
-    
-    let attempts = 0;
-    const maxAttempts = 30; // 30 tentativas = 1 minuto (2 segundos cada)
-    
-    const checkInterval = setInterval(async () => {
-        attempts++;
-        
-        try {
-            const response = await fetch(`${API}/payments/payment/${paymentId}/status`, {
-                credentials: 'include'
-            });
-            
-            if (response.ok) {
-                const data = await response.json();
-                console.log(`📊 Status do pagamento (tentativa ${attempts}):`, data.status);
-                
-                if (data.status === 'approved') {
-                    // Pagamento aprovado!
-                    clearInterval(checkInterval);
-                    
-                    // Atualizar dados do usuário
-                    await refreshUserDataAfterPayment();
-                    
-                    // Mostrar modal de sucesso
-                    showSuccessModal();
-                    
-                } else if (data.status === 'rejected') {
-                    clearInterval(checkInterval);
-                    showError('Pagamento rejeitado. Tente novamente.');
-                    
-                    // Reativar botão PIX
-                    const pixButton = document.getElementById('pixButton');
-                    if (pixButton) {
-                        pixButton.disabled = false;
-                        pixButton.innerHTML = '<i class="fas fa-qrcode"></i> Gerar Código PIX';
-                    }
-                }
-            }
-            
-            // Se atingiu o máximo de tentativas, parar
-            if (attempts >= maxAttempts) {
-                clearInterval(checkInterval);
-                showNotification('O pagamento está sendo processado. Você será redirecionado quando confirmado.', 'info');
-                
-                // Redirecionar para agenda mesmo assim após 5 segundos
-                setTimeout(() => {
-                    redirectToAgenda();
-                }, 5000);
-            }
-            
-        } catch (error) {
-            console.error('Erro ao verificar status:', error);
-        }
-        
-    }, 2000); // Verificar a cada 2 segundos
+function processPixPayment() {
+    const button = document.getElementById('pixButton');
+    if (button) processPayment('pix', button);
 }
 
-// ============================================
-// FUNÇÃO PARA ATUALIZAR DADOS DO USUÁRIO APÓS PAGAMENTO
-// ============================================
-async function refreshUserDataAfterPayment() {
-    if (!currentUser) return;
+function processCardPayment() {
+    const button = document.getElementById('cardButton');
+    if (!button) return;
     
-    try {
-        console.log('🔄 Atualizando dados do usuário após pagamento...');
-        
-        // Tentar buscar da rota /me
-        const response = await fetch(`${API}/auth/me`, {
-            credentials: 'include'
-        });
-        
-        if (response.ok) {
-            const data = await response.json();
-            const updatedUser = data.user || data.data || data;
-            
-            if (updatedUser) {
-                currentUser = { ...currentUser, ...updatedUser };
-                
-                // Normalizar planos
-                if (typeof normalizeUserPlans === 'function') {
-                    normalizeUserPlans();
-                }
-                
-                localStorage.setItem('user', JSON.stringify(currentUser));
-                console.log('✅ Dados do usuário atualizados:', currentUser);
-                return;
-            }
-        }
-        
-        // Fallback: subscription/status
-        const subResponse = await fetch(`${API}/payments/subscription/status/${currentUser.id}`, {
-            credentials: 'include'
-        });
-        
-        if (subResponse.ok) {
-            const subData = await subResponse.json();
-            const data = subData.data || subData;
-            
-            if (data.plan || data.plans) {
-                currentUser.plan = data.plan || currentUser.plan;
-                currentUser.plans = data.plans || currentUser.plans;
-                
-                localStorage.setItem('user', JSON.stringify(currentUser));
-                console.log('✅ Dados atualizados via subscription/status');
-            }
-        }
-    } catch (error) {
-        console.error('❌ Erro ao atualizar dados:', error);
+    if (!validateCardData()) {
+        return;
     }
+    
+    processPayment('credit', button);
 }
+
+function processBoletoPayment() {
+    const button = document.getElementById('boletoButton');
+    if (button) processPayment('boleto', button);
+}
+
 // ============================================
 // VALIDAR DADOS DO CARTÃO
 // ============================================
@@ -571,16 +505,65 @@ function validateCardData() {
     return true;
 }
 
-// ============================================
-// EXTRAIR CPF (remover máscara)
-// ============================================
 function extractCPF(cpf) {
     if (!cpf) return '';
     return cpf.replace(/\D/g, '');
 }
 
 // ============================================
-// MOSTRAR PAGAMENTO PIX (VERSÃO ATUALIZADA)
+// MONITORAR STATUS DO PAGAMENTO
+// ============================================
+function startPaymentStatusCheck(paymentId) {
+    console.log(`🔍 Monitorando pagamento ID: ${paymentId}`);
+    
+    let attempts = 0;
+    const maxAttempts = 30;
+    
+    const checkInterval = setInterval(async () => {
+        attempts++;
+        
+        try {
+            const response = await fetch(`${API}/payments/payment/${paymentId}/status`, {
+                credentials: 'include'
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                console.log(`📊 Status do pagamento (tentativa ${attempts}):`, data.status);
+                
+                if (data.status === 'approved') {
+                    clearInterval(checkInterval);
+                    await refreshUserDataAfterPayment();
+                    showSuccessModal();
+                } else if (data.status === 'rejected') {
+                    clearInterval(checkInterval);
+                    showError('Pagamento rejeitado. Tente novamente.');
+                    
+                    const pixButton = document.getElementById('pixButton');
+                    if (pixButton) {
+                        pixButton.disabled = false;
+                        pixButton.innerHTML = '<i class="fas fa-qrcode"></i> Gerar Código PIX';
+                    }
+                }
+            }
+            
+            if (attempts >= maxAttempts) {
+                clearInterval(checkInterval);
+                showNotification('O pagamento está sendo processado. Você será redirecionado quando confirmado.', 'info');
+                
+                setTimeout(() => {
+                    redirectToAgenda();
+                }, 5000);
+            }
+            
+        } catch (error) {
+            console.error('Erro ao verificar status:', error);
+        }
+    }, 2000);
+}
+
+// ============================================
+// MOSTRAR PAGAMENTO PIX
 // ============================================
 function showPixPayment(data) {
     const qrContainer = document.getElementById('qrCodeContainer');
@@ -588,23 +571,19 @@ function showPixPayment(data) {
     const pixButton = document.getElementById('pixButton');
     
     if (qrContainer && data.qr_code_base64) {
-        qrContainer.innerHTML = `<img src="data:image/png;base64,${data.qr_code_base64}" alt="QR Code PIX">`;
+        qrContainer.innerHTML = `<img src="data:image/png;base64,${data.qr_code_base64}" alt="QR Code PIX" style="max-width: 250px;">`;
     }
     
     if (pixCode && data.qr_code) {
         pixCode.value = data.qr_code;
     }
     
-    // Mudar texto do botão
     if (pixButton) {
         pixButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Aguardando pagamento...';
-        // Não desabilitar para não atrapalhar, mas mudar o texto
     }
     
-    // Mostrar notificação
     showNotification('Pagamento PIX gerado! Escaneie o código ou copie a chave.', 'success');
     
-    // Adicionar mensagem de aguardando
     const pixContainer = document.querySelector('.pix-container');
     if (pixContainer) {
         const waitingMsg = document.createElement('div');
@@ -616,15 +595,13 @@ function showPixPayment(data) {
             border-radius: 8px;
             margin: 10px 0;
             font-size: 14px;
+            text-align: center;
         `;
         waitingMsg.innerHTML = '<i class="fas fa-clock"></i> Aguardando confirmação do pagamento...';
         pixContainer.appendChild(waitingMsg);
     }
 }
 
-// ============================================
-// MOSTRAR PAGAMENTO BOLETO
-// ============================================
 function showBoletoPayment(data) {
     if (data.boleto_url) {
         window.open(data.boleto_url, '_blank');
@@ -632,15 +609,11 @@ function showBoletoPayment(data) {
     
     showNotification('Boleto gerado! Verifique sua caixa de email.', 'success');
     
-    // Mostrar modal de sucesso
     setTimeout(() => {
         showSuccessModal();
     }, 2000);
 }
 
-// ============================================
-// COPIAR CÓDIGO PIX
-// ============================================
 function copyPixCode() {
     const input = document.getElementById('pixCode');
     if (!input) return;
@@ -652,7 +625,7 @@ function copyPixCode() {
 }
 
 // ============================================
-// MOSTRAR MODAL DE SUCESSO (VERSÃO ATUALIZADA)
+// MODAL DE SUCESSO
 // ============================================
 function showSuccessModal() {
     const modal = document.getElementById('successModal');
@@ -660,13 +633,10 @@ function showSuccessModal() {
     
     modal.style.display = 'flex';
     
-    // Limpar seleção da sessionStorage
     sessionStorage.removeItem('selectedPlans');
     
-    // ATUALIZAR OS DADOS DO USUÁRIO NO LOCALSTORAGE
     refreshUserDataAfterPayment();
     
-    // Contador regressivo
     let seconds = 5;
     const countdown = document.getElementById('countdown');
     
@@ -683,16 +653,12 @@ function showSuccessModal() {
     }, 1000);
 }
 
-// ============================================
-// FUNÇÃO PARA ATUALIZAR DADOS DO USUÁRIO APÓS PAGAMENTO
-// ============================================
 async function refreshUserDataAfterPayment() {
     if (!currentUser) return;
     
     try {
         console.log('🔄 Atualizando dados do usuário após pagamento...');
         
-        // Tentar buscar da rota /me (se existir)
         const response = await fetch(`${API}/auth/me`, {
             credentials: 'include',
             headers: {
@@ -705,16 +671,11 @@ async function refreshUserDataAfterPayment() {
             const updatedUser = data.user || data.data || data;
             
             if (updatedUser) {
-                // Atualizar currentUser
                 currentUser = { ...currentUser, ...updatedUser };
-                
-                // Salvar no localStorage
                 localStorage.setItem('user', JSON.stringify(currentUser));
-                
                 console.log('✅ Dados do usuário atualizados:', currentUser);
             }
         } else {
-            // Fallback: buscar status da assinatura
             const subResponse = await fetch(`${API}/payments/subscription/status/${currentUser.id}`, {
                 credentials: 'include'
             });
@@ -724,16 +685,13 @@ async function refreshUserDataAfterPayment() {
                 const data = subData.data || subData;
                 
                 if (data.plan || data.subscription) {
-                    // Atualizar currentUser com os dados recebidos
                     currentUser.plan = data.plan || currentUser.plan;
                     currentUser.subscription = data.subscription || currentUser.subscription;
                     
-                    // Se tiver planos no formato antigo, converter
                     if (currentUser.plan && !currentUser.plans) {
                         if (typeof normalizeUserPlans === 'function') {
                             normalizeUserPlans();
                         } else {
-                            // Fallback manual
                             currentUser.plans = [{
                                 id: currentUser.plan.id || 'normal_2x',
                                 name: currentUser.plan.name || 'Plano Ativo',
@@ -753,19 +711,14 @@ async function refreshUserDataAfterPayment() {
     }
 }
 
-// ============================================
-// FUNÇÃO PARA NORMALIZAR PLANOS (cópia do main-new.js)
-// ============================================
 function normalizeUserPlans() {
     if (!currentUser) return;
     if (currentUser.isAdmin) return;
 
-    // Se já tem a estrutura nova, manter
     if (currentUser.plans && Array.isArray(currentUser.plans)) {
         return;
     }
 
-    // Migrar da estrutura antiga para a nova
     const planAntigo = currentUser.plan || currentUser.subscription;
     
     if (planAntigo && planAntigo.active) {
@@ -792,24 +745,14 @@ function normalizeUserPlans() {
     }
 }
 
-// ============================================
-// REDIRECIONAR PARA AGENDA
-// ============================================
-
 function redirectToAgenda() {
-    // Forçar recarga da página para atualizar todos os dados
     window.location.href = '/';
-    
-    // Alternativa: se quiser evitar recarga, use:
-    // localStorage.setItem('forceUserRefresh', 'true');
-    // window.location.href = '/';
 }
 
 // ============================================
-// MOSTRAR NOTIFICAÇÃO
+// SISTEMA DE NOTIFICAÇÕES
 // ============================================
 function showNotification(message, type = 'info') {
-    // Verificar se já existe container
     let container = document.getElementById('notificationContainer');
     
     if (!container) {
@@ -827,7 +770,6 @@ function showNotification(message, type = 'info') {
         document.body.appendChild(container);
     }
     
-    // Criar notificação
     const notification = document.createElement('div');
     notification.style.cssText = `
         min-width: 300px;
@@ -842,7 +784,6 @@ function showNotification(message, type = 'info') {
         border-left: 4px solid ${getNotificationColor(type)};
     `;
     
-    // Ícone baseado no tipo
     const icon = getNotificationIcon(type);
     const color = getNotificationColor(type);
     
@@ -856,16 +797,12 @@ function showNotification(message, type = 'info') {
     
     container.appendChild(notification);
     
-    // Remover após 5 segundos
     setTimeout(() => {
         notification.style.animation = 'slideOut 0.3s ease';
         setTimeout(() => notification.remove(), 300);
     }, 5000);
 }
 
-// ============================================
-// MOSTRAR ERRO
-// ============================================
 function showError(message, redirect = false) {
     showNotification(message, 'error');
     
@@ -876,9 +813,6 @@ function showError(message, redirect = false) {
     }
 }
 
-// ============================================
-// CORES DE NOTIFICAÇÃO
-// ============================================
 function getNotificationColor(type) {
     const colors = {
         success: '#10b981',
@@ -889,9 +823,6 @@ function getNotificationColor(type) {
     return colors[type] || colors.info;
 }
 
-// ============================================
-// ÍCONES DE NOTIFICAÇÃO
-// ============================================
 function getNotificationIcon(type) {
     const icons = {
         success: 'fa-check-circle',
@@ -903,7 +834,7 @@ function getNotificationIcon(type) {
 }
 
 // ============================================
-// ADICIONAR ESTILOS ADICIONAIS
+// ESTILOS ADICIONAIS
 // ============================================
 function addCheckoutStyles() {
     const style = document.createElement('style');
@@ -938,7 +869,19 @@ function addCheckoutStyles() {
         
         .plan-detail:hover {
             transform: translateX(5px);
-            background: #f8fafc;
+            background: #fef2f2 !important;
+        }
+        
+        .plan-detail button {
+            transition: all 0.3s;
+        }
+        
+        .plan-detail button:hover {
+            transform: scale(1.1);
+        }
+        
+        .plan-detail.removing {
+            animation: slideOut 0.3s ease forwards;
         }
         
         .categories-summary {
@@ -1015,5 +958,6 @@ window.processCardPayment = processCardPayment;
 window.processBoletoPayment = processBoletoPayment;
 window.copyPixCode = copyPixCode;
 window.redirectToAgenda = redirectToAgenda;
+window.removePlan = removePlan;
 
-console.log('✅ checkout.js carregado com sucesso! (Modo Multiplanos)');
+console.log('✅ checkout.js carregado com sucesso! (Modo Multiplanos com Remoção)');
