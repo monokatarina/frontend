@@ -1574,7 +1574,8 @@ if (!document.getElementById('multiPlanStyles')) {
 // Conta reservas do usuário na semana atual (para compatibilidade)
 const getWeeklyBookingsCount = () => {
     if (!currentUser) return 0;
-    return countBookingsInWeek(new Date(), currentUser.id);
+    const result = countBookingsInWeek(new Date(), currentUser.id);
+    return result.total; // Retorna apenas o total, não o objeto completo
 };
 
 // Valida se pode cancelar uma reserva
