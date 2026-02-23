@@ -426,17 +426,32 @@ async function processPayment(method, button) {
             if (method === 'pix') {
                 showPixPayment(data.data);
                 startPaymentStatusCheck(data.data.id);
+                
+                // ===== NOVO: Salvar pagamento pendente =====
+                sessionStorage.setItem('pendingPayment', JSON.stringify({
+                    paymentId: data.data.id,
+                    planIds: selectedPlans,
+                    timestamp: Date.now()
+                }));
+                // ===========================================
+                
             } else if (method === 'boleto') {
                 showBoletoPayment(data.data);
                 startPaymentStatusCheck(data.data.id);
+                
+                // ===== NOVO: Salvar pagamento pendente =====
+                sessionStorage.setItem('pendingPayment', JSON.stringify({
+                    paymentId: data.data.id,
+                    planIds: selectedPlans,
+                    timestamp: Date.now()
+                }));
+                // ===========================================
+                
             } else {
                 showSuccessModal();
             }
-        } else {
-            showError(data.error || 'Erro ao processar pagamento');
-            button.disabled = false;
-            button.innerHTML = originalText;
         }
+
         
     } catch (error) {
         console.error('❌ Erro no pagamento:', error);

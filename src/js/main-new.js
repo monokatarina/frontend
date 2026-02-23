@@ -43,151 +43,68 @@ function normalizeUserPlans() {
 // ============================================
 // FUNÇÃO PARA ATUALIZAR DADOS DO USUÁRIO DO BACKEND
 // ============================================
-// ============================================
-// FUNÇÃO PARA ATUALIZAR DADOS DO USUÁRIO DO BACKEND
-// ============================================
-// ============================================
-// FUNÇÃO PARA ATUALIZAR DADOS DO USUÁRIO DO BACKEND (VERSÃO RESILIENTE)
-// ============================================
-// ============================================
-// FUNÇÃO PARA ATUALIZAR DADOS DO USUÁRIO DO BACKEND (VERSÃO CORRIGIDA)
-// ============================================
+
 async function refreshUserData() {
     if (!currentUser) return false;
     
     try {
         console.log('🔄 ===== INICIANDO ATUALIZAÇÃO DE DADOS =====');
-        console.log('👤 Usuário atual (antes):', JSON.stringify(currentUser, null, 2));
-        console.log('🆔 User ID:', currentUser.id);
         
-        // Tentar buscar da rota /me com query string (mais confiável)
-        try {
-            console.log('📡 Tentando /auth/me?userId=' + currentUser.id);
-            const response = await fetch(`${API}/auth/me?userId=${currentUser.id}`, {
-                credentials: 'include',
-                headers: {
-                    'Content-Type': 'application/json'
-                }
-            });
-            
-            console.log('📥 Status da resposta /auth/me:', response.status);
-            
-            if (response.ok) {
-                const data = await response.json();
-                console.log('📦 Dados recebidos do /auth/me:', data);
-                
-                const updatedUser = data.user || data.data || data;
-                
-                if (updatedUser) {
-                    console.log('👤 Usuário ANTES da mesclagem:', JSON.stringify(currentUser, null, 2));
-                    console.log('🔄 Mesclando com:', JSON.stringify(updatedUser, null, 2));
-                    
-                    // Mesclar dados mantendo estrutura existente
-                    currentUser = { ...currentUser, ...updatedUser };
-                    
-                    console.log('👤 Usuário DEPOIS da mesclagem:', JSON.stringify(currentUser, null, 2));
-                    
-                    // Garantir que plans existe
-                    if (!currentUser.plans && currentUser.plan) {
-                        console.log('🔄 Convertendo plano antigo para novo formato...');
-                        normalizeUserPlans();
-                    }
-                    
-                    console.log('📦 Plans após normalização:', currentUser.plans);
-                    
-                    localStorage.setItem('user', JSON.stringify(currentUser));
-                    console.log('✅ Dados salvos no localStorage');
-                    console.log('✅ Dados atualizados via /auth/me');
-                    
-                    updatePlanInfo();
-                    return true;
-                }
-            } else {
-                console.log('⚠️ /auth/me falhou com status:', response.status);
-                // Tentar ler o corpo do erro para debug
-                try {
-                    const errorText = await response.text();
-                    console.log('📄 Corpo da resposta de erro:', errorText);
-                } catch (e) {
-                    console.log('Não foi possível ler o corpo do erro');
-                }
+        // Tentar buscar da rota /me com userId
+        const response = await fetch(`${API}/auth/me?userId=${currentUser.id}`, {
+            credentials: 'include',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-User-ID': currentUser.id
             }
-        } catch (meError) {
-            console.log('⚠️ Erro na requisição /auth/me:', meError.message);
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            const updatedUser = data.user || data.data || data;
+            
+            if (updatedUser) {
+                console.log('📦 Dados recebidos do servidor:', {
+                    id: updatedUser.id,
+                    name: updatedUser.name,
+                    plans: updatedUser.plans,
+                    pendingPlans: updatedUser.pendingPlans
+                });
+                
+                // Verificar se tem pendingPlans
+                if (updatedUser.pendingPlans && updatedUser.pendingPlans.length > 0) {
+                    console.log('⏳ Pagamento ainda pendente:', updatedUser.pendingPlans);
+                    
+                    // Se tiver pendingPayment, monitorar
+                    if (updatedUser.pendingPayment) {
+                        monitorPayment(updatedUser.pendingPayment.paymentId, updatedUser.pendingPlans);
+                    }
+                }
+                
+                // Verificar se tem plans ativos
+                if (updatedUser.plans && updatedUser.plans.length > 0) {
+                    console.log('✅ Planos ativos encontrados:', updatedUser.plans);
+                    currentUser.plans = updatedUser.plans;
+                }
+                
+                // Mesclar outros dados
+                currentUser = { ...currentUser, ...updatedUser };
+                
+                localStorage.setItem('user', JSON.stringify(currentUser));
+                updatePlanInfo();
+                
+                console.log('✅ Dados atualizados com sucesso');
+                return true;
+            }
+        } else {
+            console.log('⚠️ Falha ao buscar dados do servidor');
         }
         
-        // Fallback: buscar status da assinatura
-        try {
-            console.log('📡 Tentando subscription/status para userId:', currentUser.id);
-            const subResponse = await fetch(`${API}/payments/subscription/status/${currentUser.id}`, {
-                credentials: 'include'
-            });
-            
-            console.log('📥 Status da resposta subscription/status:', subResponse.status);
-            
-            if (subResponse.ok) {
-                const subData = await subResponse.json();
-                console.log('📦 Dados recebidos do subscription/status:', subData);
-                
-                const data = subData.data || subData;
-                
-                if (data.plan || data.plans) {
-                    console.log('🔄 Atualizando com dados da subscription...');
-                    
-                    if (data.plans) {
-                        currentUser.plans = data.plans;
-                    } else if (data.plan) {
-                        currentUser.plan = data.plan;
-                    }
-                    
-                    // Se checkSubscriptionStatus populou currentUser.plan, normalizar
-                    if (currentUser.plan && !currentUser.plans) {
-                        console.log('🔄 Convertendo plano após subscription/status...');
-                        normalizeUserPlans();
-                    }
-                    
-                    console.log('📦 Plans após normalização:', currentUser.plans);
-                    
-                    localStorage.setItem('user', JSON.stringify(currentUser));
-                    console.log('✅ Dados atualizados via subscription/status');
-                    
-                    updatePlanInfo();
-                    return true;
-                }
-            } else {
-                console.log('⚠️ subscription/status falhou com status:', subResponse.status);
-            }
-            
-        } catch (subError) {
-            console.log('⚠️ Erro no subscription/status:', subError.message);
-        }
-        
-        // Último recurso: usar dados locais
-        console.log('📦 Usando dados locais do usuário');
-        console.log('👤 Dados locais antes da normalização:', JSON.stringify(currentUser, null, 2));
-        
-        normalizeUserPlans();
-        
-        console.log('📦 Plans após normalização local:', currentUser.plans);
-        
-        localStorage.setItem('user', JSON.stringify(currentUser));
-        updatePlanInfo();
         return false;
         
     } catch (error) {
         console.error('❌ Erro ao atualizar usuário:', error);
-        
-        // Garantir que pelo menos os dados locais estão normalizados
-        if (!currentUser.plans && currentUser.plan) {
-            normalizeUserPlans();
-        }
-        updatePlanInfo();
         return false;
-    } finally {
-        console.log('🏁 ===== FIM DA ATUALIZAÇÃO =====');
-        console.log('👤 Estado final do usuário:', JSON.stringify(currentUser, null, 2));
-        console.log('📦 Plans finais:', currentUser?.plans);
-        console.log('✅ userHasActivePlan():', userHasActivePlan());
     }
 }
 
@@ -201,6 +118,152 @@ if (forceRefresh === 'true') {
             refreshUserData();
         }
     }, 500);
+}
+
+async function checkPendingPayments() {
+    if (!currentUser) return;
+    
+    try {
+        console.log('🔍 Verificando pagamentos pendentes...');
+        
+        const response = await fetch(`${API}/auth/me?userId=${currentUser.id}`, {
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            const userData = data.user || data.data || data;
+            
+            // Verificar se tem pendingPlans
+            if (userData.pendingPlans && userData.pendingPlans.length > 0) {
+                console.log('⏳ Pagamento pendente detectado!', userData.pendingPlans);
+                
+                // Mostrar notificação
+                showNotification('⏳ Você tem um pagamento pendente. Aguardando confirmação...', 'info', 5000);
+                
+                // Verificar se tem pendingPayment com PIX
+                if (userData.pendingPayment) {
+                    const payment = userData.pendingPayment;
+                    
+                    // Verificar status do pagamento
+                    const statusResponse = await fetch(`${API}/payments/payment/${payment.paymentId}/status`);
+                    if (statusResponse.ok) {
+                        const statusData = await statusResponse.json();
+                        
+                        if (statusData.status === 'approved') {
+                            console.log('✅ Pagamento aprovado! Atualizando dados...');
+                            
+                            // Forçar atualização dos dados
+                            await refreshUserData();
+                            
+                            // Limpar pendingPayment
+                            sessionStorage.removeItem('pendingPayment');
+                            
+                            showNotification('✅ Pagamento confirmado! Seus planos foram ativados.', 'success');
+                        }
+                    }
+                }
+            }
+            
+            // Se não tem pendingPlans mas tem plans, atualizar
+            if (!userData.pendingPlans && userData.plans && userData.plans.length > 0) {
+                if (!currentUser.plans || currentUser.plans.length === 0) {
+                    console.log('✅ Planos ativos encontrados! Atualizando frontend...');
+                    currentUser.plans = userData.plans;
+                    localStorage.setItem('user', JSON.stringify(currentUser));
+                    updatePlanInfo();
+                    showNotification('✅ Seus planos foram ativados!', 'success');
+                }
+            }
+        }
+    } catch (error) {
+        console.error('❌ Erro ao verificar pagamentos pendentes:', error);
+    }
+}
+
+// Função para monitorar pagamento específico
+function monitorPayment(paymentId, planIds) {
+    console.log(`🔍 Iniciando monitoramento do pagamento: ${paymentId}`);
+    
+    let attempts = 0;
+    const maxAttempts = 60; // 2 minutos (2s * 60)
+    
+    const interval = setInterval(async () => {
+        attempts++;
+        
+        try {
+            const response = await fetch(`${API}/payments/payment/${paymentId}/status`);
+            if (response.ok) {
+                const data = await response.json();
+                console.log(`📊 Status do pagamento (tentativa ${attempts}):`, data.status);
+                
+                if (data.status === 'approved') {
+                    clearInterval(interval);
+                    
+                    // Limpar pendingPayment
+                    sessionStorage.removeItem('pendingPayment');
+                    
+                    showNotification('✅ Pagamento aprovado! Seus planos foram ativados.', 'success');
+                    
+                    // Atualizar dados do usuário
+                    await refreshUserData();
+                    
+                    // Recarregar a página para mostrar os planos
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 2000);
+                }
+            }
+            
+            if (attempts >= maxAttempts) {
+                clearInterval(interval);
+                console.log('⏹️ Monitoramento encerrado após', maxAttempts, 'tentativas');
+                
+                // Verificar manualmente uma última vez
+                setTimeout(() => {
+                    checkPendingPayments();
+                }, 5000);
+            }
+            
+        } catch (error) {
+            console.error('Erro ao verificar status:', error);
+        }
+    }, 2000);
+    
+    return interval;
+}
+
+// Verificar pagamentos pendentes ao carregar a página
+function initPaymentMonitoring() {
+    // Verificar sessionStorage
+    const pendingPayment = sessionStorage.getItem('pendingPayment');
+    if (pendingPayment) {
+        try {
+            const pending = JSON.parse(pendingPayment);
+            const timeElapsed = Date.now() - pending.timestamp;
+            
+            // Se o pagamento foi criado há menos de 2 horas
+            if (timeElapsed < 2 * 60 * 60 * 1000) {
+                console.log('🔄 Retomando monitoramento de pagamento:', pending);
+                monitorPayment(pending.paymentId, pending.planIds);
+            } else {
+                sessionStorage.removeItem('pendingPayment');
+            }
+        } catch (e) {
+            sessionStorage.removeItem('pendingPayment');
+        }
+    }
+    
+    // Verificar pendingPlans do servidor
+    if (currentUser) {
+        checkPendingPayments();
+        
+        // Verificar a cada 30 segundos
+        setInterval(() => {
+            checkPendingPayments();
+        }, 30000);
+    }
 }
 // ============================================
 // FRONTEND - SISTEMA DE AGENDAMENTO
@@ -2325,6 +2388,9 @@ window.redirectToPlans = function() {
     closePlanModal();
     window.location.href = '/plans';
 };
+window.checkPendingPayments = checkPendingPayments;
+window.monitorPayment = monitorPayment;
+window.initPaymentMonitoring = initPaymentMonitoring;
 
 // ============================================
 // 9. FUNÇÕES DE MODAL DE RESERVA
@@ -2699,6 +2765,12 @@ document.addEventListener('DOMContentLoaded', function() {
             submitBtn.disabled = false;
             submitBtn.innerHTML = originalText;
         }
+        setTimeout(() => {
+            if (currentUser) {
+                initPaymentMonitoring();
+            }
+        }, 1000);
+        // ===================================================
     });
     
     // ===== CADASTRO =====
