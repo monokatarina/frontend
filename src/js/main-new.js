@@ -1035,6 +1035,7 @@ function groupBookingsByWeek(bookings) {
         }
         
         grouped[weekKey].bookings.push(booking);
+        updateWeeklyWarning();
     });
     
     // Ordenar semanas da mais recente para a mais antiga
@@ -2042,6 +2043,7 @@ async function cancelBooking(id) {
     } else {
         showNotification(`Erro ao cancelar: ${result.error}`, 'error');
     }
+    updateWeeklyWarning();
 }
 
 function onSlotClick(e) {
@@ -2986,6 +2988,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (result.success) {
                 showNotification('Horário reservado com sucesso!', 'success');
                 closeModal();
+                updateWeeklyWarning();
                 await loadData();
             } else {
                 showNotification(`Erro ao reservar: ${result.error}`, 'error');
