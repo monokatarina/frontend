@@ -1257,40 +1257,6 @@ async function updateWeeklyWarning() {
                             </div>
                         `}
                     </div>
-                    
-                    <div class="week-card current ${!hasAnyCurrentBookings ? 'empty' : ''}">
-                        <div class="week-title">
-                            <i class="fas fa-calendar-alt"></i>
-                            <span>Semana em andamento</span>
-                            <span class="week-dates">${currentWeekRange}</span>
-                            ${hasAnyCurrentBookings ? 
-                                '<span class="bookings-badge">Com aulas</span>' : 
-                                '<span class="no-bookings-badge">Sem aulas</span>'
-                            }
-                        </div>
-                        
-                        <div class="week-stats">
-                            ${hasAnyCurrentBookings ? `
-                                <div class="multi-plans-progress">
-                                    ${plansCurrentHtml}
-                                </div>
-                                
-                                <div class="count-info total">
-                                    <span class="used">
-                                        <strong>${totalCurrentUsed}</strong>/${totalCurrentLimit} aulas no total
-                                    </span>
-                                    <span class="current-bookings">
-                                        <i class="fas fa-calendar-check"></i>
-                                        ${totalCurrentUsed} aula${totalCurrentUsed !== 1 ? 's' : ''} marcada${totalCurrentUsed !== 1 ? 's' : ''}
-                                    </span>
-                                </div>
-                            ` : `
-                                <div class="empty-week-message">
-                                    <i class="fas fa-clock"></i>
-                                    <span>Nenhuma aula marcada para esta semana</span>
-                                </div>
-                            `}
-                        </div>
                         
                         <!-- CORREÇÃO: Footer com mensagem correta para a semana atual -->
                         <div class="week-footer ${hasAnyCurrentBookings ? 'info' : 'warning'}">
