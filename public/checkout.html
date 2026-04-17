@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Checkout - JR</title>
-    <link rel="stylesheet" href="../src/css/style.css">
+    <title>Checkout Profissional - </title>
+    <link rel="stylesheet" href="/src/css/style.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
@@ -466,12 +466,12 @@
                         
                         <div class="pix-key">
                             <input type="text" id="pixCode" readonly placeholder="Código PIX">
-                            <button onclick="copyPixCode()">
-                                <i class="fas fa-copy"></i>
+                            <button id="btnCopyPix">
+                                <i class="fas fa-copy"></i> Copiar
                             </button>
                         </div>
 
-                        <button class="btn-pay pix" onclick="processPixPayment()" id="pixButton">
+                        <button class="btn-pay pix" id="pixButton">
                             <i class="fas fa-qrcode"></i>
                             Gerar Código PIX
                         </button>
@@ -525,7 +525,7 @@
                             </select>
                         </div>
 
-                        <button class="btn-pay credit" onclick="processCardPayment()" id="cardButton">
+                        <button class="btn-pay credit" id="cardButton">
                             <i class="fas fa-lock"></i>
                             Pagar com Cartão
                         </button>
@@ -545,7 +545,7 @@
                             <p style="font-size: 12px; margin-top: 10px;">Vencimento em 3 dias úteis</p>
                         </div>
 
-                        <button class="btn-pay boleto" onclick="processBoletoPayment()" id="boletoButton">
+                        <button class="btn-pay boleto" id="boletoButton">
                             <i class="fas fa-file-invoice"></i>
                             Gerar Boleto
                         </button>
@@ -561,14 +561,14 @@
             <i class="fas fa-check-circle"></i>
             <h2>Pagamento realizado!</h2>
             <p>Seu plano foi ativado com sucesso. Você já pode fazer seus agendamentos.</p>
-            <button class="btn-primary" onclick="redirectToAgenda()">
+            <button class="btn-primary" id="btnRedirect">
                 <i class="fas fa-calendar-alt"></i>
                 Ir para Agenda
             </button>
             <div class="countdown" id="countdown">Redirecionando em 5 segundos...</div>
         </div>
     </div>
-
-    <script src="../src/js/checkout.js"></script>
+    <script src="/src/js/discountUtils.js"></script>
+    <script src="/src/js/checkout.js"></script>
 </body>
 </html>

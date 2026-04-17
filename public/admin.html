@@ -4,40 +4,64 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Painel Admin - Academia</title>
-  <link rel="stylesheet" href="../css/style.css">
+  <link rel="stylesheet" href="/src/css/style.css"> 
   <style>
-    body { background: #f7f7f7; }
-    .admin-container { max-width: 700px; margin: 40px auto; background: #fff; border-radius: 10px; box-shadow: 0 2px 12px #0001; padding: 32px; }
-    h1 { text-align: center; margin-bottom: 24px; }
+    body { background: #f7f7f7; font-family: 'Inter', sans-serif; }
+    .admin-container { max-width: 1200px; margin: 40px auto; background: #fff; border-radius: 10px; box-shadow: 0 2px 12px #0001; padding: 32px; }
+    h1 { text-align: center; margin-bottom: 24px; color: #1f2937; }
     .admin-section { margin-bottom: 32px; }
-    .admin-table { width: 100%; border-collapse: collapse; margin-top: 12px; }
-    .admin-table th, .admin-table td { border: 1px solid #ddd; padding: 8px; text-align: center; }
-    .admin-table th { background: #f0f0f0; }
-    .btn { padding: 6px 16px; border: none; border-radius: 4px; background: #007bff; color: #fff; cursor: pointer; }
-    .btn[disabled] { background: #aaa; cursor: not-allowed; }
-    .danger { background: #dc3545; }
-    .success { background: #28a745; }
+    .admin-table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 14px; }
+    .admin-table th, .admin-table td { border: 1px solid #e5e7eb; padding: 12px 8px; text-align: center; }
+    .admin-table th { background: #f3f4f6; font-weight: 600; color: #374151; }
+    .admin-table tr:hover { background: #f9fafb; }
+    .btn { padding: 6px 16px; border: none; border-radius: 6px; background: #3b82f6; color: #fff; cursor: pointer; font-size: 13px; transition: all 0.3s; }
+    .btn:hover { background: #2563eb; transform: translateY(-1px); }
+    .btn[disabled] { background: #9ca3af; cursor: not-allowed; }
+    .danger { background: #ef4444; }
+    .danger:hover { background: #dc2626; }
+    .success { background: #10b981; }
+    .badge {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+      margin: 2px;
+    }
+    .badge.normal { background: #dbeafe; color: #1e40af; }
+    .badge.danca { background: #fce7f3; color: #9d174d; }
+    .badge.admin { background: #fef3c7; color: #92400e; }
+    .vencimento-ok { color: #059669; font-weight: 600; }
+    .vencimento-alerta { color: #d97706; font-weight: 600; }
+    .vencimento-atrasado { color: #dc2626; font-weight: 600; }
+    .plan-list {
+      max-width: 250px;
+      text-align: left;
+    }
   </style>
 </head>
 <body>
   <div class="admin-container">
-    <h1>Painel do Administrador</h1>
+    <h1>👑 Painel do Administrador</h1>
+    
     <div class="admin-section">
-      <h2>Reservas do Dia</h2>
+      <h2>📅 Reservas do Dia</h2>
       <table class="admin-table" id="bookingsTable">
         <thead>
           <tr>
             <th>Data</th>
             <th>Hora</th>
             <th>Usuário</th>
+            <th>Categoria</th>
             <th>Ação</th>
           </tr>
         </thead>
         <tbody></tbody>
       </table>
     </div>
+    
     <div class="admin-section">
-      <h2>Usuários Cadastrados</h2>
+      <h2>👥 Usuários Cadastrados</h2>
       <table class="admin-table" id="usersTable">
         <thead>
           <tr>
@@ -45,13 +69,17 @@
             <th>Nome</th>
             <th>Email</th>
             <th>Admin</th>
+            <th>Planos</th>
+            <th>Vencimento</th>
+            <th>Status</th>
           </tr>
         </thead>
         <tbody></tbody>
       </table>
     </div>
-    <button class="btn" onclick="window.location.href='../public/index.html'">Voltar ao App</button>
+    
+    <button class="btn" id="btnVoltar">← Voltar ao App</button>
   </div>
-  <script src="../js/admin.js"></script>
+  <script src="/src/js/admin.js"></script>
 </body>
 </html>

@@ -601,7 +601,7 @@ body {
 }
 
 .slot-btn.my-booking::after {
-    content: '✓';
+    content: ' ';
     position: absolute;
     top: 2px;
     right: 2px;
@@ -945,6 +945,37 @@ body {
 
 /* Tablets e telas médias (768px - 1024px) */
 @media (max-width: 1024px) {
+    /* Adicione DENTRO do @media (max-width: 768px) existente */
+    .weeks-container {
+        grid-template-columns: 1fr !important;
+        gap: 15px !important;
+    }
+
+    .week-card {
+        width: 100% !important;
+    }
+
+    .count-info.total {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 8px !important;
+    }
+
+    .week-footer {
+        flex-wrap: wrap !important;
+        gap: 8px !important;
+    }
+
+    .pagamento-aviso {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 10px !important;
+    }
+
+    .pagamento-aviso .btn-small {
+        width: 100% !important;
+        margin-left: 0 !important;
+    }
     .dashboard-grid {
         grid-template-columns: 1fr;
     }
@@ -983,10 +1014,34 @@ body {
     }
     
     .header-right .controls {
-        width: 100%;
+        display: flex;
+        flex-direction: row;        /* Força ficar em linha */
+        align-items: center;
         justify-content: flex-end;
-        gap: 8px;
-        flex-wrap: wrap;
+        gap: 4px;                   /* Espaço menor entre botões */
+        flex-wrap: nowrap;          /* Não quebra linha */
+        width: auto;                /* Largura automática */
+    }
+
+    .btn-icon {
+        width: 32px;                /* Botões menores */
+        height: 32px;
+        font-size: 14px;
+        min-width: 32px;
+        min-height: 32px;
+    }
+
+    .btn-plans {
+        padding: 6px 10px;          /* Padding menor */
+        font-size: 12px;
+        gap: 4px;
+        white-space: nowrap;        /* Não quebra texto */
+    }
+
+    .btn-logout {
+        padding: 6px 10px;          /* Botão sair menor */
+        font-size: 12px;
+        white-space: nowrap;
     }
     
     .admin-toggle {
@@ -1074,13 +1129,13 @@ body {
     }
     
     .slot-btn.available::after {
-        content: "✓";
+        content: "";
         font-size: 12px;
         color: var(--success);
     }
     
     .slot-btn.partial::after {
-        content: "⚠";
+        content: "";
         font-size: 12px;
         color: var(--warning);
     }
@@ -1248,12 +1303,149 @@ body {
     }
     
     /* AVISO SEMANAL */
+/* AVISO SEMANAL - Versão compacta */
     .weekly-warning {
         padding: 12px;
-        font-size: 13px;
+        margin-bottom: 16px;
     }
-    
-    .weekly-warning i {
+
+    .weekly-warning .warning-content {
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;       /* Estica os elementos */
+        gap: 10px;
+    }
+
+    /* Container dos cards */
+    .weeks-container {
+        display: flex !important;
+        flex-direction: column !important;  /* Um embaixo do outro */
+        gap: 12px !important;
+        width: 100% !important;
+    }
+
+    /* Cards individuais */
+    .week-card {
+        width: 100% !important;
+        padding: 14px !important;
+        margin: 0 !important;
+    }
+
+    /* Título do card */
+    .week-title {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 6px;
+        font-size: 13px;
+        margin-bottom: 10px;
+    }
+
+    .week-title i {
+        font-size: 14px;
+    }
+
+    .week-dates {
+        font-size: 11px;
+        padding: 2px 6px;
+        margin-left: 0;
+    }
+
+    /* Badges */
+    .bookings-badge,
+    .no-bookings-badge,
+    .available-badge {
+        font-size: 10px;
+        padding: 2px 6px;
+        margin-left: 0;
+    }
+
+    /* Informações dos planos */
+    .multi-plans-progress {
+        gap: 8px;
+        margin: 8px 0;
+    }
+
+    .plan-week-item {
+        padding: 8px;
+    }
+
+    .plan-week-header {
+        gap: 6px;
+    }
+
+    .plan-week-name {
+        font-size: 12px;
+    }
+
+    .plan-week-progress {
+        gap: 6px;
+    }
+
+    .progress-container.small {
+        height: 5px;
+    }
+
+    .plan-week-count {
+        font-size: 11px;
+        min-width: 35px;
+    }
+
+    /* Informações de contagem */
+    .count-info.total {
+        display: flex;
+        flex-direction: row !important;     /* Um ao lado do outro */
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 8px;
+        padding: 8px 10px;
+        font-size: 12px;
+        margin-top: 8px;
+    }
+
+    .current-bookings,
+    .next-bookings,
+    .remaining.positive {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px 8px;
+        font-size: 11px;
+        white-space: nowrap;
+    }
+
+    /* Rodapé do card */
+    .week-footer {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 10px;
+        font-size: 11px;
+        margin-top: 8px;
+    }
+
+    .week-footer i {
+        font-size: 12px;
+    }
+
+    .week-footer span {
+        flex: 1;
+        text-align: left;
+    }
+
+    /* Mensagem de vazio */
+    .empty-week-message {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 10px;
+        font-size: 12px;
+    }
+
+    .empty-week-message i {
         font-size: 14px;
     }
     
@@ -1395,6 +1587,100 @@ body {
 
 /* Acessibilidade - Aumentar área de clique em mobile */
 @media (max-width: 768px) {
+    /* CONTROLS - Container principal */
+    .header-right .controls {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 6px;
+        flex-wrap: wrap;
+        width: 100%;
+    }
+
+    /* Botões menores */
+    .btn-icon {
+        width: 32px;
+        height: 32px;
+        font-size: 14px;
+        min-width: 32px;
+    }
+
+    .btn-plans {
+        padding: 5px 8px;
+        font-size: 11px;
+        gap: 3px;
+        white-space: nowrap;
+        height: 32px;
+    }
+
+    .btn-logout {
+        padding: 5px 8px;
+        font-size: 11px;
+        height: 32px;
+        white-space: nowrap;
+    }
+
+    /* USER INFO - Agora em linha com os botões */
+    #userInfo.user-info {
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: center !important;
+        gap: 4px !important;
+        margin-left: auto; /* Empurra para a direita */
+        max-width: 50%; /* Limita tamanho */
+        overflow-x: auto;
+        white-space: nowrap;
+        padding: 0;
+        background: transparent;
+    }
+
+    /* Badge do usuário */
+    .user-badge {
+        display: inline-flex !important;
+        align-items: center;
+        padding: 3px 8px !important;
+        font-size: 10px !important;
+        height: 28px;
+        white-space: nowrap;
+        background: var(--primary-light);
+        color: white;
+        border-radius: 20px;
+    }
+
+    /* Container dos planos */
+    .plans-container-mini {
+        display: inline-flex !important;
+        flex-direction: row !important;
+        align-items: center !important;
+        gap: 4px !important;
+        flex-wrap: nowrap !important;
+    }
+
+    /* Badges dos planos */
+    .plan-badge {
+        display: inline-flex !important;
+        align-items: center;
+        padding: 3px 8px !important;
+        font-size: 10px !important;
+        height: 28px;
+        white-space: nowrap;
+        margin: 0 !important;
+        border-radius: 20px;
+    }
+
+    .plan-aulas {
+        font-size: 9px;
+        padding: 2px 4px;
+        margin-left: 3px;
+    }
+
+    /* Esconde textos longos se necessário */
+    .plan-badge .plan-name {
+        max-width: 60px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
     .slot-btn,
     .btn-cancel,
     .day-control-btn,

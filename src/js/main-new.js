@@ -26,7 +26,7 @@ function normalizeUserPlans() {
             categoria: planData.categoria || planAntigo.categoria || 'normal',
             aulasPorSemana: planData.aulasPorSemana || planAntigo.aulasPorSemana || 2,
             horariosPermitidos: planData.horariosPermitidos || 
-                (planData.categoria === 'danca' ? [14,15] : [6,7,8,9,10,11,12,16,17,18,19]),
+                (planData.categoria === 'danca' ? [14,15] : [6,7,8,9,10,11,16,17,18]),
             color: planData.color || '#6366f1',
             icon: planData.icon || 'fa-crown',
             price: planData.price || 0,
@@ -97,13 +97,13 @@ async function refreshUserData() {
                 return true;
             }
         } else {
-            console.log('âš ï¸ Falha ao buscar dados do servidor');
+            console.log(' Falha ao buscar dados do servidor');
         }
         
         return false;
         
     } catch (error) {
-        console.error('âŒ Erro ao atualizar usuÃ¡rio:', error);
+        console.error(' Erro ao atualizar usuário:', error);
         return false;
     }
 }
@@ -137,10 +137,10 @@ async function checkPendingPayments() {
             
             // Verificar se tem pendingPlans
             if (userData.pendingPlans && userData.pendingPlans.length > 0) {
-                console.log('â³ Pagamento pendente detectado!', userData.pendingPlans);
+                console.log(' Pagamento pendente detectado!', userData.pendingPlans);
                 
-                // Mostrar notificaÃ§Ã£o
-                showNotification('â³ VocÃª tem um pagamento pendente. Aguardando confirmaÃ§Ã£o...', 'info', 5000);
+                // Mostrar notificação
+                showNotification('Você tem um pagamento pendente. Aguardando confirmação...', 'info', 5000);
                 
                 // Verificar se tem pendingPayment com PIX
                 if (userData.pendingPayment) {
@@ -173,7 +173,7 @@ async function checkPendingPayments() {
                     currentUser.plans = userData.plans;
                     localStorage.setItem('user', JSON.stringify(currentUser));
                     updatePlanInfo();
-                    showNotification('âœ… Seus planos foram ativados!', 'success');
+                    showNotification('… Seus planos foram ativados!', 'success');
                 }
             }
         }
@@ -273,7 +273,7 @@ function initPaymentMonitoring() {
 // ===== CONFIGURAÇÕES =====
 const API = 'https://jokesteronline.org/api';
 const weekdays = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta'];
-const HOURS = [6, 7, 8, 9, 10, 11, 12, 14, 15, 16, 17, 18, 19];
+const HOURS = [6, 7, 8, 9, 10, 11, 14, 15, 16, 17, 18];
 
 // ===== CONSTANTES DE REGRAS =====
 const CANCEL_LIMIT_HOURS = 9;
@@ -290,7 +290,7 @@ const PLANS = {
         price: 400.00,
         color: '#10b981',
         icon: 'fa-dumbbell',
-        horariosPermitidos: [6,7,8,9,10,11,12,16,17,18,19],
+        horariosPermitidos: [6,7,8,9,10,11,14,15,16,17,18],
         diasPermitidos: [1,2,3,4,5],
         features: ['2 aulas por semana', 'Acesso a todos horários', 'Suporte básico']
     },
@@ -302,7 +302,7 @@ const PLANS = {
         price: 510.00,
         color: '#3b82f6',
         icon: 'fa-dumbbell',
-        horariosPermitidos: [6,7,8,9,10,11,12,16,17,18,19],
+        horariosPermitidos: [6,7,8,9,10,11,14,15,16,17,18],
         diasPermitidos: [1,2,3,4,5],
         features: ['3 aulas por semana', 'Acesso a todos horários', 'Suporte prioritário']
     },
@@ -314,7 +314,7 @@ const PLANS = {
         price: 800.00,
         color: '#8b5cf6',
         icon: 'fa-crown',
-        horariosPermitidos: [6,7,8,9,10,11,12,16,17,18,19],
+        horariosPermitidos: [6,7,8,9,10,11,14,15,16,17,18],
         diasPermitidos: [1,2,3,4,5],
         features: ['5 aulas por semana', 'Acesso a todos horários', 'Suporte VIP']
     },
@@ -397,7 +397,7 @@ function limparDadosCorrompidos() {
             const user = JSON.parse(savedUser);
             // Se o ID for muito alto (8) e nÃ£o for admin, pode ser problema
             if (user.id > 5 && !user.isAdmin) {
-                console.warn('âš ï¸ PossÃ­vel usuÃ¡rio corrompido detectado (ID:', user.id, ')');
+                console.warn('PossÃ­vel usuÃ¡rio corrompido detectado (ID:', user.id, ')');
                 
                 // Perguntar se quer limpar
                 if (confirm('Detectamos um problema com seus dados salvos. Deseja fazer login novamente?')) {
@@ -508,10 +508,10 @@ async function loadDates() {
                     return nextDates;
                 }
             } else {
-                console.warn(`âš ï¸ Endpoint /admin/dates respondeu com status ${response.status}`);
+                console.warn(`Endpoint /admin/dates respondeu com status ${response.status}`);
             }
         } catch (error) {
-            console.warn('âš ï¸ Erro ao acessar /admin/dates:', error.message);
+            console.warn('Erro ao acessar /admin/dates:', error.message);
         }
         
         // SEGUNDA TENTATIVA: Tentar obter do /auth/me (alguns backends retornam lÃ¡)
@@ -533,7 +533,7 @@ async function loadDates() {
                 }
             }
         } catch (error) {
-            console.warn('âš ï¸ Erro ao buscar datas via /auth/me:', error.message);
+            console.warn('Erro ao buscar datas via /auth/me:', error.message);
         }
         
         // TERCEIRA TENTATIVA: Tentar endpoint alternativo
@@ -553,7 +553,7 @@ async function loadDates() {
                 }
             }
         } catch (error) {
-            console.warn('âš ï¸ Erro no endpoint alternativo:', error.message);
+            console.warn('Erro no endpoint alternativo:', error.message);
         }
         
         // FALLBACK: Gerar datas localmente
@@ -608,7 +608,7 @@ const fetchAPI = async (endpoint, options = {}) => {
         
         return { success: true, data: data.data || data, status: res.status };
     } catch (err) {
-        console.error(`âŒ Fetch error (${endpoint}):`, err.message);
+        console.error(`Fetch error (${endpoint}):`, err.message);
         return { success: false, error: err.message };
     }
 };
@@ -756,8 +756,8 @@ function getSlotSectionGroups() {
     return [
         {
             key: 'normal',
-            title: 'Horarios do Plano Normal',
-            subtitle: 'Use estes horarios para aulas do plano de treino normal.',
+            title: 'Horarios do Plano Treino',
+            subtitle: 'Use estes horarios para aulas do plano de treino .',
             hours: normalHours
         },
         {
@@ -875,12 +875,480 @@ async function verificarStatusPagamentoUsuario() {
         return {
             status: 'bloqueado',
             diasEmAtraso: diasEmAtraso,
-            mensagem: 'âŒ Plano suspenso por falta de pagamento.',
+            mensagem: 'Plano suspenso por falta de pagamento.',
             podeAgendar: false
         };
     }
 }
-// Funï¿½ï¿½o para atualizar o botï¿½o de planos
+
+// Adicionar função para verificar status da aula fixa
+function getFixedBookingStatus(fixedBooking) {
+  if (!fixedBooking.active) {
+    return { status: 'canceled', label: 'Cancelada', color: '#ef4444' };
+  }
+  
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  const nextDate = getNextWeekDate(fixedBooking.weekday, fixedBooking.hour);
+  const nextBookingDate = parseDate(nextDate);
+  
+  if (nextBookingDate < today) {
+    return { status: 'expired', label: 'Expirada', color: '#9ca3af' };
+  }
+  
+  return { status: 'active', label: 'Ativa', color: '#10b981' };
+}
+
+// Modificar createBookingItem para mostrar status de aulas fixas
+function createBookingItem(booking, isPast = false) {
+  const item = document.createElement('div');
+  item.className = `my-booking-item ${isPast ? 'past' : ''}`;
+  
+  const bookingDateTime = new Date(`${booking.date}T${String(booking.hour).padStart(2, '0')}:00:00`);
+  const datetimeStr = bookingDateTime.toISOString();
+  
+  const cancelCheck = canCancelBooking(booking);
+  const canCancel = cancelCheck.canCancel;
+  const formattedDate = formatDate(booking.date);
+  const timeRemaining = !isPast ? formatTimeRemaining(bookingDateTime) : null;
+  const weekRange = formatWeekRange(bookingDateTime);
+  
+  const isFixed = !!booking.fixedBookingId;
+  const isCurrentWeek = !isPast && getWeekRange(new Date()).monday.toISOString().split('T')[0] === 
+                        getWeekRange(bookingDateTime).monday.toISOString().split('T')[0];
+  
+  // Badges de status
+  let statusBadge = '';
+  if (isPast) {
+    statusBadge = '<span class="status-badge completed"><i class="fas fa-check-circle"></i> Concluída</span>';
+  } else if (booking.status === 'cancelled') {
+    statusBadge = '<span class="status-badge cancelled"><i class="fas fa-times-circle"></i> Cancelada</span>';
+  } else if (isFixed) {
+    statusBadge = '<span class="status-badge fixed"><i class="fas fa-repeat"></i> Fixa</span>';
+  }
+  
+  // Determinar quais botões mostrar
+  let actionButtons = '';
+  
+  if (!isPast) {
+    if (isFixed) {
+      // Aula fixa - mostrar botão específico
+      actionButtons = `
+        <div class="action-buttons">
+          <button class="btn-cancel-fixed" data-fixed-id="${booking.fixedBookingId}" data-booking-id="${booking.id}">
+            <i class="fas fa-ban"></i>
+            <span>Cancelar Aula Fixa</span>
+          </button>
+          ${canCancel ? `
+            <button class="btn-cancel-single" data-id="${booking.id}">
+              <i class="fas fa-times"></i>
+              <span>Cancelar Esta Apenas</span>
+            </button>
+          ` : ''}
+        </div>
+      `;
+    } else if (canCancel) {
+      // Aula normal
+      actionButtons = `
+        <button class="btn-cancel" data-id="${booking.id}">
+          <i class="fas fa-times"></i>
+          <span>Cancelar</span>
+        </button>
+      `;
+    }
+  }
+  
+  item.innerHTML = `
+    <div class="booking-info">
+      <div class="booking-main">
+        <div class="booking-datetime">
+          <i class="fas fa-calendar-day"></i>
+          <span class="booking-date">${formattedDate}</span>
+          <span class="booking-hour">${booking.hour}:00</span>
+          ${statusBadge}
+        </div>
+        <div class="booking-week">
+          <i class="fas fa-calendar-week"></i>
+          <span>${weekRange}</span>
+          ${isCurrentWeek ? '<span class="current-week-tag">Atual</span>' : ''}
+        </div>
+        ${isFixed && !isPast ? `
+          <div class="fixed-info">
+            <i class="fas fa-repeat"></i>
+            <span>Aula recorrente toda ${weekdays[new Date(booking.date).getDay() - 1]} às ${booking.hour}:00</span>
+          </div>
+        ` : ''}
+      </div>
+      ${!isPast && timeRemaining && !timeRemaining.expired ? `
+        <div class="booking-timer" data-datetime="${datetimeStr}">
+          <i class="fas fa-hourglass-half"></i>
+          <span class="${timeRemaining.class}">${timeRemaining.text}</span>
+        </div>
+      ` : ''}
+    </div>
+    <div class="booking-actions">
+      ${actionButtons}
+    </div>
+  `;
+  
+  // Adicionar event listeners
+  if (!isPast) {
+    if (isFixed) {
+      const cancelFixedBtn = item.querySelector('.btn-cancel-fixed');
+      if (cancelFixedBtn) {
+        cancelFixedBtn.addEventListener('click', () => confirmCancelFixedBooking(booking.fixedBookingId, booking));
+      }
+      
+      const cancelSingleBtn = item.querySelector('.btn-cancel-single');
+      if (cancelSingleBtn) {
+        cancelSingleBtn.addEventListener('click', () => cancelBooking(booking.id));
+      }
+    } else {
+      const cancelBtn = item.querySelector('.btn-cancel');
+      if (cancelBtn) {
+        cancelBtn.addEventListener('click', () => cancelBooking(booking.id));
+      }
+    }
+  }
+  
+  return item;
+}
+
+// Função para confirmar cancelamento de aula fixa
+// Função para confirmar cancelamento de aula fixa - CORRIGIDA
+function confirmCancelFixedBooking(fixedBookingId, booking) {
+  const weekday = weekdays[new Date(booking.date).getDay() - 1];
+  const hour = booking.hour;
+  
+  // Remover modal existente se houver
+  closeModalById('cancelFixedModal');
+  
+  const modal = document.createElement('div');
+  modal.className = 'modal';
+  modal.id = 'cancelFixedModal';
+  
+  modal.innerHTML = `
+    <div class="modal-content" style="max-width: 450px;">
+      <div class="modal-header">
+        <h3><i class="fas fa-ban" style="color: #ef4444;"></i> Cancelar Aula Fixa</h3>
+        <button class="modal-close" id="closeCancelFixedBtn">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="warning-icon">
+          <i class="fas fa-exclamation-triangle" style="font-size: 48px; color: #f59e0b;"></i>
+        </div>
+        
+        <p class="cancel-message">
+          Deseja cancelar a aula fixa de <strong>${weekday} às ${hour}:00</strong>?
+        </p>
+        
+        <div class="cancel-options">
+          <p style="font-weight: 600; margin-bottom: 10px;">Escolha uma opção:</p>
+          
+          <label class="radio-option">
+            <input type="radio" name="cancelOption" value="all" checked>
+            <div class="radio-content">
+              <span class="option-title">Cancelar todas as ocorrências</span>
+              <span class="option-desc">Todas as aulas futuras deste horário serão canceladas</span>
+            </div>
+          </label>
+          
+          <label class="radio-option">
+            <input type="radio" name="cancelOption" value="this">
+            <div class="radio-content">
+              <span class="option-title">Cancelar apenas esta aula</span>
+              <span class="option-desc">As próximas semanas continuarão agendadas</span>
+            </div>
+          </label>
+        </div>
+        
+        <div class="cancel-info">
+          <i class="fas fa-info-circle"></i>
+          <span>Esta ação não pode ser desfeita.</span>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-danger" id="confirmCancelFixedBtn">
+          <i class="fas fa-ban"></i> Confirmar Cancelamento
+        </button>
+        <button class="btn-secondary" id="backCancelFixedBtn">
+          Voltar
+        </button>
+      </div>
+    </div>
+  `;
+  
+  document.body.appendChild(modal);
+  
+  // Adicionar event listeners - CORRIGIDO
+  const closeBtn = document.getElementById('closeCancelFixedBtn');
+  const backBtn = document.getElementById('backCancelFixedBtn');
+  const confirmBtn = document.getElementById('confirmCancelFixedBtn');
+  
+  if (closeBtn) {
+    closeBtn.addEventListener('click', function(e) {
+      e.preventDefault();
+      closeModalById('cancelFixedModal');
+    });
+  }
+  
+  if (backBtn) {
+    backBtn.addEventListener('click', function(e) {
+      e.preventDefault();
+      closeModalById('cancelFixedModal');
+    });
+  }
+  
+  if (confirmBtn) {
+    confirmBtn.addEventListener('click', function() {
+      const selectedOption = document.querySelector('input[name="cancelOption"]:checked')?.value;
+      processCancelFixed(fixedBookingId, booking.id, selectedOption);
+    });
+  }
+  
+  // Fechar ao clicar fora
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) {
+      closeModalById('cancelFixedModal');
+    }
+  });
+  
+  setTimeout(() => {
+    modal.style.display = 'flex';
+    setTimeout(() => modal.classList.add('show'), 10);
+  }, 10);
+}
+
+// Função auxiliar para fechar modal por ID
+function closeModalById(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.classList.remove('show');
+        setTimeout(() => {
+            if (modal.parentNode) {
+                modal.remove();
+            }
+        }, 300);
+    }
+}
+
+// Processar cancelamento de aula fixa
+// Processar cancelamento de aula fixa - CORRIGIDA
+async function processCancelFixed(fixedBookingId, singleBookingId, selectedOption) {
+  if (!selectedOption) {
+    showNotification('Selecione uma opção', 'warning');
+    return;
+  }
+  
+  closeModalById('cancelFixedModal');
+  
+  try {
+    if (selectedOption === 'all') {
+      // Cancelar TODAS as ocorrências (aula fixa inteira)
+      showNotification('Cancelando aula fixa...', 'info');
+      
+      const response = await fetch(`${API}/fixed-bookings/${fixedBookingId}?userId=${currentUser.id}`, {
+        method: 'DELETE'
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok) {
+        showNotification('Aula fixa cancelada com sucesso!', 'success');
+        
+        // ATUALIZAÇÃO IMEDIATA: Remover do array local
+        bookings = bookings.filter(b => b.fixedBookingId !== fixedBookingId);
+        
+        // Recarregar dados do backend para garantir consistência
+        await loadData();
+      } else {
+        showNotification(data.error || 'Erro ao cancelar aula fixa', 'error');
+      }
+    } else {
+      // Cancelar APENAS esta ocorrência
+      await cancelSingleBooking(singleBookingId);
+    }
+  } catch (error) {
+    console.error('Erro:', error);
+    showNotification('Erro ao conectar com o servidor', 'error');
+  }
+}
+
+async function cancelSingleBooking(bookingId) {
+  const result = await fetchAPI(`/bookings/${bookingId}?userId=${currentUser.id}`, {
+    method: 'DELETE'
+  });
+  
+  if (result.success) {
+    showNotification('Reserva cancelada com sucesso!', 'success');
+    
+    // ATUALIZAÇÃO IMEDIATA: Remover do array local
+    bookings = bookings.filter(b => b.id !== bookingId);
+    
+    // Recarregar dados do backend
+    await loadData();
+  } else {
+    showNotification(`Erro ao cancelar: ${result.error}`, 'error');
+  }
+  updateWeeklyWarning();
+}
+// Funções auxiliares para o modal
+window.closeCancelFixedModal = function() {
+    closeModalById('cancelFixedModal');
+};
+
+window.processCancelFixed = processCancelFixed;
+
+// NOVA FUNÇÃO: Mostrar histórico de aulas passadas
+// Modificar a função showPastBookings
+function showPastBookings() {
+  const el = document.getElementById('myBookingsList');
+  if (!el) return;
+  
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  const pastBookings = bookings.filter(b => {
+    if (b.userId !== currentUser.id) return false;
+    const bookingDate = new Date(b.date + 'T00:00:00');
+    return bookingDate < today;
+  }).sort((a, b) => new Date(b.date) - new Date(a.date));
+  
+  if (pastBookings.length === 0) {
+    el.innerHTML = `
+      <div class="empty-state">
+        <i class="fas fa-history"></i>
+        <p>Nenhuma aula no histórico</p>
+        <button class="btn-secondary" id="backToUpcomingBtn">
+          <i class="fas fa-calendar-alt"></i> Ver próximas aulas
+        </button>
+      </div>
+    `;
+    
+    const backBtn = document.getElementById('backToUpcomingBtn');
+    if (backBtn) {
+      backBtn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        const tabUpcoming = document.getElementById('tabUpcoming');
+        if (tabUpcoming) tabUpcoming.classList.add('active');
+        renderUpcomingBookings();
+      });
+    }
+    
+    return;
+  }
+  
+  // Cabeçalho com opção de limpar
+  const headerHtml = `
+    <div class="history-header">
+      <h3><i class="fas fa-history"></i> Histórico de Aulas</h3>
+      <button class="btn-clear-history" id="clearHistoryBtn">
+        <i class="fas fa-trash-alt"></i> Limpar histórico
+      </button>
+    </div>
+  `;
+  
+  el.innerHTML = headerHtml;
+  
+  // Adicionar event listener ao botão de limpar
+  const clearBtn = document.getElementById('clearHistoryBtn');
+  if (clearBtn) {
+    clearBtn.addEventListener('click', confirmClearHistory);
+  }
+  
+  // Agrupar por mês
+  const groupedByMonth = {};
+  
+  pastBookings.forEach(booking => {
+    const date = new Date(booking.date + 'T00:00:00');
+    const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+    const monthName = date.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+    
+    if (!groupedByMonth[monthKey]) {
+      groupedByMonth[monthKey] = {
+        name: monthName,
+        bookings: []
+      };
+    }
+    groupedByMonth[monthKey].bookings.push(booking);
+  });
+  
+  // Renderizar cada mês
+  Object.keys(groupedByMonth).sort().reverse().forEach(monthKey => {
+    const month = groupedByMonth[monthKey];
+    
+    const monthHeader = document.createElement('div');
+    monthHeader.className = 'month-header';
+    monthHeader.innerHTML = `<i class="fas fa-calendar"></i> ${month.name}`;
+    el.appendChild(monthHeader);
+    
+    month.bookings.forEach(booking => {
+      const item = createBookingItem(booking, true);
+      el.appendChild(item);
+    });
+  });
+  
+  // Botão para voltar
+  const backBtn = document.createElement('div');
+  backBtn.className = 'history-footer';
+  backBtn.innerHTML = `
+    <button class="btn-secondary" id="backToUpcomingFooterBtn">
+      <i class="fas fa-arrow-left"></i> Voltar para próximas aulas
+    </button>
+  `;
+  el.appendChild(backBtn);
+  
+  const backFooterBtn = document.getElementById('backToUpcomingFooterBtn');
+  if (backFooterBtn) {
+    backFooterBtn.addEventListener('click', () => {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      const tabUpcoming = document.getElementById('tabUpcoming');
+      if (tabUpcoming) tabUpcoming.classList.add('active');
+      renderUpcomingBookings();
+    });
+  }
+}
+
+// Adicionar botão para alternar entre "Próximas" e "Histórico"
+function addBookingTabs() {
+  const container = document.getElementById('myBookingsContainer');
+  if (!container) return;
+  
+  const tabsHtml = `
+    <div class="booking-tabs">
+      <button class="tab-btn active" data-tab="upcoming">
+        <i class="fas fa-calendar-alt"></i> Próximas Aulas
+      </button>
+      <button class="tab-btn" data-tab="past">
+        <i class="fas fa-history"></i> Histórico
+      </button>
+    </div>
+  `;
+  
+  // Inserir antes da lista
+  const list = document.getElementById('myBookingsList');
+  if (list) {
+    list.insertAdjacentHTML('beforebegin', tabsHtml);
+    
+    // Adicionar eventos
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        e.target.classList.add('active');
+        
+        if (e.target.dataset.tab === 'upcoming') {
+          renderMyBookings();
+        } else {
+          showPastBookings();
+        }
+      });
+    });
+  }
+}
+// Função para atualizar o botão de planos
 function updatePlansButton() {
     const plansBtn = document.getElementById('plansMenuBtn');
     if (!plansBtn) return;
@@ -925,13 +1393,13 @@ function updatePlanInfo() {
         `;
     } else {
         // Verificar se tem planos ativos
-        console.log('ðŸ” Chamando getUserActivePlans()...');
+        console.log('🔍 Chamando getUserActivePlans()...');
         const activePlans = getUserActivePlans();
-        console.log('ðŸ“Š Planos ativos encontrados:', activePlans);
-        console.log('ðŸ“Š Quantidade de planos ativos:', activePlans.length);
+        console.log('Planos ativos encontrados:', activePlans);
+        console.log('Quantidade de planos ativos:', activePlans.length);
         
         if (activePlans && activePlans.length > 0) {
-            console.log('âœ… Temos planos! Vamos renderizar...');
+            console.log('Temos planos! Vamos renderizar...');
             
             // Mostrar mÃºltiplos planos
             planHtml = '<div class="plans-container-mini">';
@@ -959,12 +1427,12 @@ function updatePlanInfo() {
             });
             planHtml += '</div>';
         } else {
-            console.log('âš ï¸ Nenhum plano ativo encontrado');
+            console.log(' Nenhum plano ativo encontrado');
             planHtml = `
-                <span class="plan-badge no-plan" onclick="window.location.href='/plans'">
+                <span class="plan-badge no-plan" id="noPlanBadge">
                     <i class="fas fa-exclamation-circle"></i>
                     Sem plano ativo
-                    <button class="btn-plan-small">Escolher plano</button>
+                    <button class="btn-plan-small" id="choosePlanBtn">Escolher plano</button>
                 </span>
             `;
         }
@@ -979,10 +1447,10 @@ function updatePlanInfo() {
     `;
     
     const finalHtml = userBadge + planHtml;
-    console.log('ðŸ“ HTML gerado:', finalHtml);
+    console.log(' HTML gerado:', finalHtml);
     
     userInfo.innerHTML = finalHtml;
-    console.log('âœ… Interface atualizada');
+    console.log('Interface atualizada');
 
     updatePlansButton();
 
@@ -1634,29 +2102,214 @@ function canCancelBooking(booking) {
 
 // Mensagem de cancelamento
 function getCancellationMessage(cancelCheck) {
-    if (!cancelCheck) return 'NÃ£o Ã© possÃ­vel cancelar esta reserva';
+    if (!cancelCheck) return 'Não é possível cancelar esta reserva';
     
     switch (cancelCheck.reason) {
         case 'ok':
-            return `âœ… VocÃª pode cancelar esta reserva. Faltam ${cancelCheck.diffHours}h ${cancelCheck.diffMinutes}min para a aula.`;
+            return ` Voce pode cancelar esta reserva. Faltam ${cancelCheck.diffHours}h ${cancelCheck.diffMinutes}min para a aula.`;
         
         case 'grace_period':
-            return `â° PerÃ­odo de graÃ§a: vocÃª tem ${cancelCheck.minutesLeft} minutos para cancelar esta reserva (aula em menos de ${CANCEL_LIMIT_HOURS}h).`;
+            return `periodo ${cancelCheck.minutesLeft} minutos para cancelar esta reserva (aula em menos de ${CANCEL_LIMIT_HOURS}h).`;
         
         case 'too_late':
-            return `âŒ Cancelamento nÃ£o permitido. Aula comeÃ§a em ${cancelCheck.timeMessage}.`;
+            return `Cancelamento não é permitido. Aula começa em ${cancelCheck.timeMessage}.`;
         
         default:
-            return 'NÃ£o Ã© possÃ­vel cancelar esta reserva';
+            return 'não pode cancelar esta reserva';
     }
 }
 
-// Valida horÃ¡rio da reserva
+// ============================================
+// FUNÇÕES PARA GERENCIAR HISTÓRICO DE AULAS
+// ============================================
+
+// Renderizar apenas aulas futuras
+function renderUpcomingBookings() {
+  const el = document.getElementById('myBookingsList');
+  if (!el) return;
+  
+  el.innerHTML = '';
+  
+  if (!currentUser) {
+    el.innerHTML = '<p class="empty-message"><i class="fas fa-lock"></i> Faça login para ver suas reservas</p>';
+    return;
+  }
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  const upcomingBookings = bookings.filter(b => {
+    if (b.userId !== currentUser.id) return false;
+    const bookingDate = new Date(b.date + 'T00:00:00');
+    return bookingDate >= today;
+  });
+  
+  if (upcomingBookings.length === 0) {
+    el.innerHTML = `
+      <div class="empty-state">
+        <i class="fas fa-calendar-check"></i>
+        <p>Você não tem aulas futuras</p>
+        <button class="btn-secondary" onclick="showPastBookings()">
+          <i class="fas fa-history"></i> Ver histórico
+        </button>
+      </div>
+    `;
+    return;
+  }
+
+  // Agrupar por semana
+  const groupedByWeek = groupBookingsByWeek(upcomingBookings);
+  
+  groupedByWeek.forEach(weekGroup => {
+    const weekStart = weekGroup.weekStart;
+    const weekBookings = weekGroup.bookings.sort((a, b) => new Date(a.date) - new Date(b.date));
+    
+    const weekCount = weekBookings.length;
+    const totalLimit = getUserActivePlans().reduce((sum, p) => sum + (p.aulasPorSemana || 0), 0);
+    
+    const weekHeader = document.createElement('div');
+    weekHeader.className = 'week-header';
+    
+    const isCurrentWeek = getWeekRange(new Date()).monday.toISOString().split('T')[0] === weekGroup.weekKey;
+    
+    weekHeader.innerHTML = `
+      <div class="week-title">
+        <i class="fas fa-calendar-alt"></i>
+        <span>Semana de ${formatWeekRange(weekStart)}</span>
+        ${isCurrentWeek ? '<span class="current-week-badge">Semana atual</span>' : ''}
+      </div>
+      <div class="week-stats">
+        <div class="progress-bar-small">
+          <div style="width: ${(weekCount/totalLimit)*100}%; background: #3b82f6; height: 100%;"></div>
+        </div>
+        <span class="week-count"><strong>${weekCount}</strong>/${totalLimit} aulas</span>
+      </div>
+    `;
+    
+    el.appendChild(weekHeader);
+    
+    // Separar por categoria
+    const treinoBookings = [];
+    const dancaBookings = [];
+
+    weekBookings.forEach(booking => {
+      const categoria = booking.categoria || getHorarioCategoria(booking.hour);
+      if (categoria === 'danca') {
+        dancaBookings.push(booking);
+      } else {
+        treinoBookings.push(booking);
+      }
+    });
+
+    if (treinoBookings.length > 0) {
+      el.appendChild(createBookingCategoryHeader('treino', 'Treino', 'fa-dumbbell', treinoBookings.length));
+      treinoBookings.forEach(booking => {
+        const item = createBookingItem(booking, false); // false = não é passado
+        el.appendChild(item);
+      });
+    }
+
+    if (dancaBookings.length > 0) {
+      el.appendChild(createBookingCategoryHeader('danca', 'Dança', 'fa-music', dancaBookings.length));
+      dancaBookings.forEach(booking => {
+        const item = createBookingItem(booking, false);
+        el.appendChild(item);
+      });
+    }
+  });
+  
+  startTimers();
+}
+
+// Renderizar histórico de aulas passadas
+function showPastBookings() {
+  const el = document.getElementById('myBookingsList');
+  if (!el) return;
+  
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  const pastBookings = bookings.filter(b => {
+    if (b.userId !== currentUser.id) return false;
+    const bookingDate = new Date(b.date + 'T00:00:00');
+    return bookingDate < today;
+  }).sort((a, b) => new Date(b.date) - new Date(a.date)); // Mais recentes primeiro
+  
+  if (pastBookings.length === 0) {
+    el.innerHTML = `
+      <div class="empty-state">
+        <i class="fas fa-history"></i>
+        <p>Nenhuma aula no histórico</p>
+        <button class="btn-secondary" onclick="renderUpcomingBookings()">
+          <i class="fas fa-calendar-alt"></i> Ver próximas aulas
+        </button>
+      </div>
+    `;
+    return;
+  }
+  
+  // Cabeçalho com opção de limpar
+  const headerHtml = `
+    <div class="history-header">
+      <h3><i class="fas fa-history"></i> Histórico de Aulas</h3>
+      <button class="btn-clear-history" onclick="confirmClearHistory()">
+        <i class="fas fa-trash-alt"></i> Limpar histórico
+      </button>
+    </div>
+  `;
+  
+  el.innerHTML = headerHtml;
+  
+  // Agrupar por mês para melhor organização
+  const groupedByMonth = {};
+  
+  pastBookings.forEach(booking => {
+    const date = new Date(booking.date + 'T00:00:00');
+    const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+    const monthName = date.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+    
+    if (!groupedByMonth[monthKey]) {
+      groupedByMonth[monthKey] = {
+        name: monthName,
+        bookings: []
+      };
+    }
+    groupedByMonth[monthKey].bookings.push(booking);
+  });
+  
+  // Renderizar cada mês
+  Object.keys(groupedByMonth).sort().reverse().forEach(monthKey => {
+    const month = groupedByMonth[monthKey];
+    
+    const monthHeader = document.createElement('div');
+    monthHeader.className = 'month-header';
+    monthHeader.innerHTML = `<i class="fas fa-calendar"></i> ${month.name}`;
+    el.appendChild(monthHeader);
+    
+    month.bookings.forEach(booking => {
+      const item = createBookingItem(booking, true); // true = é passado
+      el.appendChild(item);
+    });
+  });
+  
+  // Botão para voltar
+  const backBtn = document.createElement('div');
+  backBtn.className = 'history-footer';
+  backBtn.innerHTML = `
+    <button class="btn-secondary" onclick="renderUpcomingBookings()">
+      <i class="fas fa-arrow-left"></i> Voltar para próximas aulas
+    </button>
+  `;
+  el.appendChild(backBtn);
+}
+
+
+// Valida horario da reserva
 function validateBookingTime(date, hour) {
     const now = new Date();
     const bookingDate = new Date(`${date}T${String(hour).padStart(2, '0')}:00:00`);
     
-    // Verificar se Ã© horÃ¡rio passado
+    // Verificar se é horário passado
     if (bookingDate < now) {
         return {
             valid: false,
@@ -1665,12 +2318,12 @@ function validateBookingTime(date, hour) {
         };
     }
     
-    // Verificar se estÃ¡ muito proximo (menos de 9 horas)
+    // Verificar se esta muito proximo (menos de 9 horas)
     if (bookingDate - now < CANCEL_LIMIT_HOURS * 60 * 60 * 1000) {
         return {
             valid: true,
             warning: true,
-            message: `â° Esta aula comeÃ§arÃ¡ em menos de ${CANCEL_LIMIT_HOURS}h. VocÃª terÃ¡ apenas ${PROXIMITY_GRACE_MINUTES} minutos para cancelar apÃ³s a reserva.`
+            message: `Esta aula começara em menos de ${CANCEL_LIMIT_HOURS}voce tera a penas ${PROXIMITY_GRACE_MINUTES} minutos para cancelar essa reserva.`
         };
     }
     
@@ -1778,7 +2431,7 @@ function renderSchedule() {
     grid.className = 'grid';
 
     // CabeÃ§alho
-    grid.appendChild(createHeaderCell('hour-header', '<i class="fas fa-clock"></i> HorÃ¡rio'));
+    grid.appendChild(createHeaderCell('hour-header', '<i class="fas fa-clock"></i> Horarios'));
     for (let i = 0; i < 5; i++) {
         grid.appendChild(createHeaderCell('weekday-header', weekdays[i]));
     }
@@ -1898,6 +2551,19 @@ function renderMyBookings() {
     const el = document.getElementById('myBookingsList');
     if (!el) return;
     
+    // Garantir que as abas existam
+    addBookingTabs();
+    
+    // Renderizar a tab ativa
+    const activeTab = document.querySelector('.tab-btn.active');
+    if (activeTab && activeTab.dataset.tab === 'past') {
+        showPastBookings();
+    } else {
+        renderUpcomingBookings();
+    }
+    
+    updatePastCount();
+    
     el.innerHTML = '';
     
     if (!currentUser) {
@@ -1908,7 +2574,7 @@ function renderMyBookings() {
     const myBookings = bookings.filter(b => b.userId === currentUser.id);
     
     if (myBookings.length === 0) {
-        el.innerHTML = '<p class="empty-message"><i class="fas fa-calendar-times"></i> VocÃª nÃ£o possui reservas</p>';
+        el.innerHTML = '<p class="empty-message"><i class="fas fa-calendar-times"></i> Voce não possui reservas ;-;</p>';
         return;
     }
 
@@ -1991,56 +2657,249 @@ function createBookingCategoryHeader(categoryKey, title, icon, count) {
     return header;
 }
 
-function createBookingItem(booking) {
-    const item = document.createElement('div');
-    item.className = 'my-booking-item';
-    
-    const bookingDateTime = new Date(`${booking.date}T${String(booking.hour).padStart(2, '0')}:00:00`);
-    const datetimeStr = bookingDateTime.toISOString();
-    
-    const cancelCheck = canCancelBooking(booking);
-    const canCancel = cancelCheck.canCancel;
-    const formattedDate = formatDate(booking.date);
-    const timeRemaining = formatTimeRemaining(bookingDateTime);
-    const weekRange = formatWeekRange(bookingDateTime);
-    
-    // Determinar se Ã© semana atual
-    const isCurrentWeek = getWeekRange(new Date()).monday.toISOString().split('T')[0] === 
-                          getWeekRange(bookingDateTime).monday.toISOString().split('T')[0];
-    
-    item.innerHTML = `
-        <div class="booking-info">
-            <div class="booking-main">
-                <div class="booking-datetime">
-                    <i class="fas fa-calendar-day"></i>
-                    <span class="booking-date">${formattedDate}</span>
-                    <span class="booking-hour">${booking.hour}:00</span>
-                </div>
-                <div class="booking-week">
-                    <i class="fas fa-calendar-week"></i>
-                    <span>${weekRange}</span>
-                    ${isCurrentWeek ? '<span class="current-week-tag">Atual</span>' : ''}
-                </div>
-            </div>
-            <div class="booking-timer" data-datetime="${datetimeStr}">
-                <i class="fas fa-hourglass-half"></i>
-                <span class="${timeRemaining.class}">${timeRemaining.text}</span>
-            </div>
-            <div class="booking-footer">
-                ${!canCancel ? '<span class="cannot-cancel-badge"><i class="fas fa-lock"></i> NÃ£o pode cancelar</span>' : ''}
-            </div>
+function createBookingItem(booking, isPast = false) {
+  const item = document.createElement('div');
+  item.className = `my-booking-item ${isPast ? 'past' : ''}`;
+  
+  const bookingDateTime = new Date(`${booking.date}T${String(booking.hour).padStart(2, '0')}:00:00`);
+  const datetimeStr = bookingDateTime.toISOString();
+  
+  const cancelCheck = canCancelBooking(booking);
+  const canCancel = cancelCheck.canCancel;
+  const formattedDate = formatDate(booking.date);
+  const timeRemaining = !isPast ? formatTimeRemaining(bookingDateTime) : null;
+  const weekRange = formatWeekRange(bookingDateTime);
+  
+  const isFixed = !!booking.fixedBookingId;
+  const isCurrentWeek = !isPast && getWeekRange(new Date()).monday.toISOString().split('T')[0] === 
+                        getWeekRange(bookingDateTime).monday.toISOString().split('T')[0];
+  
+  // Badges de status
+  let statusBadge = '';
+  if (isPast) {
+    statusBadge = '<span class="status-badge completed"><i class="fas fa-check-circle"></i> Concluída</span>';
+  } else if (booking.status === 'cancelled') {
+    statusBadge = '<span class="status-badge cancelled"><i class="fas fa-times-circle"></i> Cancelada</span>';
+  } else if (isFixed) {
+    statusBadge = '<span class="status-badge fixed"><i class="fas fa-repeat"></i> Fixa</span>';
+  }
+  
+  item.innerHTML = `
+    <div class="booking-info">
+      <div class="booking-main">
+        <div class="booking-datetime">
+          <i class="fas fa-calendar-day"></i>
+          <span class="booking-date">${formattedDate}</span>
+          <span class="booking-hour">${booking.hour}:00</span>
+          ${statusBadge}
         </div>
-        <button class="btn-cancel" data-id="${booking.id}" ${!canCancel ? 'disabled' : ''}>
-            <i class="fas fa-times"></i>
-            <span>Cancelar</span>
-        </button>
-    `;
-    
+        <div class="booking-week">
+          <i class="fas fa-calendar-week"></i>
+          <span>${weekRange}</span>
+          ${isCurrentWeek ? '<span class="current-week-tag">Atual</span>' : ''}
+        </div>
+      </div>
+      ${!isPast && timeRemaining && !timeRemaining.expired ? `
+        <div class="booking-timer" data-datetime="${datetimeStr}">
+          <i class="fas fa-hourglass-half"></i>
+          <span class="${timeRemaining.class}">${timeRemaining.text}</span>
+        </div>
+      ` : ''}
+    </div>
+    ${!isPast && canCancel ? `
+      <button class="btn-cancel" data-id="${booking.id}">
+        <i class="fas fa-times"></i>
+        <span>Cancelar</span>
+      </button>
+    ` : ''}
+  `;
+  
+  if (!isPast && canCancel) {
     const cancelBtn = item.querySelector('.btn-cancel');
     cancelBtn.addEventListener('click', () => cancelBooking(booking.id));
-    
-    return item;
+  }
+  
+  return item;
 }
+
+// Confirmar limpeza do histórico
+// Confirmar limpeza do histórico
+function confirmClearHistory() {
+  if (!currentUser) return;
+  
+  // Remover modal existente se houver
+  const existingModal = document.getElementById('clearHistoryModal');
+  if (existingModal) existingModal.remove();
+  
+  const modal = document.createElement('div');
+  modal.className = 'modal';
+  modal.id = 'clearHistoryModal';
+  
+  modal.innerHTML = `
+    <div class="modal-content" style="max-width: 400px;">
+      <div class="modal-header">
+        <h3><i class="fas fa-trash-alt" style="color: #ef4444;"></i> Limpar histórico</h3>
+        <button class="modal-close" id="closeClearHistoryBtn">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <i class="fas fa-exclamation-triangle" style="font-size: 48px; color: #f59e0b; margin: 20px 0;"></i>
+        <p style="font-size: 16px; margin-bottom: 20px;">
+          Tem certeza que deseja limpar todo o histórico de aulas passadas?
+        </p>
+        <p style="color: #6b7280; font-size: 14px;">
+          Esta ação não pode ser desfeita. As aulas futuras não serão afetadas.
+        </p>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-danger" id="confirmClearHistoryBtn">
+          <i class="fas fa-trash-alt"></i> Sim, limpar histórico
+        </button>
+        <button class="btn-secondary" id="cancelClearHistoryBtn">
+          Cancelar
+        </button>
+      </div>
+    </div>
+  `;
+  
+  document.body.appendChild(modal);
+  
+  // Adicionar event listeners
+  const closeBtn = document.getElementById('closeClearHistoryBtn');
+  const cancelBtn = document.getElementById('cancelClearHistoryBtn');
+  const confirmBtn = document.getElementById('confirmClearHistoryBtn');
+  
+  if (closeBtn) {
+    closeBtn.addEventListener('click', () => closeModalById('clearHistoryModal'));
+  }
+  
+  if (cancelBtn) {
+    cancelBtn.addEventListener('click', () => closeModalById('clearHistoryModal'));
+  }
+  
+  if (confirmBtn) {
+    confirmBtn.addEventListener('click', clearHistory);
+  }
+  
+  // Fechar ao clicar fora
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) {
+      closeModalById('clearHistoryModal');
+    }
+  });
+  
+  setTimeout(() => {
+    modal.style.display = 'flex';
+    setTimeout(() => modal.classList.add('show'), 10);
+  }, 10);
+}
+
+
+// Função para limpar o histórico
+async function clearHistory() {
+  closeModalById('clearHistoryModal');
+  
+  try {
+    showNotification('Limpando histórico...', 'info');
+    
+    const response = await fetch(`${API}/fixed-bookings/user/${currentUser.id}/clear`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    
+    const data = await response.json();
+    
+    if (response.ok && data.success) {
+      showNotification(data.message || 'Histórico limpo com sucesso!', 'success');
+      await loadData();
+      showPastBookings();
+    } else {
+      showNotification(data.error || 'Erro ao limpar histórico', 'error');
+    }
+  } catch (error) {
+    console.error('Erro ao limpar histórico:', error);
+    showNotification('Erro ao conectar com o servidor', 'error');
+  }
+}
+
+// Funções auxiliares para modais
+window.closeClearHistoryModal = function() {
+    closeModalById('clearHistoryModal');
+};
+
+window.confirmClearHistory = confirmClearHistory;
+window.clearHistory = clearHistory;
+
+// Adicionar abas na seção de reservas
+function addBookingTabs() {
+  const container = document.getElementById('myBookingsContainer');
+  if (!container) return;
+  
+  // Verificar se as abas já existem
+  if (document.querySelector('.booking-tabs')) return;
+  
+  const tabsHtml = `
+    <div class="booking-tabs">
+      <button class="tab-btn active" data-tab="upcoming" id="tabUpcoming">
+        <i class="fas fa-calendar-alt"></i> Próximas Aulas
+      </button>
+      <button class="tab-btn" data-tab="past" id="tabPast">
+        <i class="fas fa-history"></i> Histórico
+        <span class="past-count" id="pastCount"></span>
+      </button>
+    </div>
+  `;
+  
+  const list = document.getElementById('myBookingsList');
+  if (list) {
+    list.insertAdjacentHTML('beforebegin', tabsHtml);
+    
+    // Adicionar eventos com addEventListener
+    const tabUpcoming = document.getElementById('tabUpcoming');
+    const tabPast = document.getElementById('tabPast');
+    
+    if (tabUpcoming) {
+      tabUpcoming.addEventListener('click', (e) => {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        e.target.classList.add('active');
+        renderUpcomingBookings();
+      });
+    }
+    
+    if (tabPast) {
+      tabPast.addEventListener('click', (e) => {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        e.target.classList.add('active');
+        showPastBookings();
+      });
+    }
+    
+    // Atualizar contador
+    updatePastCount();
+  }
+}
+
+// Atualizar contador de aulas passadas
+function updatePastCount() {
+  if (!currentUser) return;
+  
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  const pastCount = bookings.filter(b => {
+    if (b.userId !== currentUser.id) return false;
+    const bookingDate = new Date(b.date + 'T00:00:00');
+    return bookingDate < today;
+  }).length;
+  
+  const pastCountEl = document.getElementById('pastCount');
+  if (pastCountEl) {
+    pastCountEl.textContent = pastCount;
+    pastCountEl.style.display = pastCount > 0 ? 'inline-block' : 'none';
+  }
+}
+
 
 function renderDayControls() {
     const el = document.getElementById('dayControls');
@@ -2099,41 +2958,79 @@ function renderDayControls() {
 // 8. FUNÃ‡Ã•ES DE AÃ‡ÃƒO
 // ============================================
 
+// Melhorar a função cancelBooking existente
 async function cancelBooking(id) {
-    const booking = bookings.find(b => b.id === id);
-    if (!booking) return;
+  const booking = bookings.find(b => b.id === id);
+  if (!booking) return;
+  
+  // Se for aula fixa, perguntar se quer cancelar só esta ou todas
+  if (booking.fixedBookingId) {
+    confirmCancelFixedBooking(booking.fixedBookingId, booking);
+    return;
+  }
+  
+  const cancelCheck = canCancelBooking(booking);
+  
+  if (!cancelCheck.canCancel) {
+    const message = getCancellationMessage(cancelCheck);
+    showNotification(message, 'error');
+    return;
+  }
+  
+  let confirmMessage = 'Deseja realmente cancelar esta reserva?';
+  
+  if (cancelCheck.reason === 'grace_period') {
+    confirmMessage = `Aula em menos de ${CANCEL_LIMIT_HOURS}h! Você tem apenas ${cancelCheck.minutesLeft} minutos para cancelar. Deseja cancelar agora?`;
+  } else {
+    confirmMessage = `Cancelar reserva para ${formatDate(booking.date)} às ${booking.hour}:00?`;
+  }
+  
+  if (!confirm(confirmMessage)) return;
+  
+  const result = await fetchAPI(`/bookings/${id}?userId=${currentUser.id}`, {
+    method: 'DELETE'
+  });
+  
+  if (result.success) {
+    showNotification('Reserva cancelada com sucesso!', 'success');
     
-    const cancelCheck = canCancelBooking(booking);
+    // ATUALIZAÇÃO IMEDIATA: Remover do array local
+    bookings = bookings.filter(b => b.id !== id);
     
-    if (!cancelCheck.canCancel) {
-        const message = getCancellationMessage(cancelCheck);
-        showNotification(message, 'error');
-        return;
-    }
-    
-    let confirmMessage = 'âš ï¸ Deseja realmente cancelar esta reserva?';
-    
-    if (cancelCheck.reason === 'grace_period') {
-        confirmMessage = `âš ï¸ Aula em menos de ${CANCEL_LIMIT_HOURS}h! VocÃª tem apenas ${cancelCheck.minutesLeft} minutos para cancelar. Deseja cancelar agora?`;
-    } else {
-        confirmMessage = `âš ï¸ Cancelar reserva para ${formatDate(booking.date)} Ã s ${booking.hour}:00?`;
-    }
-    
-    if (!confirm(confirmMessage)) return;
-    
-    const result = await fetchAPI(`/bookings/${id}?userId=${currentUser.id}`, {
-        method: 'DELETE'
-    });
-    
-    if (result.success) {
-        showNotification('Reserva cancelada com sucesso!', 'success');
-        await loadData();
-    } else {
-        showNotification(`Erro ao cancelar: ${result.error}`, 'error');
-    }
-    updateWeeklyWarning();
+    // Recarregar dados do backend
+    await loadData();
+  } else {
+    showNotification(`Erro ao cancelar: ${result.error}`, 'error');
+  }
+  updateWeeklyWarning();
 }
-
+async function refreshBookingsList() {
+  if (!currentUser) return;
+  
+  try {
+    const result = await fetchAPI('/bookings');
+    if (result.success) {
+      // Filtrar apenas reservas não canceladas
+      bookings = result.data.filter(booking => 
+        booking.status !== 'cancelled' && booking.status !== 'canceled'
+      );
+      
+      // Re-renderizar a lista de reservas
+      const activeTab = document.querySelector('.tab-btn.active');
+      if (activeTab && activeTab.dataset.tab === 'past') {
+        showPastBookings();
+      } else {
+        renderUpcomingBookings();
+      }
+      
+      updatePastCount();
+      
+      console.log('🔄 Lista de reservas atualizada');
+    }
+  } catch (error) {
+    console.error('Erro ao atualizar reservas:', error);
+  }
+}
 function onSlotClick(e) {
     const btn = e.currentTarget;
     const wd = Number(btn.dataset.weekday);
@@ -2162,15 +3059,15 @@ function onSlotClick(e) {
 
     // VERIFICAÃ‡ÃƒO DE DISPONIBILIDADE - AGORA CORRETA
     if (!isAvailable) {
-        console.log('âŒ HorÃ¡rio indisponÃ­vel:', { wd, h, date });
-        showNotification('Este horÃ¡rio estÃ¡ indisponÃ­vel', 'error');
+        console.log('horario indisponível:', { wd, h, date });
+        showNotification('Este horario está indisponivel', 'error');
         return;
     }
 
     // Modo Admin - toggle disponibilidade
     if (adminMode && currentUser?.isAdmin) {
         const newState = !isAvailable;
-        if (!confirm(`${newState ? 'âœ… Ativar' : 'âŒ Desativar'} horÃ¡rio ${h}:00 de ${weekdays[wd - 1]}?`)) return;
+        if (!confirm(`${newState ? 'âœ… Ativar' : 'âŒ Desativar'} horario ${h}:00 de ${weekdays[wd - 1]}?`)) return;
         
         btn.disabled = true;
         btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
@@ -2179,7 +3076,7 @@ function onSlotClick(e) {
             method: 'POST',
             body: JSON.stringify({ weekday: wd, hour: h, enabled: newState })
         }).then(() => {
-            showNotification(`HorÃ¡rio ${newState ? 'ativado' : 'desativado'}!`, 'success');
+            showNotification(`Horario ${newState ? 'ativado' : 'desativado'}!`, 'success');
             loadData();
         }).catch(() => {
             btn.disabled = false;
@@ -2192,19 +3089,19 @@ function onSlotClick(e) {
     
     // Verificar login
     if (!currentUser) {
-        showNotification('FaÃ§a login para reservar um horÃ¡rio', 'error');
+        showNotification('Faça login para reservar um horário', 'error');
         showAuthScreen();
         return;
     }
 
-    // Verificar se usuÃ¡rio tem plano ativo
+    // Verificar se usuári tem plano ativo
     if (!currentUser.isAdmin && !userHasActivePlan()) {
-        showNotification('VocÃª precisa escolher um plano primeiro', 'warning');
+        showNotification('Você precisa escolher um plano primeiro', 'warning');
         showPlanRequiredModal();
         return;
     }
 
-    // Verificar se o horÃ¡rio Ã© permitido pelo plano
+    // Verificar se o horário é permitido pelo plano
     if (!currentUser.isAdmin && !isHorarioPermitido(wd, h)) {
         showNotification(`Este horario pertence ao plano ${categoriaLabel}. Selecione um horario da sua categoria ativa.`, 'warning');
         return;
@@ -2213,17 +3110,17 @@ function onSlotClick(e) {
     // Verificar se jÃ¡ reservou
     const bookedList = isBooked(date, h);
     if (bookedList.some(b => b.userId === currentUser.id)) {
-        showNotification('VocÃª jÃ¡ reservou este horÃ¡rio', 'warning');
+        showNotification('Você já reservou este horário', 'warning');
         return;
     }
     
-    // Verificar lotaÃ§Ã£o
+    // Verificar lotação
     if (bookCount >= 4) {
-        showNotification('Este horÃ¡rio jÃ¡ estÃ¡ lotado!', 'error');
+        showNotification('Este horário já está lotado!', 'error');
         return;
     }
     
-    // Verificar limite semanal (agora considerando mÃºltiplos planos)
+    // Verificar limite semanal (agora considerando mÚltiplos planos)
     const activePlans = getUserActivePlans();
     const nextWeekCounts = countBookingsInWeek(new Date(date), currentUser.id);
     
@@ -2290,6 +3187,163 @@ async function createFixedBooking(weekday, hour) {
   }
 }
 
+// Adicione esta função no seu frontend (main-new.js)
+function showCancelConfirmationModal(booking) {
+    // Remover modal existente se houver
+    const existingModal = document.getElementById('cancelConfirmationModal');
+    if (existingModal) existingModal.remove();
+    
+    const modal = document.createElement('div');
+    modal.id = 'cancelConfirmationModal';
+    modal.className = 'modal';
+    
+    const formattedDate = formatDate(booking.date);
+    const cancelCheck = canCancelBooking(booking);
+    let warningMessage = '';
+    
+    if (cancelCheck.reason === 'grace_period') {
+        warningMessage = `
+            <div class="cancel-warning grace-period">
+                <i class="fas fa-exclamation-triangle"></i>
+                <span>Período de graça! Você tem apenas ${cancelCheck.minutesLeft} minutos para cancelar.</span>
+            </div>
+        `;
+    }
+    
+    modal.innerHTML = `
+        <div class="modal-content cancel-confirm-modal">
+            <div class="modal-header">
+                <h3>
+                    <i class="fas fa-times-circle" style="color: #ef4444;"></i>
+                    Cancelar Reserva
+                </h3>
+                <button class="modal-close" id="closeCancelModalBtn">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="modal-body">
+                <div class="cancel-icon">
+                    <i class="fas fa-calendar-times"></i>
+                </div>
+                
+                <p class="cancel-message">
+                    Deseja realmente cancelar esta reserva?
+                </p>
+                
+                <div class="booking-details">
+                    <div class="detail-item">
+                        <i class="fas fa-calendar-day"></i>
+                        <span><strong>Data:</strong> ${formattedDate}</span>
+                    </div>
+                    <div class="detail-item">
+                        <i class="fas fa-clock"></i>
+                        <span><strong>Horário:</strong> ${booking.hour}:00</span>
+                    </div>
+                    <div class="detail-item">
+                        <i class="fas fa-tag"></i>
+                        <span><strong>Categoria:</strong> ${booking.categoria || 'Normal'}</span>
+                    </div>
+                    ${booking.fixedBookingId ? `
+                    <div class="detail-item fixed-badge">
+                        <i class="fas fa-repeat"></i>
+                        <span><strong>Aula Fixa</strong></span>
+                    </div>
+                    ` : ''}
+                </div>
+                
+                ${warningMessage}
+                
+                <div class="cancel-info">
+                    <i class="fas fa-info-circle"></i>
+                    <span>Esta ação não pode ser desfeita.</span>
+                </div>
+            </div>
+            
+            <div class="modal-actions">
+                <button class="btn-danger" id="confirmCancelBtn">
+                    <i class="fas fa-check"></i>
+                    Sim, cancelar
+                </button>
+                <button class="btn-secondary" id="keepBookingBtn">
+                    <i class="fas fa-times"></i>
+                    Manter reserva
+                </button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Adicionar event listeners
+    const closeBtn = document.getElementById('closeCancelModalBtn');
+    const cancelBtn = document.getElementById('keepBookingBtn');
+    const confirmBtn = document.getElementById('confirmCancelBtn');
+    
+    if (closeBtn) {
+        closeBtn.addEventListener('click', () => closeModalById('cancelConfirmationModal'));
+    }
+    
+    if (cancelBtn) {
+        cancelBtn.addEventListener('click', () => closeModalById('cancelConfirmationModal'));
+    }
+    
+    if (confirmBtn) {
+        confirmBtn.addEventListener('click', () => {
+            closeModalById('cancelConfirmationModal');
+            // Chamar a função de cancelamento real
+            processCancelBooking(booking.id);
+        });
+    }
+    
+    // Fechar ao clicar fora
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            closeModalById('cancelConfirmationModal');
+        }
+    });
+    
+    // Mostrar modal
+    setTimeout(() => {
+        modal.style.display = 'flex';
+        setTimeout(() => modal.classList.add('show'), 10);
+    }, 10);
+}
+
+// Cria uma aula fixa (recorrente) sem confirmação extra – usada pela checkbox
+async function confirmFixedBooking(weekdayIndex, hour) {
+    const weekdayNumber = weekdayIndex + 1;
+    if (!currentUser) {
+        showNotification('Faça login primeiro', 'error');
+        return;
+    }
+
+    try {
+        const response = await fetch(`${API}/fixed-bookings`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                userId: currentUser.id,
+                weekday: weekdayNumber,
+                hour: hour
+            })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            showNotification('Aula fixa criada com sucesso!', 'success');
+            closeModal();          // fecha o modal
+            await loadData();       // recarrega a agenda e as reservas
+        } else {
+            showNotification(data.error || 'Erro ao criar aula fixa', 'error');
+        }
+    } catch (error) {
+        console.error('Erro:', error);
+        showNotification('Erro ao conectar com o servidor', 'error');
+    }
+}
+
 
 // Modal para redirecionar para planos
 function showPlanRequiredModal() {
@@ -2313,18 +3367,18 @@ function showPlanRequiredModal() {
                         Para realizar agendamentos, vocÃª precisa escolher um plano.
                     </p>
                     <div style="background: #f8f9fa; padding: 15px; border-radius: 10px; margin-bottom: 20px;">
-                        <p style="color: #666; margin-bottom: 10px;">BenefÃ­cios dos planos:</p>
+                        <p style="color: #666; margin-bottom: 10px;">Benefícios dos planos:</p>
                         <ul style="list-style: none; padding: 0; text-align: left;">
-                            <li style="margin: 8px 0;">âœ“ Acesso a todos horÃ¡rios</li>
-                            <li style="margin: 8px 0;">âœ“ AtÃ© 5 aulas por semana</li>
-                            <li style="margin: 8px 0;">âœ“ Suporte personalizado</li>
+                            <li style="margin: 8px 0;">Acesso a todos horários</li>
+                            <li style="margin: 8px 0;">Até 5 aulas por semana</li>
+                            <li style="margin: 8px 0;">Suporte personalizado</li>
                         </ul>
                     </div>
                 </div>
                 <div class="modal-actions" style="flex-direction: column;">
                     <button class="btn-primary" onclick="redirectToPlans()" style="width: 100%;">
                         <i class="fas fa-crown"></i>
-                        Ver planos disponÃ­veis
+                        Ver planos disponíveis
                     </button>
                     <button class="btn-secondary" onclick="closePlanModal()" style="width: 100%;">
                         Cancelar
@@ -2353,18 +3407,18 @@ function showPastTimeModal(date, hour) {
     modal.setAttribute('role', 'dialog');
     modal.setAttribute('aria-modal', 'true');
     
-    // Formatar data e hora para exibiÃ§Ã£o
+    // Formatar data e hora para exibiçãoo
     const formattedDate = formatDate(date);
-    const dateTimeStr = `${formattedDate} Ã s ${hour}:00`;
+    const dateTimeStr = `${formattedDate} as ${hour}:00`;
     
     modal.innerHTML = `
         <div class="modal-content past-time-modal">
             <div class="modal-header">
                 <h3>
                     <i class="fas fa-clock"></i>
-                    HorÃ¡rio indisponÃ­vel
+                    Horário indisponível
                 </h3>
-                <button class="modal-close" onclick="closePastTimeModal()">
+                <button class="modal-close" id="closePastTimeModalBtn">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
@@ -2373,17 +3427,17 @@ function showPastTimeModal(date, hour) {
                     <i class="fas fa-hourglass-end"></i>
                 </div>
                 <p class="past-time-message">
-                    Este horÃ¡rio <br>
+                    Este horário <br>
                     <strong>${dateTimeStr}</strong> <br>
-                    jÃ¡ passou.
+                    já passou.
                 </p>
                 <div class="past-time-suggestion">
                     <i class="fas fa-lightbulb"></i>
-                    <span>Que tal escolher um horÃ¡rio futuro?</span>
+                    <span>Que tal escolher um horário futuro?</span>
                 </div>
             </div>
             <div class="modal-actions">
-                <button class="btn-primary" onclick="closePastTimeModal()">
+                <button class="btn-primary" id="understandPastTimeBtn">
                     <i class="fas fa-check"></i>
                     Entendi
                 </button>
@@ -2393,11 +3447,17 @@ function showPastTimeModal(date, hour) {
     
     document.body.appendChild(modal);
     
-    // Mostrar modal com animaÃ§Ã£o
-    setTimeout(() => {
-        modal.style.display = 'flex';
-        setTimeout(() => modal.classList.add('show'), 10);
-    }, 10);
+    // Adicionar event listeners
+    const closeBtn = document.getElementById('closePastTimeModalBtn');
+    const understandBtn = document.getElementById('understandPastTimeBtn');
+    
+    if (closeBtn) {
+        closeBtn.addEventListener('click', closePastTimeModal);
+    }
+    
+    if (understandBtn) {
+        understandBtn.addEventListener('click', closePastTimeModal);
+    }
     
     // Fechar ao clicar fora
     modal.addEventListener('click', (e) => {
@@ -2405,20 +3465,18 @@ function showPastTimeModal(date, hour) {
             closePastTimeModal();
         }
     });
+    
+    // Mostrar modal com animaГ§ГЈo
+    setTimeout(() => {
+        modal.style.display = 'flex';
+        setTimeout(() => modal.classList.add('show'), 10);
+    }, 10);
 }
 
 
 // FunÃ§Ã£o global para fechar o modal - CORRIGIDA
 window.closePastTimeModal = function() {
-    const modal = document.getElementById('pastTimeModal');
-    if (modal) {
-        modal.classList.remove('show');
-        setTimeout(() => {
-            if (modal.parentNode) {
-                modal.remove();
-            }
-        }, 300);
-    }
+    closeModalById('pastTimeModal');
 };
 
 // ============================================
@@ -2534,15 +3592,7 @@ function showLimitReachedModal(limit, used, planName) {
 
 // FunÃ§Ãµes globais para o modal de limite
 window.closeLimitModal = function() {
-    const modal = document.getElementById('limitReachedModal');
-    if (modal) {
-        modal.classList.remove('show');
-        setTimeout(() => {
-            if (modal.parentNode) {
-                modal.remove();
-            }
-        }, 300);
-    }
+    closeModalById('limitReachedModal');
 };
 
 // Redirecionar para pÃ¡gina de planos
@@ -2556,7 +3606,9 @@ window.closePlanModal = function() {
     const modal = document.getElementById('planRequiredModal');
     if (modal) {
         modal.classList.remove('show');
-        setTimeout(() => modal.style.display = 'none', 300);
+        setTimeout(() => {
+            modal.style.display = 'none';
+        }, 300);
     }
 };
 
@@ -2573,14 +3625,14 @@ window.initPaymentMonitoring = initPaymentMonitoring;
 // ============================================
 
 function openBookingModal(date, h) {
-    // Verificar novamente se Ã© horÃ¡rio passado (seguranÃ§a)
+    // Verificar novamente se é horário passado (segurança)
     if (isPastDateTime(date, h)) {
-        showPastTimeModal(date, h); // <-- USAR O MESMO MODAL
+        showPastTimeModal(date, h);
         return;
     }
     
-    modalContext = { date, hour: h };
-    const weekday = new Date(date).getDay(); // 1-5
+    modalContext = { date, hour: h, weekday: new Date(date).getDay() }; // guarda o dia da semana
+    const weekday = modalContext.weekday;
     const bookedList = isBooked(date, h);
     const bookCount = bookedList.length;
     const availableSpots = 4 - bookCount;
@@ -2591,7 +3643,7 @@ function openBookingModal(date, h) {
     
     modalTitle.innerHTML = `
         <i class="fas fa-calendar-check"></i>
-        Reservar ${formatDate(date)} â€” ${h}:00
+        Reservar ${formatDate(date)} as ${h}:00
     `;
     
     const warningHtml = timeValidation.warning ? 
@@ -2599,18 +3651,17 @@ function openBookingModal(date, h) {
             <i class="fas fa-exclamation-triangle"></i>
             ${timeValidation.message}
         </div>` : '';
-    const fixedButtonHtml = `
-        <div class="fixed-booking-option">
-        <hr>
-        <p><i class="fas fa-repeat"></i> <strong>Quer tornar este horÃ¡rio fixo?</strong></p>
-        <p class="fixed-description">Isso criarÃ¡ uma aula automÃ¡tica toda ${weekdays[weekday-1]} Ã s ${h}:00.</p>
-        <button class="btn-secondary btn-fixed" onclick="createFixedBooking(${weekday}, ${h})">
-            <i class="fas fa-calendar-plus"></i>
-            Tornar Fixo
-        </button>
+    
+    // Opção de agendamento recorrente (checkbox)
+    const recurringHtml = `
+        <div class="recurring-option">
+            <label class="checkbox-label">
+                <input type="checkbox" id="recurringCheckbox">
+                <i class="fas fa-repeat"></i>
+                Agendar automaticamente todas as semanas (aula fixa)
+            </label>
         </div>
     `;
-    modalUserName.innerHTML += fixedButtonHtml;
     
     modalUserName.innerHTML = `
         <div class="user-info-detail">
@@ -2620,12 +3671,13 @@ function openBookingModal(date, h) {
             </p>
             <p><i class="fas fa-calendar-week"></i> <strong>Semana de ${weekRange}</strong></p>
             <p class="${availableSpots > 0 ? 'text-success' : 'text-danger'}">
-                <i class="fas fa-users"></i> Vagas disponÃ­veis: ${availableSpots}/4
+                <i class="fas fa-users"></i> Vagas disponíveis: ${availableSpots}/4
             </p>
             <p>
                 <i class="fas fa-chart-line"></i> Seus agendamentos nesta semana: ${weeklyCount}/${currentUser.plan?.aulasPorSemana || 0}
             </p>
             ${warningHtml}
+            ${recurringHtml}
         </div>
     `;
     
@@ -2636,15 +3688,61 @@ function openBookingModal(date, h) {
     setTimeout(() => modal.classList.add('show'), 10);
 }
 
-function closeModal() {
+// Função principal para fechar modais
+function closeModal(modalElement = null) {
+    // Se um elemento específico foi passado
+    if (modalElement) {
+        modalElement.classList.remove('show');
+        setTimeout(() => {
+            if (modalElement && modalElement.parentNode) {
+                modalElement.remove();
+            }
+        }, 300);
+        return;
+    }
+    
+    // Fechar o modal principal de reserva (se existir)
+    const mainModal = document.getElementById('modal');
+    if (mainModal && !mainModal.hidden) {
+        mainModal.classList.remove('show');
+        setTimeout(() => {
+            mainModal.hidden = true;
+        }, 300);
+        return;
+    }
+    
+    // Fechar qualquer outro modal que esteja aberto
+    const openModals = document.querySelectorAll('.modal.show');
+    openModals.forEach(modal => {
+        modal.classList.remove('show');
+        setTimeout(() => {
+            if (modal.parentNode) {
+                modal.remove();
+            }
+        }, 300);
+    });
+}
+
+// Sobrescrever as funções antigas de fechar modal
+window.closePastTimeModal = function() {
+  const modal = document.getElementById('pastTimeModal');
+  closeModal(modal);
+};
+
+window.closeLimitModal = function() {
+  const modal = document.getElementById('limitReachedModal');
+  closeModal(modal);
+};
+
+window.closePlanModal = function() {
+  const modal = document.getElementById('planRequiredModal');
+  if (modal) {
     modal.classList.remove('show');
     setTimeout(() => {
-        modal.hidden = true;
-        modalContext = null;
-        modalConfirm.disabled = false;
-        modalConfirm.innerHTML = 'Confirmar';
+      modal.style.display = 'none';
     }, 300);
-}
+  }
+};
 
 // ============================================
 // FUNÃ‡ÃƒO PARA AVISO QUANDO NÃƒO TEM PLANO
@@ -2655,7 +3753,7 @@ function updateWeeklyWarningNoPlan() {
     weeklyWarning.innerHTML = `
         <div class="warning-content warning">
             <i class="fas fa-exclamation-triangle"></i>
-            <span>VocÃª nÃ£o possui um plano ativo</span>
+            <span>voce não possui um plano ativo</span>
             <button class="btn-small" onclick="window.location.href='/plans'">
                 <i class="fas fa-crown"></i>
                 Ver planos
@@ -2827,7 +3925,7 @@ async function loadData() {
     try {
         scheduleEl.innerHTML = `<div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i> Carregando...</div>`;
         
-        // PRIMEIRO: Atualizar dados do usuÃ¡rio
+        // PRIMEIRO: Atualizar dados do usuário
         await refreshUserData();
         
         await loadDates();
@@ -2841,9 +3939,15 @@ async function loadData() {
         if (!bookingsRes.success) throw new Error(bookingsRes.error);
         
         availability = availabilityRes.data;
-        bookings = bookingsRes.data;
         
-        // Normalizar planos (jÃ¡ foi feito no refreshUserData, mas garantimos)
+        // FILTRAR APENAS RESERVAS NÃO CANCELADAS
+        bookings = bookingsRes.data.filter(booking => 
+            booking.status !== 'cancelled' && booking.status !== 'canceled'
+        );
+        
+        console.log(`📊 ${bookings.length} reservas ativas carregadas`);
+        
+        // Normalizar planos
         normalizeUserPlans();
         
         // Renderizar interface
@@ -2859,19 +3963,31 @@ async function loadData() {
         }
         
     } catch (e) {
-        console.error('âŒ Erro ao carregar dados:', e);
+        console.error('❌ Erro ao carregar dados:', e);
         showNotification('Erro ao carregar dados', 'error');
     } finally {
         loading = false;
     }
 }
+function getWeekdayNumber(dayName) {
+    const map = {
+        'domingo': 0,
+        'segunda': 1,
+        'terça': 2,
+        'quarta': 3,
+        'quinta': 4,
+        'sexta': 5,
+        'sábado': 6
+    };
+    return map[dayName.toLowerCase()] ?? -1;
+}
 // ============================================
-// 13. INICIALIZAÃ‡ÃƒO
+// 13. INICIALIZAÇÃO - COMPLETO E ATUALIZADO
 // ============================================
-
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('ðŸš€ Sistema iniciado - VersÃ£o com VisualizaÃ§Ã£o Semanal');
+    console.log('🚀 Sistema iniciado - Versão com Visualização Semanal');
     
+    // ===== ELEMENTOS DOM =====
     const loginForm = document.getElementById('loginForm');
     const cadastroForm = document.getElementById('cadastroForm');
     const tabLogin = document.getElementById('tabLogin');
@@ -2879,237 +3995,286 @@ document.addEventListener('DOMContentLoaded', function() {
     const adminToggle = document.getElementById('adminMode');
     const refreshBtn = document.getElementById('refreshBtn');
     const logoutBtn = document.getElementById('logoutBtn');
+    const plansMenuBtn = document.getElementById('plansMenuBtn');
+    const adminMenuBtn = document.getElementById('adminMenuBtn');
+    const adminDropdown = document.getElementById('adminDropdown');
+    const modal = document.getElementById('modal');
+    const modalClose = document.getElementById('modalClose');
+    const modalCancel = document.getElementById('modalCancel');
+    const modalConfirm = document.getElementById('modalConfirm');
     
-    // ===== TABS DE AUTENTICAÃ‡ÃƒO =====
-    tabLogin.addEventListener('click', () => {
-        tabLogin.classList.add('active');
-        tabCadastro.classList.remove('active');
-        loginForm.classList.add('active');
-        cadastroForm.classList.remove('active');
-    });
-    
-    tabCadastro.addEventListener('click', () => {
-        tabCadastro.classList.add('active');
-        tabLogin.classList.remove('active');
-        cadastroForm.classList.add('active');
-        loginForm.classList.remove('active');
-    });
-    
-    // ===== LOGIN =====
-    loginForm.addEventListener('submit', async function(e) {
-        e.preventDefault();
-        
-        const email = document.getElementById('loginEmail').value;
-        const password = document.getElementById('loginPassword').value;
-        
-        if (!email || !password) {
-            showNotification('Preencha todos os campos', 'error');
-            return;
-        }
-        
-        const submitBtn = this.querySelector('button[type="submit"]');
-        const originalText = submitBtn.innerHTML;
-        submitBtn.disabled = true;
-        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Entrando...';
-        
-        try {
-            const response = await fetch(`${API}/auth/login`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, password }),
-                credentials: 'include'
-            });
-            
-            const data = await response.json();
-            
-            if (response.ok) {
-                currentUser = data.user || data.data || data;
-                
-                await checkSubscriptionStatus();
-                
-                localStorage.setItem('user', JSON.stringify(currentUser));
-                
-                showAppScreen();
-                showNotification(`Bem-vindo, ${currentUser.name}!`, 'success');
-            } else {
-                showNotification(data.error || 'Falha no login', 'error');
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = originalText;
-            }
-        } catch (error) {
-            showNotification('Erro de conexÃ£o', 'error');
-            submitBtn.disabled = false;
-            submitBtn.innerHTML = originalText;
-        }
-        setTimeout(() => {
-            if (currentUser) {
-                initPaymentMonitoring();
-            }
-        }, 1000);
-        // ===================================================
-    });
-    
-    // ===== CADASTRO =====
-    cadastroForm.addEventListener('submit', async function(e) {
-        e.preventDefault();
-        
-        const name = document.getElementById('cadastroName').value;
-        const email = document.getElementById('cadastroEmail').value;
-        const phone = document.getElementById('cadastroPhone').value;
-        const password = document.getElementById('cadastroPassword').value;
-        const password2 = document.getElementById('cadastroPassword2').value;
-        
-        if (password !== password2) {
-            showNotification('As senhas nÃ£o conferem', 'error');
-            return;
-        }
-        
-        const submitBtn = this.querySelector('button[type="submit"]');
-        const originalText = submitBtn.innerHTML;
-        submitBtn.disabled = true;
-        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Cadastrando...';
-        
-        try {
-            const response = await fetch(`${API}/auth/register`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, email, phone, password, password2 }),
-                credentials: 'include'
-            });
-            
-            const data = await response.json();
-            
-            if (response.ok) {
-                showNotification('Cadastro realizado! FaÃ§a login.', 'success');
-                tabLogin.click();
-                
-                ['cadastroName', 'cadastroEmail', 'cadastroPhone', 'cadastroPassword', 'cadastroPassword2']
-                    .forEach(id => document.getElementById(id).value = '');
-                
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = originalText;
-            } else {
-                showNotification(data.error || 'Falha no cadastro', 'error');
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = originalText;
-            }
-        } catch (error) {
-            showNotification('Erro de conexÃ£o', 'error');
-            submitBtn.disabled = false;
-            submitBtn.innerHTML = originalText;
-        }
-    });
-    
-    // ===== LOGOUT =====
-    logoutBtn.addEventListener('click', async () => {
-        if (timerInterval) {
-            clearInterval(timerInterval);
-            timerInterval = null;
-        }
-        await fetch(`${API}/auth/logout`, { method: 'POST', credentials: 'include' });
-        currentUser = null;
-        localStorage.removeItem('user');
-        showAuthScreen();
-        showNotification('Logout realizado', 'info');
-    });
-    
-    // ===== MODO ADMIN =====
-    adminToggle.addEventListener('change', (e) => {
-        if (!currentUser?.isAdmin) {
-            showNotification('Apenas administradores podem acessar o modo admin', 'error');
-            e.target.checked = false;
-            return;
-        }
-        
-        adminMode = e.target.checked;
-        adminPanel.hidden = !adminMode;
-        
-        document.querySelectorAll('.slot-btn').forEach(btn => {
-            btn.classList.toggle('admin-mode', adminMode);
+    // ===== TABS DE AUTENTICAÇÃO =====
+    if (tabLogin && tabCadastro && loginForm && cadastroForm) {
+        tabLogin.addEventListener('click', () => {
+            tabLogin.classList.add('active');
+            tabCadastro.classList.remove('active');
+            loginForm.classList.add('active');
+            cadastroForm.classList.remove('active');
         });
         
-        showNotification(adminMode ? 'Modo admin ativado' : 'Modo admin desativado', 'info');
-    });
+        tabCadastro.addEventListener('click', () => {
+            tabCadastro.classList.add('active');
+            tabLogin.classList.remove('active');
+            cadastroForm.classList.add('active');
+            loginForm.classList.remove('active');
+        });
+    }
     
-    // ===== BOTï¿½O DE PLANOS (sempre visï¿½vel) =====
+    // ===== LOGIN =====
+    if (loginForm) {
+        loginForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+            
+            if (!email || !password) {
+                showNotification('Preencha todos os campos', 'error');
+                return;
+            }
+            
+            const submitBtn = this.querySelector('button[type="submit"]');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Entrando...';
+            
+            try {
+                const response = await fetch(`${API}/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password }),
+                    credentials: 'include'
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    currentUser = data.user || data.data || data;
+                    
+                    await checkSubscriptionStatus();
+                    
+                    localStorage.setItem('user', JSON.stringify(currentUser));
+                    
+                    showAppScreen();
+                    showNotification(`Bem-vindo, ${currentUser.name}!`, 'success');
+                    
+                    setTimeout(() => {
+                        if (currentUser) {
+                            initPaymentMonitoring();
+                        }
+                    }, 1000);
+                } else {
+                    showNotification(data.error || 'Falha no login', 'error');
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = originalText;
+                }
+            } catch (error) {
+                showNotification('Erro de conexão', 'error');
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText;
+            }
+        });
+    }
+    
+    // ===== CADASTRO =====
+    if (cadastroForm) {
+        cadastroForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const name = document.getElementById('cadastroName').value;
+            const email = document.getElementById('cadastroEmail').value;
+            const phone = document.getElementById('cadastroPhone').value;
+            const password = document.getElementById('cadastroPassword').value;
+            const password2 = document.getElementById('cadastroPassword2').value;
+            
+            if (password !== password2) {
+                showNotification('As senhas não conferem', 'error');
+                return;
+            }
+            
+            const submitBtn = this.querySelector('button[type="submit"]');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Cadastrando...';
+            
+            try {
+                const response = await fetch(`${API}/auth/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, email, phone, password, password2 }),
+                    credentials: 'include'
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showNotification('Cadastro realizado! Faça login.', 'success');
+                    if (tabLogin) tabLogin.click();
+                    
+                    ['cadastroName', 'cadastroEmail', 'cadastroPhone', 'cadastroPassword', 'cadastroPassword2']
+                        .forEach(id => {
+                            const el = document.getElementById(id);
+                            if (el) el.value = '';
+                        });
+                    
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = originalText;
+                } else {
+                    showNotification(data.error || 'Falha no cadastro', 'error');
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = originalText;
+                }
+            } catch (error) {
+                showNotification('Erro de conexão', 'error');
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText;
+            }
+        });
+    }
+    
+    // ===== LOGOUT =====
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', async () => {
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+            await fetch(`${API}/auth/logout`, { method: 'POST', credentials: 'include' });
+            currentUser = null;
+            localStorage.removeItem('user');
+            showAuthScreen();
+            showNotification('Logout realizado', 'info');
+        });
+    }
+    
+    // ===== MODO ADMIN =====
+    if (adminToggle) {
+        adminToggle.addEventListener('change', (e) => {
+            if (!currentUser?.isAdmin) {
+                showNotification('Apenas administradores podem acessar o modo admin', 'error');
+                e.target.checked = false;
+                return;
+            }
+            
+            adminMode = e.target.checked;
+            const adminPanel = document.getElementById('adminPanel');
+            if (adminPanel) adminPanel.hidden = !adminMode;
+            
+            document.querySelectorAll('.slot-btn').forEach(btn => {
+                btn.classList.toggle('admin-mode', adminMode);
+            });
+            
+            showNotification(adminMode ? 'Modo admin ativado' : 'Modo admin desativado', 'info');
+        });
+    }
+    
+    // ===== BOTÃO DE PLANOS =====
     if (plansMenuBtn) {
         plansMenuBtn.addEventListener('click', () => {
             if (!currentUser) {
-                showNotification('Faï¿½a login para ver os planos', 'warning');
+                showNotification('Faça login para ver os planos', 'warning');
                 showAuthScreen();
                 return;
             }
             window.location.href = '/plans';
         });
     }
-    // ===== BOTÃƒO ATUALIZAR =====
-    refreshBtn.addEventListener('click', () => {
-        loadData();
-        showNotification('Dados atualizados', 'success');
-    });
+    
+    // ===== BOTÃO ATUALIZAR =====
+    if (refreshBtn) {
+        refreshBtn.addEventListener('click', () => {
+            loadData();
+            showNotification('Dados atualizados', 'success');
+        });
+    }
     
     // ===== MODAL DE RESERVA =====
-    modal.addEventListener('click', (e) => {
-        if (e.target === modal) closeModal();
-    });
-    
-    modalClose?.addEventListener('click', closeModal);
-    modalCancel.addEventListener('click', closeModal);
-    
-    modalConfirm.addEventListener('click', async () => {
-        if (processingReservation) return;
-        
-        if (!modalContext) {
+    if (modal) {
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) closeModal();
+        });
+    }
+
+    if (modalClose) {
+        modalClose.addEventListener('click', (e) => {
+            e.preventDefault();
             closeModal();
-            return;
-        }
-        
-        if (!currentUser) {
+        });
+    }
+
+    if (modalCancel) {
+        modalCancel.addEventListener('click', (e) => {
+            e.preventDefault();
             closeModal();
-            showNotification('UsuÃ¡rio nÃ£o autenticado', 'error');
-            return;
-        }
-        
-        processingReservation = true;
-        modalConfirm.disabled = true;
-        modalConfirm.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Confirmando...';
-        
-        try {
-            const result = await fetchAPI('/bookings', {
-                method: 'POST',
-                body: JSON.stringify({
-                    date: modalContext.date,
-                    hour: modalContext.hour,
-                    name: currentUser.name,
-                    userId: currentUser.id
-                })
-            });
+        });
+    }
+    
+    if (modalConfirm) {
+        modalConfirm.addEventListener('click', async () => {
+            if (processingReservation) return;
             
-            if (result.success) {
-                showNotification('HorÃ¡rio reservado com sucesso!', 'success');
+            if (!modalContext) {
                 closeModal();
-                updateWeeklyWarning();
-                await loadData();
-            } else {
-                showNotification(`Erro ao reservar: ${result.error}`, 'error');
+                return;
+            }
+            
+            if (!currentUser) {
+                closeModal();
+                showNotification('Usuário não autenticado', 'error');
+                return;
+            }
+            
+            processingReservation = true;
+            modalConfirm.disabled = true;
+            modalConfirm.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Confirmando...';
+            
+            // Verifica se a opção de aula fixa foi marcada
+            const recurringCheckbox = document.getElementById('recurringCheckbox');
+            if (recurringCheckbox && recurringCheckbox.checked) {
+                // Cria aula fixa (recorrente)
+                await confirmFixedBooking(modalContext.weekday, modalContext.hour);
+                processingReservation = false;
+                return; // a função confirmFixedBooking já chama closeModal() e loadData()
+            }
+            
+            // Fluxo normal (reserva única)
+            try {
+                const result = await fetchAPI('/bookings', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        date: modalContext.date,
+                        hour: modalContext.hour,
+                        name: currentUser.name,
+                        userId: currentUser.id
+                    })
+                });
+                
+                if (result.success) {
+                    showNotification('Horário reservado com sucesso!', 'success');
+                    closeModal();
+                    updateWeeklyWarning();
+                    await loadData();
+                } else {
+                    showNotification(`Erro ao reservar: ${result.error}`, 'error');
+                    modalConfirm.disabled = false;
+                    modalConfirm.innerHTML = 'Confirmar';
+                }
+            } catch (error) {
+                showNotification('Erro ao processar reserva', 'error');
                 modalConfirm.disabled = false;
                 modalConfirm.innerHTML = 'Confirmar';
+            } finally {
+                processingReservation = false;
             }
-        } catch (error) {
-            showNotification('Erro ao processar reserva', 'error');
-            modalConfirm.disabled = false;
-            modalConfirm.innerHTML = 'Confirmar';
-        } finally {
-            processingReservation = false;
-        }
-    });
+        });
+    }
     
     // ===== MENU ADMIN DROPDOWN =====
     if (adminMenuBtn) {
         adminMenuBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             if (currentUser?.isAdmin) {
-                adminDropdown.hidden = !adminDropdown.hidden;
+                if (adminDropdown) adminDropdown.hidden = !adminDropdown.hidden;
             } else {
                 showNotification('Apenas administradores', 'error');
             }
@@ -3122,14 +4287,38 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
-    // ===== VERIFICAR USUÃRIO SALVO =====
+    // ===== BOTÃO ESCOLHER PLANO (para usuários sem plano) =====
+    function setupChoosePlanButton() {
+        const choosePlanBtn = document.getElementById('choosePlanBtn');
+        if (choosePlanBtn) {
+            choosePlanBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                window.location.href = '/plans';
+            });
+        }
+    }
+    
+    // Configurar botão inicialmente
+    setupChoosePlanButton();
+    
+    // Observar mudanças no userInfo para configurar botões dinâmicos
+    const userInfoObserver = new MutationObserver(function() {
+        setupChoosePlanButton();
+    });
+    
+    const userInfoEl = document.getElementById('userInfo');
+    if (userInfoEl) {
+        userInfoObserver.observe(userInfoEl, { childList: true, subtree: true });
+    }
+    
+    // ===== VERIFICAR USUÁRIO SALVO =====
     const savedUser = localStorage.getItem('user');
     if (savedUser) {
         try {
             currentUser = JSON.parse(savedUser);
             showAppScreen();
         } catch (err) {
-            console.error('Erro ao recuperar usuÃ¡rio');
+            console.error('Erro ao recuperar usuário:', err);
             localStorage.removeItem('user');
             showAuthScreen();
         }
@@ -3137,13 +4326,12 @@ document.addEventListener('DOMContentLoaded', function() {
         showAuthScreen();
     }
 });
-
 // ============================================
 // 14. ESTILOS ADICIONAIS MELHORADOS
 // ============================================
 
 const additionalStyles = `
-    /* Modal de horÃ¡rio passado - CORRIGIDO */
+    /* Modal de horário passado - CORRIGIDO */
     .past-time-modal {
         max-width: 380px !important;
         text-align: center;
@@ -3369,7 +4557,7 @@ const additionalStyles = `
     }
     
     .slot-btn.requires-plan:hover::after {
-        content: "ðŸ”’ NecessÃ¡rio plano";
+        content: "necessario plano";
         position: absolute;
         top: -30px;
         left: 50%;
@@ -4642,14 +5830,653 @@ const additionalStyles = `
 
     /* Responsividade */
     @media (max-width: 768px) {
+        .warning-content {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .weeks-container {
+            grid-template-columns: 1fr; /* Muda para uma coluna */
+            gap: 15px; /* Ajusta o espaçamento */
+            width: 100%; /* Garante que ocupe toda a largura */
+        }
+
+        .week-card {
+            width: 100%; /* Garante que cada card ocupe a largura */
+            padding: 14px; /* Ajusta o padding interno */
+        }
+
+        .week-title {
+            font-size: 13px; /* Ajusta tamanho da fonte */
+            flex-wrap: wrap; /* Permite quebra de linha */
+        }
+
+        .week-dates {
+            font-size: 11px; /* Ajusta tamanho da data */
+        }
+
+        .bookings-badge, 
+        .no-bookings-badge, 
+        .available-badge {
+            margin-left: 0; /* Remove margem automática em mobile */
+            width: fit-content; /* Ajusta largura ao conteúdo */
+        }
+
+        .week-stats {
+            width: 100%;
+        }
+
+        .multi-plans-progress {
+            width: 100%;
+        }
+
+        .plan-week-item {
+            padding: 8px; /* Ajusta padding interno dos itens de plano */
+        }
+
+        .plan-week-header {
+            gap: 5px; /* Reduz espaçamento */
+        }
+
+        .plan-week-name {
+            font-size: 12px; /* Ajusta fonte do nome do plano */
+        }
+
+        .count-info.total {
+            display: flex;
+            flex-direction: column; /* Empilha as informações */
+            align-items: flex-start;
+            gap: 5px;
+            padding: 8px; /* Ajusta padding */
+            font-size: 12px; /* Ajusta fonte */
+        }
+
+        .current-bookings,
+        .next-bookings,
+        .remaining.positive {
+            width: 100%; /* Ocupa largura total */
+            justify-content: center; /* Centraliza conteúdo */
+            padding: 4px; /* Ajusta padding */
+            font-size: 11px; /* Ajusta fonte */
+        }
+
+        .week-footer {
+            flex-wrap: wrap; /* Permite quebra de linha */
+            gap: 5px;
+            padding: 6px 10px; /* Ajusta padding */
+            font-size: 11px; /* Ajusta fonte */
+        }
+
+        .week-footer i {
+            font-size: 12px; /* Ajusta ícone */
+        }
+
+        .week-footer span {
+            text-align: center; /* Centraliza texto se necessário */
+        }
+
+        .progress-container {
+            width: 200px;
+        }
+
+        .counter-info {
+            width: 100%;
+            justify-content: space-between;
+        }
+
+        .week-header {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .week-stats {
+            width: 100%;
+            justify-content: space-between;
+        }
+
+        .booking-category-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 6px;
+            padding: 8px 10px;
+        }
+
+        .booking-category-title {
+            font-size: 12px;
+        }
+
+        .booking-category-count {
+            font-size: 10px;
+        }
+
+        .my-booking-item {
+            flex-direction: column;
+            align-items: flex-start;
+            padding: 10px 12px;
+        }
+
+        .booking-info {
+            width: 100%;
+        }
+
+        .booking-datetime,
+        .booking-week {
+            flex-wrap: wrap;
+        }
+
+        .booking-timer {
+            width: 100%;
+            justify-content: center;
+        }
+
+        .btn-cancel {
+            width: 100%;
+        }
+
+        .schedule-category-divider {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 6px;
+            padding: 8px 10px;
+            margin-top: 6px;
+        }
+
+        .schedule-category-title {
+            font-size: 13px;
+        }
+
+        .schedule-category-subtitle {
+            font-size: 11px;
+            line-height: 1.3;
+        }
+
+        .slot-btn.plano-nao-permite:hover::after {
+            display: none;
+        }
+
+        .btn-plans {
+            width: 40px;
+            height: 40px;
+            padding: 0;
+            border-radius: 50%;
+        }
+
+        .btn-plans span {
+            display: none;
+        }
+
+        .btn-plans i {
+            font-size: 18px;
+        }
+
+        .limit-modal {
+            width: 95%;
+            padding: 20px;
+        }
+
+        .plan-option {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 5px;
+        }
+
+        .limit-info {
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+
+        .info-danca {
+            width: 100%;
+            margin: 10px 0 0 0;
+            justify-content: center;
+        }
+
+        .warning-header {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .multi-plan-header {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .plan-tag {
+            width: 100%;
+            justify-content: center;
+        }
+
+        .plan-week-item {
+            padding: 8px;
+        }
+
         .plans-container-mini {
             flex-direction: column;
             width: 100%;
         }
-        
+
         .plan-badge {
             width: 100%;
             justify-content: center;
+        }
+        /* Opção de agendamento recorrente */
+        .recurring-option {
+            margin-top: 15px;
+            padding: 10px;
+            background: #f0f9ff;
+            border-radius: 8px;
+            border: 1px solid #bae6fd;
+        }
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            color: #0369a1;
+        }
+        .checkbox-label input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+        /* Status badges */
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: 600;
+            margin-left: 8px;
+        }
+        
+        .status-badge.completed {
+            background: #e5e7eb;
+            color: #4b5563;
+        }
+        
+        .status-badge.fixed {
+            background: #8b5cf6;
+            color: white;
+        }
+        
+        .status-badge.cancelled {
+            background: #ef4444;
+            color: white;
+        }
+        
+        /* Booking tabs */
+        .booking-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #e5e7eb;
+            padding-bottom: 10px;
+        }
+        
+        .tab-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: transparent;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            color: #6b7280;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .tab-btn:hover {
+            background: #f3f4f6;
+            color: #374151;
+        }
+        
+        .tab-btn.active {
+            background: #e0f2fe;
+            color: #0284c7;
+        }
+        
+        .tab-btn i {
+            font-size: 14px;
+        }
+        
+        /* Past booking items */
+        .my-booking-item.past {
+            opacity: 0.7;
+            background: #f9fafb;
+        }
+        
+        .my-booking-item.past .booking-datetime {
+            color: #6b7280;
+        }
+        
+        .section-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            color: #374151;
+            margin: 20px 0 15px 0;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        
+        .section-title i {
+            color: #3b82f6;
+        }
+        
+        @media (max-width: 768px) {
+            .booking-tabs {
+            flex-direction: column;
+            gap: 5px;
+            }
+            
+            .tab-btn {
+            width: 100%;
+            justify-content: center;
+            }
+            
+            .status-badge {
+            margin-left: 0;
+            margin-top: 5px;
+            }
+        /* Histórico e limpeza */
+        .history-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 20px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid #e5e7eb;
+        }
+
+        .history-header h3 {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 18px;
+        color: #374151;
+        margin: 0;
+        }
+
+        .btn-clear-history {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 16px;
+        background: #fee2e2;
+        color: #dc2626;
+        border: 1px solid #fecaca;
+        border-radius: 8px;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        }
+
+        .btn-clear-history:hover {
+        background: #fecaca;
+        transform: translateY(-2px);
+        box-shadow: 0 2px 8px rgba(220, 38, 38, 0.2);
+        }
+
+        .month-header {
+        background: #f3f4f6;
+        padding: 10px 15px;
+        margin: 15px 0 10px 0;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        color: #4b5563;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        }
+
+        .month-header i {
+        color: #6b7280;
+        }
+
+        .history-footer {
+        margin-top: 20px;
+        padding-top: 20px;
+        border-top: 1px solid #e5e7eb;
+        display: flex;
+        justify-content: center;
+        }
+
+        .past-count {
+        background: #ef4444;
+        color: white;
+        padding: 2px 8px;
+        border-radius: 20px;
+        font-size: 11px;
+        margin-left: 5px;
+        }
+
+        .empty-state {
+        text-align: center;
+        padding: 40px 20px;
+        background: #f9fafb;
+        border-radius: 12px;
+        border: 2px dashed #e5e7eb;
+        }
+
+        .empty-state i {
+        font-size: 48px;
+        color: #9ca3af;
+        margin-bottom: 15px;
+        }
+
+        .empty-state p {
+        color: #6b7280;
+        margin-bottom: 20px;
+        }
+
+        .empty-state .btn-secondary {
+        margin: 0 auto;
+        }
+
+        .btn-danger {
+        background: #dc2626;
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        }
+
+        .btn-danger:hover {
+        background: #b91c1c;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+        }
+
+        /* Responsividade */
+        @media (max-width: 768px) {
+        .history-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 10px;
+        }
+        
+        .btn-clear-history {
+            width: 100%;
+            justify-content: center;
+        }
+        
+        .month-header {
+            font-size: 13px;
+            padding: 8px 12px;
+        }
+        /* Adicionar à constante additionalStyles */
+        .action-buttons {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        }
+
+        .btn-cancel-fixed {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 12px;
+        background: #f97316;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        }
+
+        .btn-cancel-fixed:hover {
+        background: #ea580c;
+        transform: translateY(-1px);
+        box-shadow: 0 2px 8px rgba(249, 115, 22, 0.3);
+        }
+
+        .btn-cancel-single {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 12px;
+        background: #6b7280;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        }
+
+        .btn-cancel-single:hover {
+        background: #4b5563;
+        transform: translateY(-1px);
+        }
+
+        .fixed-info {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-top: 6px;
+        padding: 4px 8px;
+        background: #f3f4f6;
+        border-radius: 4px;
+        font-size: 11px;
+        color: #6b7280;
+        }
+
+        .fixed-info i {
+        color: #8b5cf6;
+        font-size: 12px;
+        }
+
+        /* Modal de cancelamento de aula fixa */
+        .cancel-options {
+        margin: 20px 0;
+        padding: 15px;
+        background: #f9fafb;
+        border-radius: 8px;
+        border: 1px solid #e5e7eb;
+        }
+
+        .radio-option {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        padding: 12px;
+        margin-bottom: 8px;
+        background: white;
+        border-radius: 6px;
+        border: 1px solid #e5e7eb;
+        cursor: pointer;
+        transition: all 0.2s;
+        }
+
+        .radio-option:hover {
+        border-color: #3b82f6;
+        background: #eff6ff;
+        }
+
+        .radio-option input[type="radio"] {
+        margin-top: 3px;
+        width: 16px;
+        height: 16px;
+        cursor: pointer;
+        }
+
+        .radio-content {
+        flex: 1;
+        }
+
+        .option-title {
+        display: block;
+        font-weight: 600;
+        color: #1f2937;
+        margin-bottom: 4px;
+        }
+
+        .option-desc {
+        display: block;
+        font-size: 12px;
+        color: #6b7280;
+        }
+
+        .cancel-info {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px;
+        background: #fee2e2;
+        border-radius: 6px;
+        font-size: 13px;
+        color: #991b1b;
+        }
+
+        .cancel-info i {
+        color: #dc2626;
+        }
+
+        /* Responsividade */
+        @media (max-width: 768px) {
+        .action-buttons {
+            flex-direction: column;
+            width: 100%;
+        }
+        
+        .btn-cancel-fixed,
+        .btn-cancel-single {
+            width: 100%;
+            justify-content: center;
+        }
+        
+        .radio-option {
+            padding: 10px;
+        }
+        
+        .option-title {
+            font-size: 13px;
+        }
+        
+        .option-desc {
+            font-size: 11px;
+        }
         }
     }
     `;
@@ -4659,5 +6486,3 @@ styleSheet.textContent = additionalStyles;
 document.head.appendChild(styleSheet);
 
 console.log('âœ… CÃ³digo carregado completamente!');
-
-

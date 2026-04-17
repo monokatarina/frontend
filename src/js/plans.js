@@ -1,114 +1,44 @@
 
 const API = 'https://jokesteronline.org/api';
 
+
+
 // ============================================
 // CONFIGURAÇÃO DOS PLANOS (NOVOS)
 // ============================================
-const PLANS = {
-    // ===== TREINO NORMAL =====
-    normal_2x: {
-        id: 'normal_2x',
-        name: 'Treino Normal 2x',
-        categoria: 'normal',
-        aulasPorSemana: 2,
-        price: 400.00,
-        color: '#10b981',
-        icon: 'fa-dumbbell',
-        description: 'Treino normal 2 vezes por semana',
-        horarios: 'Todos os horários (6h-12h e 16h-19h)',
-        features: [
-            '2 aulas por semana',
-            'Acesso a todos horários',
-            'Suporte básico',
-            'Acesso ao app mobile'
-        ],
-        popular: false
-    },
-    normal_3x: {
-        id: 'normal_3x',
-        name: 'Treino Normal 3x',
-        categoria: 'normal',
-        aulasPorSemana: 3,
-        price: 510.00,
-        color: '#3b82f6',
-        icon: 'fa-dumbbell',
-        description: 'Treino normal 3 vezes por semana',
-        horarios: 'Todos os horários (6h-12h e 16h-19h)',
-        features: [
-            '3 aulas por semana',
-            'Acesso a todos horários',
-            'Suporte prioritário',
-            'Acesso ao app mobile',
-            'Avaliação mensal'
-        ],
-        popular: true
-    },
-    normal_5x: {
-        id: 'normal_5x',
-        name: 'Treino Normal 5x',
-        categoria: 'normal',
-        aulasPorSemana: 5,
-        price: 800.00,
-        color: '#8b5cf6',
-        icon: 'fa-crown',
-        description: 'Treino normal 5 vezes por semana',
-        horarios: 'Todos os horários (6h-12h e 16h-19h)',
-        features: [
-            '5 aulas por semana',
-            'Acesso a todos horários',
-            'Suporte VIP',
-            'Acesso ao app mobile',
-            'Avaliação semanal',
-            'Acompanhamento personalizado'
-        ],
-        popular: false
-    },
-    
-    // ===== DANÇA =====
-    danca_2x: {
-        id: 'danca_2x',
-        name: 'Dança 2x',
-        categoria: 'danca',
-        aulasPorSemana: 2,
-        price: 79.00,
-        color: '#ec4899',
-        icon: 'fa-music',
-        description: 'Aulas de dança 2 vezes por semana',
-        horarios: '14:00 e 15:00',
-        features: [
-            '2 aulas de dança por semana',
-            'Horários: 14:00 e 15:00',
-            'Professores especializados',
-            'Turmas reduzidas'
-        ],
-        popular: true
-    },
-    danca_3x: {
-        id: 'danca_3x',
-        name: 'Dança 3x',
-        categoria: 'danca',
-        aulasPorSemana: 3,
-        price: 89.00,
-        color: '#ec4899',
-        icon: 'fa-music',
-        description: 'Aulas de dança 3 vezes por semana',
-        horarios: '14:00 e 15:00',
-        features: [
-            '3 aulas de dança por semana',
-            'Horários: 14:00 e 15:00',
-            'Professores especializados',
-            'Turmas reduzidas',
-            'Coreografias exclusivas'
-        ],
-        popular: false
-    }
-};
+let PLANS = {};  // Agora vazio, será preenchido pela API
 
 // Mapeamento das categorias
 const PLANOS_POR_CATEGORIA = {
     normal: ['normal_2x', 'normal_3x', 'normal_5x'],
     danca: ['danca_2x', 'danca_3x']
 };
+// ============================================
+// BUSCAR CONFIGURAÇÃO DOS PLANOS DO BACKEND
+// ============================================
+async function loadPlansConfig() {
+    try {
+        console.log('📥 Buscando configuração dos planos...');
+        
+        const response = await fetch(`${API}/plans/config`);
+        const result = await response.json();
+        
+        if (result.success && result.data) {
+            PLANS = result.data;
+            console.log('✅ Planos carregados do backend:', PLANS);
+            
+            // Renderizar a página com os dados recebidos
+            renderPlans();
+        } else {
+            console.error('❌ Erro ao carregar planos:', result.error);
+            showNotification('Erro ao carregar planos. Tente novamente.', 'error');
+        }
+        
+    } catch (error) {
+        console.error('❌ Erro na requisição:', error);
+        showNotification('Erro de conexão com o servidor', 'error');
+    }
+}
 
 // ============================================
 // ESTADO GLOBAL
@@ -147,20 +77,40 @@ function isValidCombination(plans, newPlanId) {
     return true;
 }
 
+function calculateTotalWithDiscount(planIds) {
+    if (!planIds || planIds.length === 0) return 0;
+    
+    let total = 0;
+    const temNormal = planIds.some(id => PLANS[id]?.categoria === 'normal');
+    
+    planIds.forEach(id => {
+        const plan = PLANS[id];
+        if (!plan) return;
+        
+        if (temNormal && plan.categoria === 'danca') {
+            total += plan.price * 0.85;
+        } else {
+            total += plan.price;
+        }
+    });
+    
+    return total;
+}
+
 // ============================================
 // INICIALIZAÇÃO
 // ============================================
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     console.log('🚀 Página de Planos iniciada - Modo Multiplanos');
     
-    checkUserLogin();
-    loadSelectedPlansFromStorage();
-    renderPlans();
+    await checkUserLogin();
+    await loadSelectedPlansFromStorage();
+    await loadPlansConfig();  // <-- AGORA CARREGA DO BACKEND
+    
     setupEventListeners();
     addDynamicStyles();
     createFloatingContinueButton();
 });
-
 // ============================================
 // VERIFICAÇÃO DE USUÁRIO
 // ============================================
@@ -378,7 +328,7 @@ function createFloatingContinueButton() {
     `;
     
     floatingBtn.innerHTML = `
-        <button class="btn-continue" onclick="goToCheckout()">
+        <button class="btn-continue" id="btnContinueCheckout">
             <i class="fas fa-shopping-cart"></i>
             <span class="btn-text">Continuar</span>
             <span class="btn-badge" id="selectedCountBadge">${selectedPlans.length}</span>
@@ -402,11 +352,17 @@ function updateFloatingButton() {
         const badge = document.getElementById('selectedCountBadge');
         if (badge) badge.textContent = selectedPlans.length;
         
-        const totalPrice = selectedPlans.reduce((sum, id) => sum + PLANS[id].price, 0);
+        // Usar cálculo com desconto
+        const totalPrice = calculateTotalWithDiscount(selectedPlans);
+        const temDesconto = selectedPlans.some(id => PLANS[id]?.categoria === 'normal') && 
+                           selectedPlans.some(id => PLANS[id]?.categoria === 'danca');
         
         const btnText = floatingBtn.querySelector('.btn-text');
         if (btnText) {
             btnText.innerHTML = `Continuar (R$ ${totalPrice.toFixed(2)})`;
+            if (temDesconto) {
+                btnText.style.background = 'linear-gradient(135deg, #10b981, #059669)';
+            }
         }
     } else {
         floatingBtn.style.display = 'none';
@@ -848,6 +804,41 @@ function addDynamicStyles() {
     document.head.appendChild(style);
 }
 
+// Garantir que o botão de continuar tenha event listener
+function setupContinueButton() {
+    const btnContinue = document.getElementById('btnContinueCheckout');
+    if (btnContinue) {
+        // Remover qualquer onclick inline que possa ter sido adicionado
+        btnContinue.removeAttribute('onclick');
+        
+        // Adicionar event listener
+        btnContinue.addEventListener('click', function(e) {
+            e.preventDefault();
+            goToCheckout();
+        });
+        
+        console.log('✅ Botão continuar configurado com event listener');
+    }
+}
+
+// Chamar a função sempre que o botão for criado/atualizado
+const originalCreateFloatingContinueButton = createFloatingContinueButton;
+createFloatingContinueButton = function() {
+    originalCreateFloatingContinueButton();
+    setTimeout(setupContinueButton, 100); // Pequeno delay para garantir que o botão foi criado
+};
+
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Botão Voltar para Agenda
+    const btnVoltar = document.getElementById('btnVoltarAgenda');
+    if (btnVoltar) {
+        btnVoltar.addEventListener('click', function() {
+            window.location.href = '/';
+        });
+    setTimeout(setupContinueButton, 200);
+    }
+});
 // ============================================
 // EXPOR FUNÇÕES GLOBAIS
 // ============================================
